@@ -1,0 +1,45 @@
+services:
+  BE:
+    container_name: fastify
+    build: ./requirements/BE/.
+    image: fastify
+    ports:
+      - "3000:3000"
+    volumes:
+      - fastify_data:/app/database
+    env_file:
+      - .env
+    networks:
+      - ft_transcendence
+    restart: always
+    init: true
+    tty: true
+
+  FE:
+    container_name: nginx
+    build: ./requirements/FE/.
+    image: nginx
+    ports:
+      - "443:443"
+    depends_on:
+      - BE
+    networks:
+      - ft_transcendence
+    env_file:
+      - .env
+    restart: always
+    init: true
+
+volumes:
+  fastify_data:
+    name: fastify_data
+    driver: local
+    driver_opts:
+      device: /Users/hyunjoo/Dev/app/temp
+      o: bind
+      type: none
+
+
+networks:
+  ft_transcendence:
+    driver: bridge
