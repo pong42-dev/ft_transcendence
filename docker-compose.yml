@@ -1,7 +1,7 @@
 services:
-  BE:
+  backend:
     container_name: fastify
-    build: ./requirements/BE/.
+    build: ./backend
     image: fastify
     ports:
       - "3000:3000"
@@ -15,14 +15,13 @@ services:
     init: true
     tty: true
 
-  FE:
+  frontend:
     container_name: nginx
-    build: ./requirements/FE/.
-    image: nginx
+    build: ./frontend
     ports:
-      - "443:443"
+      - "443:80"
     depends_on:
-      - BE
+      - backend
     networks:
       - ft_transcendence
     env_file:
