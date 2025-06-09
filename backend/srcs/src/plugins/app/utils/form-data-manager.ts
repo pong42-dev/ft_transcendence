@@ -4,58 +4,49 @@ import fs from 'fs';
 import path from 'path';
 import { MultipartFile, MultipartValue } from '@fastify/multipart';
 import { v4 as uuidv4 } from 'uuid';
-import { Register } from '../../../schemas/auth.js';
+import { Register, RegisterFormData } from '../../../schemas/register.js';
 
 declare module 'fastify' {
 	export interface FastifyInstance {
-		registerFormData: (request: FastifyRequest, dirPath: string) => Promise<Register>;
+		registerFormData: (request: FastifyRequest) => Promise<RegisterFormData>;
+		saveFile: (file: MultipartFile, dirPath: string) => Promise<string>;
 	}
 }
 
-async function handleRegisterFormData(request: FastifyRequest, dirPath: string): Promise<Register> {
+async function handleRegisterFormData(request: FastifyRequest): Promise<RegisterFormData> {
 	const parts = request.parts();
 	const form: Record<string, string> = {};
-	let avatarFilePath: string | null = null;
+	const files: Record<string, MultipartFile> = {};
 
-	try {
-		for await (const part of parts) {
-			if (part.type === 'file') {
-				try {
-					avatarFilePath = await handleFilePart(part as MultipartFile, dirPath);
-				} catch (fileErr) {
-					console.error('파일 처리 중 오류 발생:', fileErr);
-					throw new Error('파일 업로드에 실패했습니다.');
-				}
-			} else {
-				try {
-					handleTextPart(part as MultipartValue<string>, form);
-				} catch (textErr) {
-					console.error('텍스트 파트 처리 중 오류 발생:', textErr);
-					throw new Error('폼 데이터 처리 중 오류가 발생했습니다.');
-				}
-			}
+	for await (const part of parts) {
+		if (part.type === 'file') {
+			const filePart = part as MultipartFile;
+			const field = filePart.fieldname;
+
+			// 배열이 아니라 단일 파일로 저장 (마지막 파일 덮어쓰기)
+			files[field] = filePart;
+		} else if (part.type === 'field') {
+			const textPart = part as MultipartValue<string>;
+			form[textPart.fieldname] = textPart.value;
+		} else {
+			continue;
 		}
-	} catch (err) {
-		console.error('폼 데이터 파싱 중 오류 발생:', err);
-		throw new Error('폼 데이터를 처리하는 데 실패했습니다.');
 	}
 
-	return {
+	const registerData: Register = {
 		email: form.email,
 		name: form.name,
 		password: form.password,
-		avatar: avatarFilePath,
+	};
+
+	return {
+		...registerData,
+		files,
 	};
 }
 
-function handleTextPart(part: MultipartValue<string>, form: Record<string, string>) {
-	if (!part.fieldname || !part.value) {
-		throw new Error('잘못된 텍스트 입력입니다.');
-	}
-	form[part.fieldname] = part.value;
-}
 
-async function handleFilePart(file: MultipartFile, dirPath: string): Promise<string> {
+async function saveFile(file: MultipartFile, dirPath: string): Promise<string> {
 	try {
 		const buffer = await file.toBuffer();
 
@@ -78,6 +69,7 @@ async function handleFilePart(file: MultipartFile, dirPath: string): Promise<str
 export default fp(
 	async (fastify: FastifyInstance) => {
 		fastify.decorate('registerFormData', handleRegisterFormData);
+		fastify.decorate('saveFile', saveFile);
 	},
 	{
 		name: 'form-data-manager',

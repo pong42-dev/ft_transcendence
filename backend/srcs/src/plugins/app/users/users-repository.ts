@@ -3,10 +3,11 @@ import fp from 'fastify-plugin'
 import { User } from '../../../schemas/auth.js'
 
 declare module 'fastify' {
-interface FastifyInstance {
-	usersRepository: ReturnType<typeof createUsersRepository>;
+	interface FastifyInstance {
+		usersRepository: ReturnType<typeof createUsersRepository>;
+	}
 }
-}
+
 export function createUsersRepository(fastify: FastifyInstance) {
 const knex = fastify.knex;
 const allowedColumns = ['id', 'email', 'password', 'provider', 'provider_id'];

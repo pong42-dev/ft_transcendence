@@ -57,13 +57,12 @@ export const UserDataSchema = Type.Object({
 })
 export interface UserData extends Static<typeof UserDataSchema > {}
 
-export const RegisterSchema = Type.Object({
-	email: EmailSchema,
-	name: StringSchema,
-	password: StringSchema,
-	avatar: Type.Union([StringSchema, Type.Null()])
-});
-export interface Register extends Static<typeof RegisterSchema> {}
+// export const RegisterSchema = Type.Object({
+// 	email: EmailSchema,
+// 	name: StringSchema,
+// 	password: StringSchema,
+// });
+// export interface Register extends Static<typeof RegisterSchema> {}
 
 export const GoogleUserProfileSchema = Type.Object({
 	id: IdSchema,

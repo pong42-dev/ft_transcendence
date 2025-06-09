@@ -2,7 +2,12 @@ import { FastifyPluginAsyncTypebox, Type } from '@fastify/type-provider-typebox'
 import { FastifyRequest, FastifyReply } from 'fastify'
 
 const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
-	const { config, usersRepository, userProfilesRepository, passwordManager, registerFormData, isValidEmail} = fastify
+	const { 
+		config, 
+		usersRepository, userProfilesRepository, 
+		passwordManager, 
+		registerFormData, saveFile, isValidRegisterFormData,
+	} = fastify
 	fastify.post(
 		'/register',
 		{
@@ -27,31 +32,28 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 			},
 		},
 		async (request: FastifyRequest, reply: FastifyReply) => {
-		try {
-			const dirPath = config.UPLOAD_DIRNAME + '/' + config.UPLOAD_AVATAR_DIRNAME || 'uploads/avatars';
-			const formData = await registerFormData(request, dirPath);
-			const { email, password, name, avatar } = formData;
-			console.log ('formData:', formData);
-			if (!isValidEmail(email)) {
-				return reply.status(200).send({ success: false, msg: '이메일 형식이 잘못되었습니다.' });
+			try {
+				const formData = await registerFormData(request);
+				if (! await isValidRegisterFormData(formData)){
+					return reply.status(200).send({ success: false, msg: 'Invalid registration format.' });
+				}
+				const { email, password, name } = formData;
+				const emailExists = await usersRepository.checkDupRow('email', email)
+				const nameExists = await userProfilesRepository.checkDupRow('name', name)
+				if (emailExists || nameExists) {
+					return reply.status(200).send({ success: false, msg: 'This email or name is already registered.'});
+				}
+				const dirPath = config.UPLOAD_DIRNAME + '/' + config.UPLOAD_AVATAR_DIRNAME || 'uploads/avatars';
+				const avatarPath = await saveFile(formData.files.avatar, dirPath);
+				console.log ('formData:', formData);
+				const hashedPassword = await passwordManager.hashPassword(password);
+				const user_id = await usersRepository.insertRow(email, hashedPassword, 'local', '');
+				await userProfilesRepository.insertRow(user_id, name, avatarPath, 'false');
+				return reply.send({ success: true, msg: 'Registration completed successfully.'});
+			} catch (err) {
+				request.log.error(err);
+				return reply.status(500).send({ success: false, msg: 'An internal server error occurred during registration.' });
 			}
-			const emailExists = await usersRepository.checkDupRow('email', email)
-			if (emailExists) {
-				return reply.status(200).send({ success: false, msg: '이미 존재하는 아이디입니다'});
-			}
-			const nameExists = await userProfilesRepository.checkDupRow('name', name)
-			if (nameExists) {
-				return reply.status(200).send({ success: false, msg: '이미 존재하는 닉네임입니다'});
-			}
-			const hashedPassword = await passwordManager.hashPassword(password);
-			const user_id = await usersRepository.insertRow(email, hashedPassword, 'local', '');
-			await userProfilesRepository.insertRow(user_id, name, avatar, 'false');
-			return reply.send({ success: true, msg: '회원가입이 완료되었습니다.'});
-			
-		} catch (err) {
-			request.log.error(err);
-			return reply.status(500).send({ success: false, msg: '회원가입 처리 중 서버 내부 오류가 발생했습니다.' });
-		}
 		}
 	)
 }
