@@ -21,10 +21,7 @@ async function handleRegisterFormData(request: FastifyRequest): Promise<Register
 	for await (const part of parts) {
 		if (part.type === 'file') {
 			const filePart = part as MultipartFile;
-			const field = filePart.fieldname;
-
-			// 배열이 아니라 단일 파일로 저장 (마지막 파일 덮어쓰기)
-			files[field] = filePart;
+			files[filePart.fieldname] = filePart;
 		} else if (part.type === 'field') {
 			const textPart = part as MultipartValue<string>;
 			form[textPart.fieldname] = textPart.value;
@@ -45,7 +42,6 @@ async function handleRegisterFormData(request: FastifyRequest): Promise<Register
 	};
 }
 
-
 async function saveFile(file: MultipartFile, dirPath: string): Promise<string> {
 	try {
 		const buffer = await file.toBuffer();
@@ -61,8 +57,8 @@ async function saveFile(file: MultipartFile, dirPath: string): Promise<string> {
 		fs.writeFileSync(filePath, buffer);
 		return filePath;
 	} catch (err) {
-		console.error('파일 저장 중 오류 발생:', err);
-		throw new Error('파일 저장에 실패했습니다.');
+		console.error('An error occurred while saving the file:', err);
+		throw new Error('Failed to save the file.');
 	}
 }
 
