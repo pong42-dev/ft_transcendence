@@ -1,0 +1,218 @@
+import { Notification } from '../models/Types';
+
+export class Terminal {
+  private terminalElement: HTMLElement;
+  private outputElement: HTMLElement;
+  private inputElement: HTMLInputElement;
+  private commandHistory: string[] = [];
+  private historyIndex: number = -1;
+  private commandCallback: (command: string) => void;
+  private type: 'main' | 'chat';
+  private outputContent: string = '';
+  private initialMessage: string = `PONG-CLI v1.0.0 (c) 2025 PongDevs
+Type "help" for available commands.
+Please login to continue.`;
+
+  constructor(commandCallback: (command: string) => void, type: 'main' | 'chat' = 'main') {
+    this.commandCallback = commandCallback;
+    this.type = type;
+    this.outputContent = this.type === 'main' ? this.initialMessage : '';
+    
+    // Create DOM elements only once
+    this.terminalElement = document.createElement('div');
+    this.terminalElement.className = 'flex flex-col h-full bg-terminal-black text-terminal-green p-4 font-jetbrains';
+    
+    const outputContainer = document.createElement('div');
+    outputContainer.className = 'flex-grow overflow-auto scrollbar-hide';
+    
+    this.outputElement = document.createElement('div');
+    this.outputElement.className = 'whitespace-pre-wrap text-sm opacity-90 space-y-1';
+    this.outputElement.innerHTML = this.outputContent;
+    
+    const inputContainer = document.createElement('div');
+    inputContainer.className = 'flex items-center mt-2';
+    
+    const promptSpan = document.createElement('span');
+    promptSpan.className = 'mr-2 text-sm opacity-90';
+    promptSpan.textContent = this.type === 'chat' ? '>' : '$ ';
+    
+    this.inputElement = document.createElement('input');
+    this.inputElement.className = 'bg-terminal-black text-terminal-green outline-none border-none flex-grow font-jetbrains text-sm opacity-90';
+    this.inputElement.setAttribute('type', 'text');
+    this.inputElement.setAttribute('autocomplete', 'off');
+    this.inputElement.setAttribute('spellcheck', 'false');
+    this.inputElement.setAttribute('placeholder', this.type === 'chat' ? 'Type your message...' : '');
+    
+    this.inputElement.addEventListener('keydown', this.handleInputKeydown.bind(this));
+    
+    // Assemble the terminal structure
+    outputContainer.appendChild(this.outputElement);
+    inputContainer.appendChild(promptSpan);
+    inputContainer.appendChild(this.inputElement);
+    
+    this.terminalElement.appendChild(outputContainer);
+    this.terminalElement.appendChild(inputContainer);
+    
+    this.terminalElement.addEventListener('click', () => {
+      this.inputElement.focus();
+    });
+
+    // Ensure initial scroll to bottom
+    setTimeout(() => this.scrollToBottom(), 0);
+  }
+
+  public render(): HTMLElement {
+    return this.terminalElement;
+  }
+
+  private formatTime(): string {
+    const now = new Date();
+    const hours = now.getHours().toString().padStart(2, '0');
+    const minutes = now.getMinutes().toString().padStart(2, '0');
+    return `${hours}:${minutes}`;
+  }
+
+  private scrollToBottom(): void {
+    const outputContainer = this.outputElement.parentElement;
+    if (outputContainer) {
+      outputContainer.scrollTop = outputContainer.scrollHeight;
+    }
+  }
+
+  public appendOutput(text: string): void {
+    const messageElement = document.createElement('div');
+    const timestamp = this.formatTime();
+    
+    if (this.type === 'chat') {
+      const messageContainer = document.createElement('div');
+      messageContainer.className = 'mb-2';
+      
+      if (text.startsWith('You: ')) {
+        messageContainer.className += ' flex flex-col items-end';
+        text = text.replace('You: ', '');
+        
+        const message = document.createElement('div');
+        message.className = 'text-terminal-green max-w-[50%] break-words';
+        message.textContent = text;
+        
+        const time = document.createElement('div');
+        time.className = 'text-xs text-terminal-gray mt-1';
+        time.textContent = timestamp;
+        
+        messageContainer.appendChild(message);
+        messageContainer.appendChild(time);
+      } else {
+        messageContainer.className += ' flex flex-col items-start';
+        const sender = text.split(':')[0];
+        const message = text.split(':').slice(1).join(':').trim();
+        
+        const senderElement = document.createElement('div');
+        senderElement.className = 'text-terminal-gray text-sm';
+        senderElement.textContent = sender;
+        
+        const messageElement = document.createElement('div');
+        messageElement.className = 'text-terminal-green max-w-[50%] break-words';
+        messageElement.textContent = message;
+        
+        const time = document.createElement('div');
+        time.className = 'text-xs text-terminal-gray mt-1';
+        time.textContent = timestamp;
+        
+        messageContainer.appendChild(senderElement);
+        messageContainer.appendChild(messageElement);
+        messageContainer.appendChild(time);
+      }
+      
+      this.outputElement.appendChild(messageContainer);
+      this.outputContent = this.outputElement.innerHTML;
+    } else {
+      // Handle regular terminal output
+      messageElement.className = 'text-terminal-green';
+      if (text.startsWith('$')) {
+        messageElement.className += ' opacity-75';
+      }
+      messageElement.textContent = text;
+      this.outputElement.appendChild(messageElement);
+      this.outputContent = this.outputElement.innerHTML;
+    }
+    
+    // Use requestAnimationFrame to ensure smooth scrolling after DOM update
+    requestAnimationFrame(() => this.scrollToBottom());
+  }
+
+  public clearOutput(): void {
+    this.outputElement.innerHTML = '';
+    this.outputContent = '';
+  }
+
+  public reset(): void {
+    this.clearOutput();
+    this.commandHistory = [];
+    this.historyIndex = -1;
+    if (this.type === 'main') {
+      this.outputElement.innerHTML = this.initialMessage;
+      this.outputContent = this.initialMessage;
+      // Ensure scroll to bottom after reset
+      requestAnimationFrame(() => this.scrollToBottom());
+    }
+  }
+
+  private handleInputKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Enter') {
+      const command = this.inputElement.value.trim();
+      
+      if (command) {
+        if (this.type === 'chat') {
+          // Handle chat message
+          this.appendOutput(`You: ${command}`);
+          // Simulate received message
+          setTimeout(() => {
+            const chatWith = this.getCurrentTab()?.chatWith;
+            if (chatWith) {
+              this.appendOutput(`${chatWith}: ${command}`);
+            }
+          }, 1000);
+        } else {
+          // Handle command
+          this.appendOutput(`$ ${command}`);
+          this.commandCallback(command);
+        }
+        
+        this.commandHistory.push(command);
+        this.historyIndex = this.commandHistory.length;
+      }
+      
+      this.inputElement.value = '';
+      // Ensure scroll to bottom after command execution
+      requestAnimationFrame(() => this.scrollToBottom());
+    } else if (event.key === 'ArrowUp' && this.type !== 'chat') {
+      event.preventDefault();
+      if (this.commandHistory.length > 0 && this.historyIndex > 0) {
+        this.historyIndex--;
+        this.inputElement.value = this.commandHistory[this.historyIndex];
+      }
+    } else if (event.key === 'ArrowDown' && this.type !== 'chat') {
+      event.preventDefault();
+      if (this.historyIndex < this.commandHistory.length - 1) {
+        this.historyIndex++;
+        this.inputElement.value = this.commandHistory[this.historyIndex];
+      } else {
+        this.historyIndex = this.commandHistory.length;
+        this.inputElement.value = '';
+      }
+    }
+  }
+
+  private getCurrentTab(): { id: string; chatWith?: string } | undefined {
+    const tabsContainer = this.terminalElement.closest('.terminal-container');
+    if (!tabsContainer) return undefined;
+    
+    const activeTab = tabsContainer.querySelector('.tab.active');
+    if (!activeTab) return undefined;
+    
+    return {
+      id: activeTab.getAttribute('data-tab-id') || '',
+      chatWith: activeTab.getAttribute('data-chat-with') || undefined
+    };
+  }
+}
