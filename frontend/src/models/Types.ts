@@ -28,7 +28,7 @@ export interface Achievement {
 
 export interface Notification {
   id: string;
-  type: 'friend_request' | 'game_invite' | 'chat';
+  type: 'friend_request' | 'game_invite';
   title: string;
   message: string;
   sender?: string;

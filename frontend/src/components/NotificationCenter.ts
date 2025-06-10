@@ -76,8 +76,6 @@ export class NotificationCenter {
         return '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M12.5 16a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm.5-5v1h1a.5.5 0 0 1 0 1h-1v1a.5.5 0 0 1-1 0v-1h-1a.5.5 0 0 1 0-1h1v-1a.5.5 0 0 1 1 0Zm-2-6a3 3 0 1 1-6 0 3 3 0 0 1 6 0ZM8 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/></svg>';
       case 'game_invite':
         return '<svg xmlns="http://www.w3.org/2000/svg"width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M11.5 6.027a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0zm-1.5 1.5a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1zm2.5-.5a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0zm-1.5 1.5a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1zm-6.5-3h1v1h1v1h-1v1h-1v-1h-1v-1h1v-1z"/></svg>';
-      case 'chat':
-        return '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M8 15c4.418 0 8-3.134 8-7s-3.582-7-8-7-8 3.134-8 7c0 1.76.743 3.37 1.97 4.6-.097 1.016-.417 2.13-.771 2.966-.079.186.074.394.273.362 2.256-.37 3.597-.938 4.18-1.234A9.06 9.06 0 0 0 8 15z"/></svg>';
       default:
         return '';
     }
@@ -156,43 +154,29 @@ export class NotificationCenter {
       const actions = document.createElement('div');
       actions.className = 'flex justify-end gap-2 pl-6';
 
-      if (notification.type === 'chat') {
-        const openChatButton = document.createElement('button');
-        openChatButton.className = 'px-2 py-1 text-sm bg-terminal-green text-terminal-black rounded hover:bg-terminal-darkGreen transition-colors w-full';
-        openChatButton.textContent = 'Open Chat';
-        openChatButton.onclick = () => {
-          this.onNotificationAction(notification);
-          this.notifications = this.notifications.filter(n => n.id !== notification.id);
-          this.unreadCount = Math.max(0, this.unreadCount - 1);
-          this.updateUnreadBadge();
-          this.renderNotifications();
-        };
-        actions.appendChild(openChatButton);
-      } else {
-        const acceptButton = document.createElement('button');
-        acceptButton.className = 'px-2 py-1 text-sm bg-terminal-green text-terminal-black rounded hover:bg-terminal-darkGreen transition-colors';
-        acceptButton.textContent = 'Accept';
-        acceptButton.onclick = () => {
-          this.onNotificationAction(notification);
-          this.notifications = this.notifications.filter(n => n.id !== notification.id);
-          this.unreadCount = Math.max(0, this.unreadCount - 1);
-          this.updateUnreadBadge();
-          this.renderNotifications();
-        };
-        
-        const declineButton = document.createElement('button');
-        declineButton.className = 'px-2 py-1 text-sm bg-terminal-red text-white rounded hover:bg-opacity-80 transition-colors';
-        declineButton.textContent = 'Decline';
-        declineButton.onclick = () => {
-          this.notifications = this.notifications.filter(n => n.id !== notification.id);
-          this.unreadCount = Math.max(0, this.unreadCount - 1);
-          this.updateUnreadBadge();
-          this.renderNotifications();
-        };
-        
-        actions.appendChild(acceptButton);
-        actions.appendChild(declineButton);
-      }
+      const acceptButton = document.createElement('button');
+      acceptButton.className = 'px-2 py-1 text-sm bg-terminal-green text-terminal-black rounded hover:bg-terminal-darkGreen transition-colors';
+      acceptButton.textContent = 'Accept';
+      acceptButton.onclick = () => {
+        this.onNotificationAction(notification);
+        this.notifications = this.notifications.filter(n => n.id !== notification.id);
+        this.unreadCount = Math.max(0, this.unreadCount - 1);
+        this.updateUnreadBadge();
+        this.renderNotifications();
+      };
+      
+      const declineButton = document.createElement('button');
+      declineButton.className = 'px-2 py-1 text-sm bg-terminal-red text-white rounded hover:bg-opacity-80 transition-colors';
+      declineButton.textContent = 'Decline';
+      declineButton.onclick = () => {
+        this.notifications = this.notifications.filter(n => n.id !== notification.id);
+        this.unreadCount = Math.max(0, this.unreadCount - 1);
+        this.updateUnreadBadge();
+        this.renderNotifications();
+      };
+      
+      actions.appendChild(acceptButton);
+      actions.appendChild(declineButton);
       
       notificationElement.appendChild(header);
       notificationElement.appendChild(message);
