@@ -219,6 +219,7 @@ export class App {
   }
 
   private async handleCommand(command: string): Promise<void> {
+    const cmd = command;
     const parts = command.trim().split(' ');
     const commandName = parts[0].toLowerCase();
 

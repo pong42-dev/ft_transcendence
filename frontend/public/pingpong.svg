@@ -1,0 +1,19 @@
+<svg width="500" height="500" xmlns="http://www.w3.org/2000/svg" style="background-color: black;">
+    <title>Terminal Ping Pong (Square)</title>
+    <desc>A fluorescent green ping pong game on a black square background, in a terminal style.</desc>
+
+    <line x1="250" y1="0" x2="250" y2="500" stroke="#39FF14" stroke-width="4" stroke-dasharray="10, 15"/>
+
+    <rect x="30" y="200" width="15" height="100" fill="#39FF14">
+        <animate attributeName="y" values="200;250;200" dur="2s" repeatCount="indefinite" />
+    </rect>
+
+    <rect x="455" y="200" width="15" height="100" fill="#39FF14">
+        <animate attributeName="y" values="200;150;200" dur="3s" repeatCount="indefinite" />
+    </rect>
+
+    <circle cx="60" cy="250" r="10" fill="#39FF14">
+        <animate attributeName="cx" values="60;440;60" dur="4s" repeatCount="indefinite" />
+        <animate attributeName="cy" values="250;100;350;250" dur="4s" repeatCount="indefinite" />
+    </circle>
+</svg>

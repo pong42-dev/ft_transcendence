@@ -1,8 +1,10 @@
 export interface User {
   id: string;
   username: string;
-  nickname?: string;
+  nickname: string;
+  email: string;
   avatarUrl?: string;
+  status: 'online' | 'offline' | 'in_game';
   twoFactorEnabled: boolean;
   gamesPlayed: number;
   gamesWon: number;
@@ -11,6 +13,8 @@ export interface User {
   friends: Friend[];
   password?: string;
   matchHistory: MatchHistory[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Friend {
