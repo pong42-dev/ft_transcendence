@@ -29,9 +29,8 @@ export class PongGame {
   private countdownTimer: number | null = null;
   private leftPlayer: { nickname: string; avatarUrl?: string } | null = null;
   private rightPlayer: { nickname: string; avatarUrl?: string } | null = null;
-  // TODO: Implement score tracking
-  // private _leftScore: number = 0;
-  // private _rightScore: number = 0;
+  private leftScore: number = 0;
+  private rightScore: number = 0;
   private currentRound: number = 1;
   private roundWins: { left: number; right: number } = { left: 0, right: 0 };
 
@@ -220,9 +219,8 @@ export class PongGame {
   }
 
   private resetGameState(): void {
-    // TODO: Reset scores when implementing score tracking
-    // this._leftScore = 0;
-    // this._rightScore = 0;
+    this.leftScore = 0;
+    this.rightScore = 0;
     this.currentRound = 1;
     this.roundWins = { left: 0, right: 0 };
     this.updateScore();

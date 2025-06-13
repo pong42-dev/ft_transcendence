@@ -1,4 +1,4 @@
-// Removed unused import
+import { User } from '../models/Types';
 
 export class GameEndModal {
   private modalElement: HTMLElement;

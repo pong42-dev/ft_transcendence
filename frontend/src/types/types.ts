@@ -1,0 +1,143 @@
+// Frontend TypeScript types
+
+// User types
+export interface User {
+  id: string;
+  username: string;
+  nickname?: string;
+  avatarUrl?: string;
+  twoFactorEnabled: boolean;
+  gamesPlayed: number;
+  gamesWon: number;
+  friends: Friend[];
+  password?: string;
+  matchHistory: MatchHistory[];
+}
+
+export interface Friend {
+  username: string;
+  nickname: string;
+  status: 'online' | 'offline' | 'in-game';
+  blocked: boolean;
+}
+
+export interface AppState {
+  isLoggedIn: boolean;
+  currentUser: User | null;
+  isInGame: boolean;
+}
+
+export interface MatchHistory {
+  date: string;
+  opponent: string | string[];
+  rank: number;
+  type: '1v1' | 'tournament';
+  my_score?: number;
+  opponent_score?: number;
+}
+
+// API types for frontend communication
+export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+export type HttpStatusCode = 200 | 201 | 400 | 401 | 403 | 404 | 409 | 422 | 500 | 503;
+
+// API Response types
+export interface ApiResponse<T = unknown> {
+  readonly success: boolean;
+  readonly data?: T;
+  readonly message?: string;
+  readonly error?: string;
+  readonly timestamp: string;
+  readonly requestId: string;
+}
+
+// Structured error types
+export interface ApiError {
+  readonly statusCode: HttpStatusCode;
+  readonly error: string;
+  readonly message: string;
+  readonly details?: Record<string, unknown>;
+  readonly timestamp: string;
+  readonly path?: string;
+}
+
+// Authentication types for API requests
+export interface LoginRequest {
+  readonly email: string;
+  readonly password: string;
+  readonly rememberMe?: boolean;
+  readonly deviceId?: string;
+}
+
+export interface LoginResponse {
+  readonly user: BackendUser; // This will be converted to frontend User
+  readonly accessToken: string;
+  readonly refreshToken: string;
+  readonly expiresAt: number;
+  readonly tokenType: 'Bearer';
+}
+
+export interface RegisterRequest {
+  readonly email: string;
+  readonly password: string;
+  readonly nickname: string;
+  readonly acceptTerms: true;
+}
+
+// Backend user type for API responses (before conversion)
+export interface BackendUser {
+  readonly id: number;
+  readonly username: string;
+  readonly nickname?: string;
+  readonly email: string;
+  readonly avatarUrl?: string;
+  readonly twoFactorEnabled: boolean;
+  readonly gamesPlayed: number;
+  readonly gamesWon: number;
+  readonly friends: readonly BackendFriend[];
+  readonly matchHistory: readonly BackendGameMatch[];
+}
+
+export interface BackendFriend {
+  readonly id: number;
+  readonly user: BackendUser;
+  readonly status: 'pending' | 'accepted' | 'blocked';
+  readonly createdAt: string;
+}
+
+export interface BackendGameMatch {
+  readonly id: number;
+  readonly player1: BackendUser;
+  readonly player2: BackendUser | null;
+  readonly player1Score: number;
+  readonly player2Score: number;
+  readonly gameMode: string;
+  readonly startedAt: string;
+  readonly endedAt?: string;
+  readonly winner?: number;
+}
+
+// WebSocket types
+export type WebSocketMessageType = 
+  | 'game_update'
+  | 'friend_status'
+  | 'system_message';
+
+export interface WebSocketMessage<T = unknown> {
+  readonly type: WebSocketMessageType;
+  readonly payload: T;
+  readonly timestamp: string;
+  readonly id: string;
+}
+
+// Utility types
+export type Prettify<T> = {
+  [K in keyof T]: T[K];
+} & {};
+
+export type DeepReadonly<T> = {
+  readonly [P in keyof T]: T[P] extends (infer U)[]
+    ? ReadonlyArray<DeepReadonly<U>>
+    : T[P] extends Record<string, unknown>
+    ? DeepReadonly<T[P]>
+    : T[P];
+}; 

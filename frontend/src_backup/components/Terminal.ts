@@ -1,5 +1,3 @@
-// Removed unused import
-
 export class Terminal {
   private terminalElement: HTMLElement;
   private outputElement: HTMLElement;
@@ -39,7 +37,6 @@ Please login to continue.`;
     this.inputElement.setAttribute('type', 'text');
     this.inputElement.setAttribute('autocomplete', 'off');
     this.inputElement.setAttribute('spellcheck', 'false');
-    this.inputElement.setAttribute('placeholder', '');
     
     this.inputElement.addEventListener('keydown', this.handleInputKeydown.bind(this));
     
@@ -72,8 +69,6 @@ Please login to continue.`;
 
   public appendOutput(text: string): void {
     const messageElement = document.createElement('div');
-    
-    // Handle regular terminal output
     messageElement.className = 'text-terminal-green';
     if (text.startsWith('$')) {
       messageElement.className += ' opacity-75';

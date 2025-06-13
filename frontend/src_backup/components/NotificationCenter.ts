@@ -1,6 +1,4 @@
 import { Notification } from '../models/Types';
-import { ApiClient } from '../services/ApiClient';
-import { getConfig } from '../config/environment';
 
 export class NotificationCenter {
   private notifications: Notification[] = [];
@@ -9,22 +7,13 @@ export class NotificationCenter {
   private unreadCount: number = 0;
   private disabled: boolean = false;
   private onNotificationAction: (notification: Notification) => void;
-  private apiClient: ApiClient;
-  private config = getConfig();
-  private mockInterval?: number;
 
-  constructor(onNotificationAction: (notification: Notification) => void, apiClient: ApiClient) {
+  constructor(onNotificationAction: (notification: Notification) => void) {
     this.container = document.createElement('div');
     this.button = document.createElement('div');
     this.onNotificationAction = onNotificationAction;
-    this.apiClient = apiClient;
     this.setupContainer();
     this.setupButton();
-    
-    // Mock 데이터 사용 시 주기적으로 가짜 알림 생성
-    if (this.config.useMockData) {
-      this.startMockNotifications();
-    }
   }
 
   private setupContainer() {
@@ -168,8 +157,7 @@ export class NotificationCenter {
       const acceptButton = document.createElement('button');
       acceptButton.className = 'px-2 py-1 text-sm bg-terminal-green text-terminal-black rounded hover:bg-terminal-darkGreen transition-colors';
       acceptButton.textContent = 'Accept';
-      acceptButton.onclick = async () => {
-        await this.handleNotificationResponse(notification, 'accept');
+      acceptButton.onclick = () => {
         this.onNotificationAction(notification);
         this.notifications = this.notifications.filter(n => n.id !== notification.id);
         this.unreadCount = Math.max(0, this.unreadCount - 1);
@@ -180,8 +168,7 @@ export class NotificationCenter {
       const declineButton = document.createElement('button');
       declineButton.className = 'px-2 py-1 text-sm bg-terminal-red text-white rounded hover:bg-opacity-80 transition-colors';
       declineButton.textContent = 'Decline';
-      declineButton.onclick = async () => {
-        await this.handleNotificationResponse(notification, 'decline');
+      declineButton.onclick = () => {
         this.notifications = this.notifications.filter(n => n.id !== notification.id);
         this.unreadCount = Math.max(0, this.unreadCount - 1);
         this.updateUnreadBadge();
@@ -199,92 +186,5 @@ export class NotificationCenter {
     });
 
     this.container.appendChild(notificationList);
-  }
-
-  // Mock 알림 생성 (개발 환경에서만)
-  private startMockNotifications(): void {
-    if (!this.config.useMockData) return;
-    
-    // 30초마다 랜덤 알림 생성
-    this.mockInterval = window.setInterval(() => {
-      if (!this.disabled && this.apiClient.isAuthenticated()) {
-        this.generateMockNotification();
-      }
-    }, 30000);
-  }
-
-  private generateMockNotification(): void {
-    const mockNotifications = [
-      {
-        id: `mock_${Date.now()}`,
-        type: 'friend_request' as const,
-        title: 'Friend Request',
-        message: 'MockUser wants to be your friend',
-        timestamp: new Date().toISOString(),
-        read: false,
-        data: { username: 'MockUser' }
-      },
-      {
-        id: `mock_${Date.now()}`,
-        type: 'game_invite' as const,
-        title: 'Game Invitation',
-        message: 'TestPlayer invited you to a game',
-        timestamp: new Date().toISOString(),
-        read: false,
-        data: { username: 'TestPlayer', gameMode: '1v1' }
-      },
-      {
-        id: `mock_${Date.now()}`,
-        type: 'system' as const,
-        title: 'System Message',
-        message: 'Your account has been verified',
-        timestamp: new Date().toISOString(),
-        read: false,
-        data: {}
-      }
-    ];
-
-    const randomNotification = mockNotifications[Math.floor(Math.random() * mockNotifications.length)];
-    this.addNotification(randomNotification);
-  }
-
-  // 실제 API에서 알림 가져오기
-  public async fetchNotifications(): Promise<void> {
-    if (this.config.useMockData || this.disabled) return;
-    
-    try {
-      // 실제 API 호출 (향후 구현)
-      // const notifications = await this.apiClient.getNotifications();
-      // notifications.forEach(notification => this.addNotification(notification));
-      
-      console.log('Real API notification fetch would happen here');
-    } catch (error) {
-      console.error('Failed to fetch notifications:', error);
-    }
-  }
-
-  // 알림 응답 처리 (Accept/Decline)
-  public async handleNotificationResponse(notification: Notification, action: 'accept' | 'decline'): Promise<void> {
-    if (this.config.useMockData) {
-      // Mock 응답 처리
-      console.log(`Mock ${action} for notification:`, notification.id);
-      return;
-    }
-
-    try {
-      // 실제 API 호출 (향후 구현)
-      // await this.apiClient.respondToNotification(notification.id, action);
-      
-      console.log(`Real API ${action} response would be sent for notification:`, notification.id);
-    } catch (error) {
-      console.error(`Failed to ${action} notification:`, error);
-    }
-  }
-
-  // 정리 메서드
-  public destroy(): void {
-    if (this.mockInterval) {
-      clearInterval(this.mockInterval);
-    }
   }
 }

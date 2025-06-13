@@ -1,34 +1,24 @@
+import { ApiResponse } from '../types/api';
 import { getConfig } from '../config/environment';
 
-export class ApiError extends Error {
-  constructor(
-    public status: number, 
-    public statusText: string, 
-    public data?: any
-  ) {
-    super(`${status}: ${statusText}`);
-    this.name = 'ApiError';
-  }
-}
-
-export abstract class BaseApiService {
+export class BaseApiService {
   protected baseUrl: string;
   protected token: string | null = null;
-  protected config = getConfig();
+  private config = getConfig();
 
   constructor(baseUrl?: string) {
     this.baseUrl = baseUrl || this.config.apiUrl;
     // localStorage에서 토큰 복원
-    this.token = localStorage.getItem('auth_token');
+    this.token = localStorage.getItem('authToken');
   }
 
   // 토큰 설정
   public setToken(token: string | null): void {
     this.token = token;
     if (token) {
-      localStorage.setItem('auth_token', token);
+      localStorage.setItem('authToken', token);
     } else {
-      localStorage.removeItem('auth_token');
+      localStorage.removeItem('authToken');
     }
   }
 
@@ -42,27 +32,11 @@ export abstract class BaseApiService {
     return !!this.token;
   }
 
-  // 토큰 제거
-  public clearToken(): void {
-    this.token = null;
-    localStorage.removeItem('auth_token');
-  }
-
-  // Mock 데이터 사용 여부 확인
-  public shouldUseMockData(): boolean {
-    return this.config.useMockData;
-  }
-
-  // HTTP 요청 메서드 (환경설정 기반)
+  // HTTP 요청 메서드
   protected async request<T>(
     endpoint: string,
     options: RequestInit = {}
-  ): Promise<T> {
-    // Mock 데이터 사용 시 실제 요청 대신 모킹된 응답 반환
-    if (this.config.useMockData) {
-      return this.getMockResponse<T>(endpoint, options);
-    }
-
+  ): Promise<ApiResponse<T>> {
     const url = `${this.baseUrl}${endpoint}`;
     
     // 기본 헤더 설정
@@ -95,19 +69,8 @@ export abstract class BaseApiService {
 
       const response = await fetch(url, requestOptions);
       
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        const apiError = new ApiError(response.status, response.statusText, errorData);
-        
-        // 401 Unauthorized - 토큰 만료 또는 인증 실패
-        if (response.status === 401) {
-          this.handleUnauthorized();
-        }
-        
-        throw apiError;
-      }
-
-      const responseData = await response.json();
+      // 응답 처리
+      const responseData = await this.handleResponse<T>(response);
       
       if (this.config.enableLogging) {
         console.log(`API Response: ${response.status}`, responseData);
@@ -116,21 +79,75 @@ export abstract class BaseApiService {
       return responseData;
     } catch (error) {
       console.error(`API Error: ${url}`, error);
-      throw error;
+      return this.handleError(error);
     }
   }
 
-  // Mock 응답 생성 (하위 클래스에서 구현)
-  protected abstract getMockResponse<T>(endpoint: string, options: RequestInit): Promise<T>;
+  // 응답 처리
+  private async handleResponse<T>(response: Response): Promise<ApiResponse<T>> {
+    try {
+      // 응답이 성공적이지 않은 경우
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        
+        // 401 Unauthorized - 토큰 만료 또는 인증 실패
+        if (response.status === 401) {
+          this.handleUnauthorized();
+          return {
+            success: false,
+            error: errorData.message || 'Authentication failed',
+          };
+        }
+
+        // 기타 HTTP 에러
+        return {
+          success: false,
+          error: errorData.message || `HTTP ${response.status}: ${response.statusText}`,
+        };
+      }
+
+      // 성공적인 응답 처리
+      const data = await response.json();
+      return {
+        success: true,
+        data: data.data || data, // Backend 응답 구조에 따라 조정
+        message: data.message,
+      };
+    } catch (error) {
+      return this.handleError(error);
+    }
+  }
+
+  // 에러 처리
+  private handleError(error: any): ApiResponse<never> {
+    let errorMessage = 'An unknown error occurred';
+
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    } else if (typeof error === 'string') {
+      errorMessage = error;
+    } else if (error?.message) {
+      errorMessage = error.message;
+    }
+
+    return {
+      success: false,
+      error: errorMessage,
+    };
+  }
 
   // 인증 실패 처리
   private handleUnauthorized(): void {
-    this.clearToken();
+    // 토큰 제거
+    this.setToken(null);
+    
+    // 사용자를 로그인 페이지로 리디렉션하거나 로그아웃 처리
+    // 이 부분은 애플리케이션의 상태 관리에 따라 구현
     console.warn('Authentication failed. Token cleared.');
   }
 
   // GET 요청
-  protected async get<T>(endpoint: string): Promise<T> {
+  protected async get<T>(endpoint: string): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, { method: 'GET' });
   }
 
@@ -139,7 +156,7 @@ export abstract class BaseApiService {
     endpoint: string,
     data?: any,
     isFormData = false
-  ): Promise<T> {
+  ): Promise<ApiResponse<T>> {
     const options: RequestInit = {
       method: 'POST',
     };
@@ -162,7 +179,7 @@ export abstract class BaseApiService {
     endpoint: string,
     data?: any,
     isFormData = false
-  ): Promise<T> {
+  ): Promise<ApiResponse<T>> {
     const options: RequestInit = {
       method: 'PUT',
     };
@@ -180,7 +197,7 @@ export abstract class BaseApiService {
   }
 
   // DELETE 요청
-  protected async delete<T>(endpoint: string): Promise<T> {
+  protected async delete<T>(endpoint: string): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, { method: 'DELETE' });
   }
 }

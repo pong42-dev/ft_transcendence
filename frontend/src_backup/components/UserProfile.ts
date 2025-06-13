@@ -1,4 +1,4 @@
-import { User, MatchHistory } from '../types/types.js';
+import { User, MatchHistory } from '../models/Types';
 
 export class UserProfile {
   private user: User;

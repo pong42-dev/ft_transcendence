@@ -218,8 +218,7 @@ export class App {
     this.terminalContainer.appendChild(terminalWrapper);
   }
 
-  private handleCommand(command: string): void {
-    const cmd = command;
+  private async handleCommand(command: string): Promise<void> {
     const parts = command.trim().split(' ');
     const commandName = parts[0].toLowerCase();
 
@@ -317,41 +316,18 @@ export class App {
           return;
         }
 
-        const email = parts[1];
-        const password = parts[2];
+        const registerEmail = parts[1];
+        const registerPassword = parts[2];
         const nickname = parts.slice(3).join(' ');
 
-        if (!this.validateEmail(email)) {
+        if (!this.validateEmail(registerEmail)) {
           this.terminal.appendOutput(
             'Invalid email format. Please use a valid email address.'
           );
           return;
         }
 
-        try {
-          this.terminal.appendOutput('Creating your account...');
-          const user = this.authService.register(email, password, nickname);
-
-          const fileModal = new FileModal((file: File) => {
-            if (user) {
-              const mockUrl = URL.createObjectURL(file);
-              user.avatarUrl = mockUrl;
-              this.state.isLoggedIn = true;
-              this.state.currentUser = user;
-              this.terminal.reset();
-              this.terminal.appendOutput(`Welcome, ${nickname}!`);
-              this.terminal.appendOutput(
-                'Type "help" to see available commands.'
-              );
-              this.render();
-            }
-          });
-          fileModal.show();
-        } catch (error) {
-          this.terminal.appendOutput(
-            'Registration failed. Email already exists.'
-          );
-        }
+        await this.handleRegister(registerEmail, registerPassword, nickname);
         break;
 
       case 'clear':
@@ -360,12 +336,7 @@ export class App {
 
       case 'logout':
         if (this.state.isLoggedIn) {
-          this.state.isLoggedIn = false;
-          this.state.currentUser = null;
-          this.state.isInGame = false;
-          this.userProfile = null;
-          this.terminal.reset();
-          this.render();
+          await this.handleLogout();
         }
         break;
 
@@ -443,232 +414,205 @@ export class App {
           return;
         }
 
-        switch (parts[0]) {
-          case 'set':
-            if (parts.length < 2) {
-              this.terminal.appendOutput(
-                'Usage: set <setting> <value>\n' +
-                  'Available settings:\n' +
-                  '  nickname     - Change your nickname\n' +
-                  '  avatar      - Change your avatar image\n' +
-                  '  2fa         - Enable/disable 2FA (enable/disable)'
-              );
-              return;
-            }
+        // Handle logged-in user commands
+        await this.handleLoggedInCommands(parts);
+    }
+  }
 
-            switch (parts[1]) {
-              case 'nickname':
-                if (parts.length < 3) {
-                  this.terminal.appendOutput(
-                    'Usage: set nickname <new-nickname>'
-                  );
-                  return;
-                }
-                const newNickname = parts.slice(2).join(' ');
-                if (this.state.currentUser) {
-                  this.state.currentUser.nickname = newNickname;
-                  this.terminal.appendOutput(
-                    `New nickname: ${newNickname}`
-                  );
-                  this.terminal.appendOutput(
-                    'Nickname updated successfully.'
-                  );
-                  this.render();
-                }
-                break;
+  private async handleLoggedInCommands(parts: string[]): Promise<void> {
+    switch (parts[0]) {
+      case 'set':
+        this.handleSetCommand(parts);
+        break;
 
-              case 'avatar':
-                const fileModal = new FileModal((file: File) => {
-                  if (this.state.currentUser) {
-                    const mockUrl = URL.createObjectURL(file);
-                    this.state.currentUser.avatarUrl = mockUrl;
-                    if (this.userProfile) {
-                      this.userProfile.updateUser(this.state.currentUser);
-                    }
-                    this.terminal.appendOutput(
-                      'Avatar updated successfully.'
-                    );
-                    this.render();
-                  }
-                });
-                fileModal.show();
-                break;
+      case 'notify':
+        this.handleNotifyCommand();
+        break;
 
-              case '2fa':
-                if (
-                  parts.length < 3 ||
-                  !['enable', 'disable'].includes(parts[2])
-                ) {
-                  this.terminal.appendOutput(
-                    'Usage: set 2fa <enable|disable>'
-                  );
-                  return;
-                }
+      case 'friend':
+        this.handleFriendCommand(parts);
+        break;
 
-                const isEnabling = parts[2] === 'enable';
-                if (this.state.currentUser?.twoFactorEnabled === isEnabling) {
-                  this.terminal.appendOutput(
-                    `2FA is already ${isEnabling ? 'enabled' : 'disabled'}.`
-                  );
-                  return;
-                }
+      default:
+        this.terminal.appendOutput(`Command not found: ${parts.join(' ')}`);
+    }
+  }
 
-                this.terminal.appendOutput(
-                  `Verification code sent to ${this.state.currentUser?.username}`
-                );
-                this.terminal.appendOutput(
-                  'Please enter the verification code:'
-                );
-                this.awaitingTwoFactorCode = true;
-                break;
+  private handleSetCommand(parts: string[]): void {
+    if (parts.length < 2) {
+      this.terminal.appendOutput(
+        'Usage: set <setting> <value>\n' +
+          'Available settings:\n' +
+          '  nickname     - Change your nickname\n' +
+          '  avatar      - Change your avatar image\n' +
+          '  2fa         - Enable/disable 2FA (enable/disable)'
+      );
+      return;
+    }
 
-              default:
-                this.terminal.appendOutput(
-                  'Invalid setting. Use "set" without arguments to see available settings.'
-                );
-            }
-            break;
-
-          case 'notify':
-            const notificationTypes = [
-              'friend_request',
-              'game_invite',
-            ] as const;
-            const type =
-              notificationTypes[
-                Math.floor(Math.random() * notificationTypes.length)
-              ];
-
-            let notification: Notification;
-
-            switch (type) {
-              case 'friend_request':
-                notification = {
-                  id: Math.random().toString(36).substring(7),
-                  type: 'friend_request',
-                  title: 'Friend Request',
-                  message: 'TestUser wants to be your friend',
-                  sender: 'TestUser',
-                  timestamp: Date.now(),
-                  read: false,
-                };
-                break;
-              case 'game_invite':
-                notification = {
-                  id: Math.random().toString(36).substring(7),
-                  type: 'game_invite',
-                  title: 'Game Invitation',
-                  message: 'TestUser invited you to a game',
-                  sender: 'TestUser',
-                  timestamp: Date.now(),
-                  read: false,
-                };
-                break;
-            }
-
-            this.notificationCenter.addNotification(notification);
-            this.terminal.appendOutput('Test notification created!');
-            break;
-
-          case 'friend':
-            if (parts.length < 2) {
-              this.terminal.appendOutput(
-                'Usage: friend list/block/unblock/remove <username>'
-              );
-              return;
-            }
-
-            switch (parts[1]) {
-              case 'list':
-                if (this.state.currentUser) {
-                  const friends = this.authService.getFriends(
-                    this.state.currentUser.username
-                  );
-                  if (friends.length === 0) {
-                    this.terminal.appendOutput('No friends yet.');
-                  } else {
-                    this.terminal.appendOutput(
-                      'Friends List:\nUsername    Nickname    Status     Blocked\n----------------------------------------'
-                    );
-                    friends.forEach((friend) => {
-                      const username = friend.username.padEnd(11);
-                      const nickname = friend.nickname.padEnd(11);
-                      const status = friend.status.padEnd(10);
-                      const blocked = friend.blocked ? 'Yes' : 'No';
-                      this.terminal.appendOutput(
-                        `${username}${nickname}${status}${blocked}`
-                      );
-                    });
-                    this.terminal.appendOutput(
-                      '\nCommands:\n' +
-                        '  friend block <username>   - Block user\n' +
-                        '  friend unblock <username> - Unblock user\n' +
-                        '  friend remove <username>  - Remove from friends'
-                    );
-                  }
-                }
-                break;
-
-              case 'block':
-                if (parts.length < 3) {
-                  this.terminal.appendOutput(
-                    'Usage: friend block <username>'
-                  );
-                  return;
-                }
-                if (this.state.currentUser) {
-                  this.authService.toggleBlockFriend(
-                    this.state.currentUser.username,
-                    parts[2]
-                  );
-                  this.terminal.appendOutput(`Blocked ${parts[2]}`);
-                }
-                break;
-
-              case 'unblock':
-                if (parts.length < 3) {
-                  this.terminal.appendOutput(
-                    'Usage: friend unblock <username>'
-                  );
-                  return;
-                }
-                if (this.state.currentUser) {
-                  this.authService.toggleBlockFriend(
-                    this.state.currentUser.username,
-                    parts[2]
-                  );
-                  this.terminal.appendOutput(`Unblocked ${parts[2]}`);
-                }
-                break;
-
-              case 'remove':
-                if (parts.length < 3) {
-                  this.terminal.appendOutput(
-                    'Usage: friend remove <username>'
-                  );
-                  return;
-                }
-                if (this.state.currentUser) {
-                  this.authService.removeFriend(
-                    this.state.currentUser.username,
-                    parts[2]
-                  );
-                  this.terminal.appendOutput(
-                    `Removed ${parts[2]} from friends`
-                  );
-                }
-                break;
-
-              default:
-                this.terminal.appendOutput(
-                  'Usage: friend list/block/unblock/remove <username>'
-                );
-            }
-            break;
-
-          default:
-            this.terminal.appendOutput(`Command not found: ${cmd}`);
+    switch (parts[1]) {
+      case 'nickname':
+        if (parts.length < 3) {
+          this.terminal.appendOutput('Usage: set nickname <new-nickname>');
+          return;
         }
+        const newNickname = parts.slice(2).join(' ');
+        if (this.state.currentUser) {
+          this.state.currentUser.nickname = newNickname;
+          this.terminal.appendOutput(`New nickname: ${newNickname}`);
+          this.terminal.appendOutput('Nickname updated successfully.');
+          this.render();
+        }
+        break;
+
+      case 'avatar':
+        const fileModal = new FileModal((file: File) => {
+          if (this.state.currentUser) {
+            const mockUrl = URL.createObjectURL(file);
+            this.state.currentUser.avatarUrl = mockUrl;
+            if (this.userProfile) {
+              this.userProfile.updateUser(this.state.currentUser);
+            }
+            this.terminal.appendOutput('Avatar updated successfully.');
+            this.render();
+          }
+        });
+        fileModal.show();
+        break;
+
+      case '2fa':
+        if (parts.length < 3 || !['enable', 'disable'].includes(parts[2])) {
+          this.terminal.appendOutput('Usage: set 2fa <enable|disable>');
+          return;
+        }
+
+        const isEnabling = parts[2] === 'enable';
+        if (this.state.currentUser?.twoFactorEnabled === isEnabling) {
+          this.terminal.appendOutput(
+            `2FA is already ${isEnabling ? 'enabled' : 'disabled'}.`
+          );
+          return;
+        }
+
+        this.terminal.appendOutput(
+          `Verification code sent to ${this.state.currentUser?.username}`
+        );
+        this.terminal.appendOutput('Please enter the verification code:');
+        this.awaitingTwoFactorCode = true;
+        break;
+
+      default:
+        this.terminal.appendOutput(
+          'Invalid setting. Use "set" without arguments to see available settings.'
+        );
+    }
+  }
+
+  private handleNotifyCommand(): void {
+    const notificationTypes = ['friend_request', 'game_invite'] as const;
+    const type = notificationTypes[Math.floor(Math.random() * notificationTypes.length)];
+
+    let notification: Notification;
+
+    switch (type) {
+      case 'friend_request':
+        notification = {
+          id: Math.random().toString(36).substring(7),
+          type: 'friend_request',
+          title: 'Friend Request',
+          message: 'TestUser wants to be your friend',
+          sender: 'TestUser',
+          timestamp: Date.now(),
+          read: false,
+        };
+        break;
+      case 'game_invite':
+        notification = {
+          id: Math.random().toString(36).substring(7),
+          type: 'game_invite',
+          title: 'Game Invitation',
+          message: 'TestUser invited you to a game',
+          sender: 'TestUser',
+          timestamp: Date.now(),
+          read: false,
+        };
+        break;
+    }
+
+    this.notificationCenter.addNotification(notification);
+    this.terminal.appendOutput('Test notification created!');
+  }
+
+  private handleFriendCommand(parts: string[]): void {
+    if (parts.length < 2) {
+      this.terminal.appendOutput(
+        'Usage: friend list/block/unblock/remove <username>'
+      );
+      return;
+    }
+
+    switch (parts[1]) {
+      case 'list':
+        if (this.state.currentUser) {
+          const friends = this.authService.getFriends(this.state.currentUser.username);
+          if (friends.length === 0) {
+            this.terminal.appendOutput('No friends yet.');
+          } else {
+            this.terminal.appendOutput(
+              'Friends List:\nUsername    Nickname    Status     Blocked\n----------------------------------------'
+            );
+            friends.forEach((friend) => {
+              const username = friend.username.padEnd(11);
+              const nickname = friend.nickname.padEnd(11);
+              const status = friend.status.padEnd(10);
+              const blocked = friend.blocked ? 'Yes' : 'No';
+              this.terminal.appendOutput(`${username}${nickname}${status}${blocked}`);
+            });
+            this.terminal.appendOutput(
+              '\nCommands:\n' +
+                '  friend block <username>   - Block user\n' +
+                '  friend unblock <username> - Unblock user\n' +
+                '  friend remove <username>  - Remove from friends'
+            );
+          }
+        }
+        break;
+
+      case 'block':
+        if (parts.length < 3) {
+          this.terminal.appendOutput('Usage: friend block <username>');
+          return;
+        }
+        if (this.state.currentUser) {
+          this.authService.toggleBlockFriend(this.state.currentUser.username, parts[2]);
+          this.terminal.appendOutput(`Blocked ${parts[2]}`);
+        }
+        break;
+
+      case 'unblock':
+        if (parts.length < 3) {
+          this.terminal.appendOutput('Usage: friend unblock <username>');
+          return;
+        }
+        if (this.state.currentUser) {
+          this.authService.toggleBlockFriend(this.state.currentUser.username, parts[2]);
+          this.terminal.appendOutput(`Unblocked ${parts[2]}`);
+        }
+        break;
+
+      case 'remove':
+        if (parts.length < 3) {
+          this.terminal.appendOutput('Usage: friend remove <username>');
+          return;
+        }
+        if (this.state.currentUser) {
+          this.authService.removeFriend(this.state.currentUser.username, parts[2]);
+          this.terminal.appendOutput(`Removed ${parts[2]} from friends`);
+        }
+        break;
+
+      default:
+        this.terminal.appendOutput('Usage: friend list/block/unblock/remove <username>');
     }
   }
 
@@ -752,4 +696,74 @@ export class App {
         const user = this.authService.register(email, password, nickname);
 
         const fileModal = new FileModal((file: File) => {
-          if
+          if (user) {
+            const mockUrl = URL.createObjectURL(file);
+            user.avatarUrl = mockUrl;
+            this.state.isLoggedIn = true;
+            this.state.currentUser = user;
+            this.terminal.reset();
+            this.terminal.appendOutput(`Welcome, ${nickname}!`);
+            this.terminal.appendOutput('Type "help" to see available commands.');
+            this.render();
+          }
+        });
+        fileModal.show();
+      } catch (error) {
+        this.terminal.appendOutput('Registration failed. Email already exists.');
+      }
+    } else {
+      // 실제 API 사용
+      this.terminal.appendOutput('Creating your account...');
+      
+      const response = await apiService.auth.register(email, password, nickname);
+      
+      if (response.success && response.data) {
+        this.state.isLoggedIn = true;
+        this.state.currentUser = {
+          ...response.data.user,
+          gamesPlayed: 0,
+          gamesWon: 0,
+          achievements: [],
+          notifications: [],
+          friends: [],
+          matchHistory: []
+        };
+        this.terminal.reset();
+        this.terminal.appendOutput(`Welcome, ${nickname}!`);
+        this.terminal.appendOutput('Type "help" to see available commands.');
+        this.render();
+      } else {
+        this.terminal.appendOutput(`Registration failed: ${response.error || 'Unknown error'}`);
+      }
+    }
+  }
+
+  // Google 로그인 처리
+  private async handleGoogleLogin(): Promise<void> {
+    if (apiService.shouldUseMockData()) {
+      // Mock 처리
+      this.terminal.appendOutput('Google login not available in mock mode');
+      return;
+    }
+
+    this.terminal.appendOutput('Redirecting to Google login...');
+    // 실제 Google OAuth 구현은 추후 추가
+    this.terminal.appendOutput('Google login implementation pending...');
+  }
+
+  // 로그아웃 처리
+  private async handleLogout(): Promise<void> {
+    if (!apiService.shouldUseMockData() && this.state.isLoggedIn) {
+      // 실제 API 로그아웃 호출
+      await apiService.auth.logout();
+    }
+    
+    // 로컬 상태 초기화
+    this.state.isLoggedIn = false;
+    this.state.currentUser = null;
+    this.state.isInGame = false;
+    this.userProfile = null;
+    this.terminal.reset();
+    this.render();
+  }
+}

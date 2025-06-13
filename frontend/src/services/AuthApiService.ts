@@ -1,165 +1,196 @@
-import { BaseApiService } from './BaseApiService';
-import { 
-  ApiResponse, 
-  AuthResult, 
-  LoginRequest, 
-  RegisterRequest, 
-  GoogleAuthRequest,
-  RefreshTokenRequest,
-  User 
-} from '../types/api';
+import { BaseApiService, ApiError } from './BaseApiService';
+import * as Types from '../types/types';
 
 export class AuthApiService extends BaseApiService {
   constructor() {
     super();
   }
 
-  // 로그인
-  async login(email: string, password: string): Promise<ApiResponse<AuthResult>> {
-    const loginData: LoginRequest = { email, password };
+  // Mock 응답 생성 (BaseApiService의 추상 메서드 구현)
+  protected async getMockResponse<T>(endpoint: string, options: RequestInit): Promise<T> {
+    // Mock 데이터 시뮬레이션을 위한 지연
+    await new Promise(resolve => setTimeout(resolve, 100 + Math.random() * 400));
     
-    const response = await this.post<AuthResult>('/users/login/local', loginData);
+    const method = options.method || 'GET';
     
-    // 로그인 성공 시 토큰 저장
-    if (response.success && response.data) {
-      this.setToken(response.data.token);
-      // 리프레시 토큰도 저장
-      localStorage.setItem('refreshToken', response.data.refreshToken);
+    // Mock 응답 생성 로직
+    if (endpoint.includes('/users/login/local') || endpoint.includes('/auth/login')) {
+      return {
+        user: {
+          id: 1,
+          username: 'mockuser',
+          nickname: 'Mock User',
+          email: 'mock@example.com',
+          avatarUrl: '',
+          twoFactorEnabled: false,
+          gamesPlayed: 10,
+          gamesWon: 6,
+          friends: [],
+          matchHistory: []
+        },
+        accessToken: 'mock_token_' + Date.now(),
+        refreshToken: 'mock_refresh_' + Date.now(),
+        expiresAt: Date.now() + 3600000,
+        tokenType: 'Bearer' as const
+      } as T;
     }
     
-    return response;
+    if (endpoint.includes('/users/register') || endpoint.includes('/auth/register')) {
+      return {
+        user: {
+          id: 2,
+          username: 'newuser',
+          nickname: 'New User',
+          email: 'new@example.com',
+          avatarUrl: '',
+          twoFactorEnabled: false,
+          gamesPlayed: 0,
+          gamesWon: 0,
+          friends: [],
+          matchHistory: []
+        },
+        accessToken: 'mock_token_' + Date.now(),
+        refreshToken: 'mock_refresh_' + Date.now(),
+        expiresAt: Date.now() + 3600000,
+        tokenType: 'Bearer' as const
+      } as T;
+    }
+    
+    if (endpoint.includes('/users/me') || endpoint.includes('/users/profile')) {
+      return {
+        id: 1,
+        username: 'mockuser',
+        nickname: 'Mock User',
+        email: 'mock@example.com',
+        avatarUrl: '',
+        twoFactorEnabled: false,
+        gamesPlayed: 10,
+        gamesWon: 6,
+        friends: [],
+        matchHistory: []
+      } as T;
+    }
+
+    if (endpoint.includes('/users/') && method === 'GET') {
+      return {
+        id: 3,
+        username: 'searcheduser',
+        nickname: 'Searched User',
+        email: 'searched@example.com',
+        avatarUrl: '',
+        twoFactorEnabled: false,
+        gamesPlayed: 5,
+        gamesWon: 3,
+        friends: [],
+        matchHistory: []
+      } as T;
+    }
+
+    if (endpoint.includes('/users/check-email')) {
+      return { available: true } as T;
+    }
+
+    if (endpoint.includes('/users/check-name')) {
+      return { available: true } as T;
+    }
+
+    // 기본 성공 응답
+    return { success: true } as T;
+  }
+
+  // Type conversion utilities
+  private convertBackendUserToFrontendUser(backendUser: Types.BackendUser): Types.User {
+    return {
+      id: backendUser.id.toString(),
+      username: backendUser.username,
+      nickname: backendUser.nickname || '',
+      avatarUrl: backendUser.avatarUrl || '',
+      twoFactorEnabled: backendUser.twoFactorEnabled,
+      gamesPlayed: backendUser.gamesPlayed,
+      gamesWon: backendUser.gamesWon,
+      friends: backendUser.friends.map((f: Types.BackendFriend) => ({
+        username: f.user.username,
+        nickname: f.user.nickname || f.user.username,
+        status: 'offline' as 'online' | 'offline' | 'in-game',
+        blocked: f.status === 'blocked'
+      })),
+      matchHistory: backendUser.matchHistory.map((m: Types.BackendGameMatch) => ({
+        date: new Date(m.startedAt).toLocaleDateString(),
+        opponent: m.player2 ? m.player2.username : 'AI',
+        rank: 1,
+        type: m.gameMode === 'tournament' ? 'tournament' : '1v1',
+        my_score: m.player1.id === backendUser.id ? m.player1Score : m.player2Score,
+        opponent_score: m.player1.id === backendUser.id ? m.player2Score : m.player1Score
+      }))
+    };
+  }
+
+  // 로그인
+  async login(email: string, password: string): Promise<Types.User> {
+    const response = await this.post<Types.LoginResponse>('/auth/login', {
+      email, 
+      password
+    });
+    
+    this.setToken(response.accessToken);
+    return this.convertBackendUserToFrontendUser(response.user);
   }
 
   // 회원가입
-  async register(email: string, password: string, nickname: string): Promise<ApiResponse<AuthResult>> {
-    const registerData: RegisterRequest = { email, password, nickname };
+  async register(email: string, password: string, nickname: string): Promise<Types.User> {
+    const response = await this.post<Types.LoginResponse>('/auth/register', {
+      email, 
+      password, 
+      nickname
+    });
     
-    const response = await this.post<AuthResult>('/users/register', registerData);
-    
-    // 회원가입 성공 시 토큰 저장
-    if (response.success && response.data) {
-      this.setToken(response.data.token);
-      localStorage.setItem('refreshToken', response.data.refreshToken);
-    }
-    
-    return response;
-  }
-
-  // Google OAuth 로그인
-  async loginWithGoogle(googleToken: string): Promise<ApiResponse<AuthResult>> {
-    const googleData: GoogleAuthRequest = { googleToken };
-    
-    const response = await this.post<AuthResult>('/users/login/google', googleData);
-    
-    if (response.success && response.data) {
-      this.setToken(response.data.token);
-      localStorage.setItem('refreshToken', response.data.refreshToken);
-    }
-    
-    return response;
+    this.setToken(response.accessToken);
+    return this.convertBackendUserToFrontendUser(response.user);
   }
 
   // 로그아웃
-  async logout(): Promise<ApiResponse<{ success: boolean }>> {
-    const response = await this.post<{ success: boolean }>('/users/logout');
-    
-    // 로그아웃 성공 여부와 관계없이 로컬 토큰 제거
-    this.setToken(null);
-    localStorage.removeItem('refreshToken');
-    
-    return response;
+  async logout(): Promise<void> {
+    await this.post('/auth/logout', {});
+    this.clearToken();
   }
 
-  // 토큰 새로고침
-  async refreshToken(): Promise<ApiResponse<{ token: string; refreshToken: string }>> {
-    const refreshToken = localStorage.getItem('refreshToken');
+  // Google OAuth 로그인
+  async loginWithGoogle(): Promise<Types.User> {
+    const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=YOUR_CLIENT_ID&redirect_uri=${encodeURIComponent(window.location.origin)}&response_type=code&scope=email%20profile`;
+    window.location.href = googleAuthUrl;
     
-    if (!refreshToken) {
-      return {
-        success: false,
-        error: 'No refresh token available'
-      };
-    }
-
-    const refreshData: RefreshTokenRequest = { refreshToken };
-    
-    const response = await this.post<{ token: string; refreshToken: string }>(
-      '/users/refresh-token', 
-      refreshData
-    );
-    
-    if (response.success && response.data) {
-      this.setToken(response.data.token);
-      localStorage.setItem('refreshToken', response.data.refreshToken);
-    }
-    
-    return response;
+    throw new ApiError(501, 'Google OAuth not implemented', { message: 'Google login not yet implemented' });
   }
 
   // 현재 사용자 정보 조회
-  async getCurrentUser(): Promise<ApiResponse<User>> {
-    return this.get<User>('/users/profile');
+  async getCurrentUser(): Promise<Types.User> {
+    const user = await this.get<Types.BackendUser>('/users/me');
+    return this.convertBackendUserToFrontendUser(user);
   }
 
-  // 이메일 중복 확인
-  async checkEmail(email: string): Promise<ApiResponse<{ available: boolean }>> {
-    return this.post<{ available: boolean }>('/users/check-email', { email });
+  // 사용자 검색 (username으로)
+  async getUserByUsername(username: string): Promise<Types.User> {
+    const user = await this.get<Types.BackendUser>(`/users/${username}`);
+    return this.convertBackendUserToFrontendUser(user);
   }
 
-  // 닉네임 중복 확인
-  async checkNickname(nickname: string): Promise<ApiResponse<{ available: boolean }>> {
-    return this.post<{ available: boolean }>('/users/check-name', { nickname });
-  }
-
-  // 2FA 활성화
-  async enable2FA(): Promise<ApiResponse<{ qrCode: string; backupCodes: string[] }>> {
-    return this.post<{ qrCode: string; backupCodes: string[] }>('/auth/2fa/enable');
-  }
-
-  // 2FA 인증 코드 확인
-  async verify2FA(code: string): Promise<ApiResponse<{ success: boolean }>> {
-    return this.post<{ success: boolean }>('/auth/2fa/verify', { code });
-  }
-
-  // 2FA 비활성화
-  async disable2FA(code: string): Promise<ApiResponse<{ success: boolean }>> {
-    return this.post<{ success: boolean }>('/auth/2fa/disable', { code });
-  }
-
-  // 사용자 검색 (닉네임으로)
-  async searchUser(nickname: string): Promise<ApiResponse<User | null>> {
-    try {
-      const response = await this.get<User>(`/users/search/${encodeURIComponent(nickname)}`);
-      return response;
-    } catch (error) {
-      return {
-        success: false,
-        error: 'User not found'
-      };
-    }
+  // 사용자 검색 (query로)
+  async searchUsers(query: string): Promise<Types.User[]> {
+    const users = await this.get<Types.BackendUser[]>(`/users/search?q=${encodeURIComponent(query)}`);
+    return users.map(user => this.convertBackendUserToFrontendUser(user));
   }
 
   // 프로필 업데이트
-  async updateProfile(data: { nickname?: string }): Promise<ApiResponse<User>> {
-    return this.put<User>('/users/profile', data);
-  }
+  async updateUser(updates: Partial<Types.User>): Promise<Types.User> {
+    const backendUpdates: any = {};
+    if (updates.nickname !== undefined) {
+      backendUpdates.nickname = updates.nickname;
+    }
+    if (updates.avatarUrl !== undefined) {
+      backendUpdates.avatarUrl = updates.avatarUrl;
+    }
 
-  // 아바타 업로드
-  async uploadAvatar(file: File): Promise<ApiResponse<{ avatarUrl: string }>> {
-    const formData = new FormData();
-    formData.append('avatar', file);
-    
-    return this.post<{ avatarUrl: string }>('/users/avatar', formData, true);
-  }
-
-  // 아바타 삭제
-  async deleteAvatar(): Promise<ApiResponse<{ success: boolean }>> {
-    return this.delete<{ success: boolean }>('/users/avatar');
-  }
-
-  // 자동 토큰 새로고침 (토큰 만료 시 자동 호출)
-  async autoRefreshToken(): Promise<boolean> {
-    const response = await this.refreshToken();
-    return response.success;
+    const user = await this.put<Types.BackendUser>('/users/me', backendUpdates);
+    return this.convertBackendUserToFrontendUser(user);
   }
 }

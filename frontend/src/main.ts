@@ -4,3 +4,8 @@ import { App } from './components/App';
 // Initialize the application
 const app = new App();
 app.init();
+
+if (import.meta.env.DEV) {
+  console.log(`🚀 PONG-CLI initialized`);
+  console.log(`📅 Built at: ${new Date().toISOString()}`);
+}
