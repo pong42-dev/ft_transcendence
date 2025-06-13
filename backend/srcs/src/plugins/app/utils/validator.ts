@@ -9,7 +9,10 @@ declare module "fastify" {
 		isValidPassword: (password: string) => boolean;
 		isValidName: (name: string) => boolean;
 		isValidProfileImage: (file: MultipartFile) => boolean;
+
 		isValidRegisterFormData: (registerFormData: RegisterFormData) => string | null;
+		isValidProfileFormData: (registerFormData: RegisterFormData) => string | null;
+	
 		isValidChatMessage: (message: string) => boolean;
 	}
 }
@@ -66,6 +69,13 @@ function validateRegisterFormData(registerFormData: RegisterFormData): string | 
 	return null;
 }
 
+function validateProfileFormData(registerFormData: RegisterFormData) : string | null {
+	if (!validateProfileImageFormat(registerFormData.files.avatar)) {
+		return "Profile image must be JPEG, PNG, WEBP, or GIF, and <= 5MB.";
+	}
+	return null;
+}
+
 
 // Message must be non-empty, max 500 characters, no forbidden words or HTML tags
 // function validateChatMessage(message: string): boolean {
@@ -93,7 +103,10 @@ export default fp(
 		fastify.decorate("isValidPassword", validatePasswordFormat);
 		fastify.decorate("isValidName", validateNameFormat);
 		fastify.decorate("isValidProfileImage", validateProfileImageFormat);
+
 		fastify.decorate("isValidRegisterFormData", validateRegisterFormData);
+		fastify.decorate("isValidProfileFormData", validateProfileFormData);
+
 		// fastify.decorate("isValidChatMessage", validateChatMessage);
 	},
 	{

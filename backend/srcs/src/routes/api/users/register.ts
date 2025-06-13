@@ -20,6 +20,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 			schema: {
 				response: {
 					200: Type.Object({
+						success: Type.Literal(false),
 						msg: Type.String()
 					}),
 					201: Type.Object({
@@ -38,6 +39,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				const validFormDataMsg = isValidRegisterFormData(formData);
 				if (validFormDataMsg) {
 					return reply.status(200).send({ 
+						success: false,
 						msg: validFormDataMsg 
 					});
 				}
@@ -45,12 +47,14 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				const emailExists = await usersRepository.checkDupRow('email', email)
 				const nameExists = await userProfilesRepository.checkDupRow('name', name)
 				if (emailExists) {
-					return reply.status(200).send({ 
+					return reply.status(200).send({
+						success: false,
 						msg: 'This email is already registered.' 
 					});
 				}
 				if (nameExists) {
 					return reply.status(200).send({
+						success: false,
 						msg: 'This name is already registered.' 
 					});
 				}

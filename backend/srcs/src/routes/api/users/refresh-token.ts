@@ -16,6 +16,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 			schema: {
 				response: {
 					200: Type.Object({
+						success: Type.Literal(true),
 						msg: Type.String(),
 						data: Type.Object({
 							accessToken: Type.String()
@@ -49,7 +50,8 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 					return reply.status(401).send({ msg: 'Invalid or expired token.'});
 				}
 				const newAccessToken = fastify.jwt.sign({ user_id: decoded.user_id })
-				return reply.send({
+				return reply.status(200).send({
+					success: true,
 					msg: "Token refreshed successfully.",
 					data : {
 						accessToken: newAccessToken

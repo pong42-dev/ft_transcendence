@@ -30,13 +30,22 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 			try {
 				const { email } = request.body as UserEmail;
 				if (!isValidEmail(email)) {
-					return reply.status(200).send({ success: false, msg: 'Invalid email format.' });
+					return reply.status(200).send({ 
+						success: false, 
+						msg: 'Invalid email format.'
+					});
 				}
 				const emailExists = await usersRepository.checkDupRow('email', email)
 				if (emailExists) {
-					return reply.send({ success: false, msg: 'Email already exists.' })
+					return reply.send({ 
+						success: false,
+						msg: 'Email already exists.'
+					})
 				}
-				return reply.send({ success: true, msg: 'Email is available.' })
+				return reply.send({ 
+					success: true,
+					msg: 'Email is available.'
+				})
 			} catch (err) {
 				fastify.log.error(err)
 				return reply.status(500).send({ msg: 'An internal server error occurred during email duplication check.' })

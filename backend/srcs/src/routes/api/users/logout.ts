@@ -17,10 +17,11 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 			schema: {
 				response: {
 					200: Type.Object({
-						msg: Type.String(),
+						success: Type.Literal(true),
+						msg: Type.String()
 					}),
 					500: Type.Object({
-						msg: Type.String(),
+						msg: Type.String()
 					}),
 				},
 				tags: ["Users"],

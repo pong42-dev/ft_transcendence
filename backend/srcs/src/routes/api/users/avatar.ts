@@ -8,7 +8,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 	const { 
 		config, userProfilesRepository,
 		registerFormData, saveFile, fileManager,
-		authenticate, isValidProfileImage
+		authenticate, isValidProfileFormData
 	} = fastify;
 
 	fastify.put(
@@ -37,10 +37,11 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 		async (request: FastifyRequest, reply: FastifyReply) => {
 			try {
 				const formData = await registerFormData(request);
-				if (!isValidProfileImage(formData.files.avatar)) {
-					return reply.status(200).send({ 
+				const validFormDataMsg = isValidProfileFormData(formData);
+				if (validFormDataMsg) {
+					return reply.status(200).send({
 						success: false,
-						msg: 'Invalid avatar format.'
+						msg: validFormDataMsg 
 					});
 				}
 				const dirPath = config.UPLOAD_DIRNAME + '/' + config.UPLOAD_AVATAR_DIRNAME || 'uploads/avatars';
@@ -51,7 +52,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				if (user.avatar)
 					fileManager.deleteFile(user.avatar);
 				await userProfilesRepository.updateRowByColumn("user_id", user_id, "avatar", newAvatarPath);
-				return reply.send({
+				return reply.status(200).send({
 					success: true,
 					msg: 'Avatar has been successfully updated.'
 				});

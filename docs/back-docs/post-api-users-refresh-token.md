@@ -26,10 +26,11 @@ const data = await res.json();
 
 ### ✅ Response
 
-### ▶ Success – Token Refreshed (HTTP 200)
+### ▶ Success – Token Refreshed ()
 
 ```json
 {
+  "success": true,
   "msg": "Token refreshed successfully.",
 	"data" : {
 	  "accessToken": "..." // returned internally by loginManager

@@ -44,6 +44,7 @@ async function login(
 		const accessToken = await this.tokenManager.generateAccessToken(userData)
 		console.log("accessToken:", accessToken);
 		reply.status(200).send({
+			success: true,
 			msg: 'Successfully logged in.',
 			data: {
 				accessToken: accessToken

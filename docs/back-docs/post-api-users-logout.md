@@ -35,6 +35,7 @@ const data = await res.json();
 
 ```json
 {
+  "success": true,
   "msg": "Successfully logged out."
 }
 ```

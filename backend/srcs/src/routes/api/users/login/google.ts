@@ -36,6 +36,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 			querystring: GoogleCallbackQuerySchema,
 			response: {
 				200: Type.Object({
+					success: Type.Literal(false),
 					msg: Type.String()
 				}),
 				302: Type.Null(),
@@ -62,7 +63,10 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 			console.log("userByName: ", userByName);
 			if (!userByEmail) {
 				if (userByName)
-					return reply.status(200).send({ msg: 'This name is already registered.' });
+					return reply.status(200).send({ 
+						success: false,
+						msg: 'This name is already registered.'
+					});
 				const user_id = await usersRepository.insertRow(email, '', 'google', provider_id.toString());
 				const picture_path = await downloadImageFromUrl(
 					avatar,
@@ -72,7 +76,10 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				return await loginManager.login(user_id, reply, tokenData.refresh_token);
 			} else {
 				if (userByEmail && userByEmail.provider != 'google')
-					return reply.status(200).send({ msg: 'This email is already registered.' });
+					return reply.status(200).send({ 
+						success: false,
+						msg: 'This email is already registered.' 
+					});
 				return await loginManager.login(userByEmail.id, reply, tokenData.refresh_token);
 			}
 		} catch (err) {

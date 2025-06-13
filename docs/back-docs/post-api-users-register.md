@@ -34,27 +34,33 @@ Endpoint for **user registration** with multipart form data (name, email, passwo
 
 ```json
 { 
+  "success": false,
   "msg": "Invalid email format." 
 }
 { 
+  "success": false,
   "msg": "Password must be 8–15 characters, contain upper and lower case letters, digits, and special characters (@#%&!$*)."
 }
 { 
+  "success": false,
   "msg": "Name must be 2–16 characters, using letters, numbers, or Korean characters."
 }
 { 
+  "success": false,
   "msg": "Profile image must be JPEG, PNG, WEBP, or GIF, and <= 5MB."
 }
 ```
 
 ```json
 {
+  "success": false,
   "msg": "This email is already registered."
 }
 ```
 
 ```json
 {
+  "success": false,
   "msg": "This name is already registered."
 }
 ```

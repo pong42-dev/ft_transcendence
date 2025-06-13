@@ -15,6 +15,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 			schema: {
 				response: {
 					200: Type.Object({
+						success: Type.Literal(true),
 						msg: Type.String(),
 						data: Type.Object({
 							accessToken: Type.String()

@@ -21,12 +21,14 @@ Handles the **OAuth2 callback** from Google and performs user login or registrat
 
 ```json
 {
+  "success": false,
   "msg": "This name is already registered."
 }
 ```
 
 ```json
 {
+  "success": false,
   "msg": "This email is already registered."
 }
 ```

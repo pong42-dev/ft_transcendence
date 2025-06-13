@@ -39,6 +39,7 @@ const data = await res.json();
 
 ```json
 {
+  "success": true,
   "msg": "Successfully logged in.",
 	"data" : {
 	  "accessToken": "..." // returned internally by loginManager
