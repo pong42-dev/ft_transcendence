@@ -30,8 +30,10 @@ const data = await res.json();
 
 ```json
 {
-  "success": true,
-  "accessToken": "..." // New JWT access token
+  "msg": "Token refreshed successfully.",
+	"data" : {
+	  "accessToken": "..." // returned internally by loginManager
+	}
 }
 ```
 
@@ -39,7 +41,6 @@ const data = await res.json();
 
 ```json
 {
-  "success": false,
   "msg": "Invalid or expired token."
 }
 ```
@@ -48,7 +49,6 @@ const data = await res.json();
 
 ```json
 {
-  "success": false,
   "msg": "An internal server error occurred while refreshing the token."
 }
 ```

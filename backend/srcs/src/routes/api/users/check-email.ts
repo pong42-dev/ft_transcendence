@@ -20,7 +20,6 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 						msg: Type.String()
 					}),
 					500: Type.Object({
-						success: Type.Boolean(),
 						msg: Type.String()
 					}),
 				},
@@ -40,10 +39,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				return reply.send({ success: true, msg: 'Email is available.' })
 			} catch (err) {
 				fastify.log.error(err)
-				return reply.status(500).send({
-					success: false,
-					msg: 'An internal server error occurred during email duplication check.'
-				})
+				return reply.status(500).send({ msg: 'An internal server error occurred during email duplication check.' })
 			}
 		}
 	)

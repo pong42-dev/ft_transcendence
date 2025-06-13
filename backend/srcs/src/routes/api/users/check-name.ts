@@ -19,7 +19,6 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 						msg: Type.String()
 					}),
 					500: Type.Object({
-						success: Type.Boolean(),
 						msg: Type.String()
 					}),
 				},
@@ -34,13 +33,12 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				}
 				const nameExists = await userProfilesRepository.checkDupRow('name', name);
 				if (nameExists) {
-					return reply.send({ success: false, msg: 'Name already exists.' });
+					return reply.status(200).send({ success: false, msg: 'Name already exists.' });
 				}
 				return reply.send({ success: true, msg: 'Name is available.' });
 			} catch (err) {
 				request.log.error(err)
 				return reply.status(500).send({
-					success: false,
 					msg: 'An internal server error occurred during name duplication check.'
 				});
 			}

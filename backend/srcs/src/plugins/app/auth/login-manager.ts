@@ -19,8 +19,7 @@ async function login(
 	const userData = { user_id: user_id }
 	const isNotLoggedIn = await this.tokenManager.isNotLoggedIn(user_id)
 	if (!isNotLoggedIn) {
-		reply.status(401).send({
-			success: false, 
+		reply.status(409).send({
 			msg: 'This account is already in use. Please log out and try again.'
 		})
 	} else {
@@ -44,10 +43,11 @@ async function login(
 		}
 		const accessToken = await this.tokenManager.generateAccessToken(userData)
 		console.log("accessToken:", accessToken);
-		reply.send({
-			success: true,
+		reply.status(200).send({
 			msg: 'Successfully logged in.',
-			accessToken: accessToken
+			data: {
+				accessToken: accessToken
+			}
 		})
 	}
 }

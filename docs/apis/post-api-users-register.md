@@ -22,35 +22,39 @@ Endpoint for **user registration** with multipart form data (name, email, passwo
 
 ### ✅ Response
 
-### ▶ Success (HTTP 200)
+### ▶ Success (HTTP 201)
 
 ```json
 {
-  "success": true,
   "msg": "Registration completed successfully."
 }
-
 ```
 
 ### ▶ Validation Failure / Duplication (HTTP 200)
 
 ```json
-{ "success": false, "msg": "Invalid email format." }
-{ "success": false, "msg": "Password must be 8–15 characters, contain upper and lower case letters, digits, and special characters (@#%&!$*)." }
-{ "success": false, "msg": "Name must be 2–16 characters, using letters, numbers, or Korean characters." }
-{ "success": false, "msg": "Profile image must be JPEG, PNG, WEBP, or GIF, and <= 5MB." }
+{ 
+  "msg": "Invalid email format." 
+}
+{ 
+  "msg": "Password must be 8–15 characters, contain upper and lower case letters, digits, and special characters (@#%&!$*)."
+}
+{ 
+  "msg": "Name must be 2–16 characters, using letters, numbers, or Korean characters."
+}
+{ 
+  "msg": "Profile image must be JPEG, PNG, WEBP, or GIF, and <= 5MB."
+}
 ```
 
 ```json
 {
-  "success": false,
   "msg": "This email is already registered."
 }
 ```
 
 ```json
 {
-  "success": false,
   "msg": "This name is already registered."
 }
 ```
@@ -59,7 +63,6 @@ Endpoint for **user registration** with multipart form data (name, email, passwo
 
 ```json
 {
-  "success": false,
   "msg": "An internal server error occurred during registration."
 }
 ```

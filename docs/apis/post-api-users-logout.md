@@ -35,7 +35,6 @@ const data = await res.json();
 
 ```json
 {
-  "success": true,
   "msg": "Successfully logged out."
 }
 ```
@@ -44,7 +43,6 @@ const data = await res.json();
 
 ```json
 {
-  "success": false,
   "msg": "An internal server error occurred during logout."
 }
 ```

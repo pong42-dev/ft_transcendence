@@ -15,15 +15,18 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 			schema: {
 				response: {
 					200: Type.Object({
-						success: Type.Boolean(),
 						msg: Type.String(),
+						data: Type.Object({
+							accessToken: Type.String()
+						})
 					}),
 					401: Type.Object({
-						success: Type.Literal(false),
+						msg: Type.String()
+					}),
+					409: Type.Object({
 						msg: Type.String()
 					}),
 					500: Type.Object({
-						success: Type.Literal(false),
 						msg: Type.String()
 					})
 				},
@@ -35,20 +38,17 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				const { email, password } = request.body as Credentials;
 				const user = await usersRepository.getRowByColumnValue('email', email);
 				if (!user || user.provider != 'local') {
-					return reply.status(401).send({ success: false, msg: 'Email or password is incorrect.' });
+					return reply.status(401).send({ msg: 'Email or password is incorrect.' });
 				}
 				const isMatch = await passwordManager.comparePassword(password, user.password);
 				if (!isMatch) {
-					return reply.status(401).send({ success: false, msg: 'Email or password is incorrect.' });
+					return reply.status(401).send({ msg: 'Email or password is incorrect.' });
 				}
 				console.log ("local user:", user);
 				await loginManager.login(user.id, reply, '');
 			} catch (err) {
-				request.server.log.error(err);
-				return reply.status(500).send({
-					success: false,
-					msg: 'An internal server error occurred during login.'
-				});
+				fastify.log.error(err);
+				return reply.status(500).send({ msg: 'An internal server error occurred during login.' });
 			}
 		}
 	);

@@ -73,7 +73,6 @@ const data = await res.json();
 
 ```json
 {
-  "success": false,
   "msg": "An internal server error occurred during email duplication check."
 }
 ```

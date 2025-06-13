@@ -1,6 +1,6 @@
 ## 📌 `/google/callback` [GET]
 
-Endpoint to handle the **Google OAuth2 callback** after user authorization.
+Handles the **OAuth2 callback** from Google and performs user login or registration.
 
 ---
 
@@ -15,40 +15,31 @@ Endpoint to handle the **Google OAuth2 callback** after user authorization.
 
 ---
 
-### 🔸 Example (Typical Callback URL)
-
-```
-/google/callback?code=AUTH_CODE_HERE
-```
-
----
-
 ### ✅ Response
 
-### ▶ Success – New or Existing Google User Login (HTTP 200)
+### ▶ Unauthorized – Name or Email Conflict (HTTP 200)
 
 ```json
 {
-  "success": true,
-  "msg": "Successfully logged in.",
-  "accessToken": "..." // returned from loginManager
+  "msg": "This name is already registered."
 }
 ```
 
-### ▶ Unauthorized – Name or Email Conflict (HTTP 401)
-
 ```json
 {
-  "success": false,
-  "msg": "This name is already registered." // or "This email is already registered."
+  "msg": "This email is already registered."
 }
 ```
 
-### ▶ Server Error – Internal Failure (HTTP 500)
+### ▶ Redirect – Login Successful (HTTP 302)
+
+- Redirects after successful login.
+- `accessToken` and session-related data are handled internally by `loginManager.login()`.
+
+### ▶ Internal Server Error (HTTP 500)
 
 ```json
 {
-  "success": false,
   "msg": "An internal server error occurred during OAuth2 callback."
 }
 ```
@@ -57,12 +48,13 @@ Endpoint to handle the **Google OAuth2 callback** after user authorization.
 
 ### 🧩 Additional Notes
 
-- **Token Exchange**: Uses `googleOAuth2Manager.getTokenFromCode()` to obtain access token.
-- **User Profile Retrieval**: Google user info fetched using `getUserProfileFromToken`.
-- **User Validation**:
-    - If email doesn't exist and name is available → create new user.
-    - If email exists with different provider → reject login.
-    - If user exists with provider === `'google'` → login.
-- **Avatar Handling**: Downloads and stores the profile picture using `downloadImageFromUrl`.
-- **Login**: Performed via `loginManager.login()`.
-- **Error Logging**: Handled via Fastify's built-in logger.
+- Uses `googleOAuth2Manager.getTokenFromCode()` to retrieve the token.
+- Retrieves the user’s profile using the access token.
+- If the user does not exist:
+    - Registers the user using `usersRepository.insertRow()` and `userProfilesRepository.insertRow()`.
+    - Downloads the profile image via `downloadImageFromUrl()`.
+- If the email exists but the provider is not `"google"`, login is rejected.
+- If the name already exists in the system, registration is blocked to avoid conflicts.
+- Errors are logged via the Fastify logger.
+
+---

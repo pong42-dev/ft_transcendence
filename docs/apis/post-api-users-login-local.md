@@ -39,9 +39,10 @@ const data = await res.json();
 
 ```json
 {
-  "success": true,
   "msg": "Successfully logged in.",
-  "accessToken": "..." // returned internally by loginManager
+	"data" : {
+	  "accessToken": "..." // returned internally by loginManager
+	}
 }
 ```
 
@@ -49,8 +50,15 @@ const data = await res.json();
 
 ```json
 {
-  "success": false,
   "msg": "Email or password is incorrect."
+}
+```
+
+### ▶ Conflict - Account already used (HTTP 409)
+
+```json
+{
+  "msg": "This account is already in use. Please log out and try again."
 }
 ```
 
@@ -58,7 +66,6 @@ const data = await res.json();
 
 ```json
 {
-  "success": false,
   "msg": "An internal server error occurred during login."
 }
 ```
@@ -72,3 +79,5 @@ const data = await res.json();
 - **Password Check**: Uses secure `passwordManager.comparePassword`.
 - **Login Logic**: Delegated to `loginManager.login()`.
 - **Error Logging**: Server-side errors are logged via Fastify logger.
+
+---

@@ -1,8 +1,8 @@
 import { FastifyPluginAsyncTypebox, Type } from '@fastify/type-provider-typebox'
 import { FastifyRequest, FastifyReply } from 'fastify'
 import { UserData } from '../../../schemas/auth.js'
-import path from 'node:path'
-import fs from 'node:fs'
+// import path from 'node:path'
+// import fs from 'node:fs'
 
 const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 	const { 
@@ -26,12 +26,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 						success: Type.Boolean(),
 						msg: Type.String()
 					}),
-					404: Type.Object({
-						success: Type.Boolean(),
-						msg: Type.String()
-					}),
 					500: Type.Object({
-						success: Type.Boolean(),
 						msg: Type.String()
 					}),
 				},
@@ -43,7 +38,10 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 			try {
 				const formData = await registerFormData(request);
 				if (!isValidProfileImage(formData.files.avatar)) {
-					return reply.status(200).send({ success: false, msg: 'Invalid avatar format.' });
+					return reply.status(200).send({ 
+						success: false,
+						msg: 'Invalid avatar format.'
+					});
 				}
 				const dirPath = config.UPLOAD_DIRNAME + '/' + config.UPLOAD_AVATAR_DIRNAME || 'uploads/avatars';
 				const newAvatarPath = await saveFile(formData.files.avatar, dirPath);
@@ -53,57 +51,57 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				if (user.avatar)
 					fileManager.deleteFile(user.avatar);
 				await userProfilesRepository.updateRowByColumn("user_id", user_id, "avatar", newAvatarPath);
-				return reply.send({ success: true, msg: 'Avatar has been successfully updated.' });
+				return reply.send({
+					success: true,
+					msg: 'Avatar has been successfully updated.'
+				});
 			} catch (err) {
 				request.server.log.error(err);
-				return reply.status(500).send({
-					success: false,
-					msg: 'An internal server error occurred while updati`ng the avatar.'
-				});
+				return reply.status(500).send({ msg: 'An internal server error occurred while updating the avatar.' });
 			}
 		}
 	)
 
-	// GET /api/users/avatar/:file_path
-	fastify.get(
-		'/avatar/*',
-		{
-		  schema: {
-			response: {
-			  200: { type: 'string', description: '이미지 파일' },
-			  404: Type.Object({ message: Type.String() })
-			},
-			tags: ["Users"]
-		  }
-		},
-		async (request, reply) => {
-			const rawPath = (request.params as any)['*'] as string
+	// // GET /api/users/avatar/:file_path
+	// fastify.get(
+	// 	'/avatar/*',
+	// 	{
+	// 	  schema: {
+	// 		response: {
+	// 		  200: { type: 'string', description: '이미지 파일' },
+	// 		  404: Type.Object({ message: Type.String() })
+	// 		},
+	// 		tags: ["Users"]
+	// 	  }
+	// 	},
+	// 	async (request, reply) => {
+	// 		const rawPath = (request.params as any)['*'] as string
 
-			console.log('@@@@@@@@@@@@@@@' + rawPath)
-			try {
-				if (!fs.existsSync(rawPath)) {
-				return reply.status(404).send({ message: '파일을 찾을 수 없습니다.' })
-				}
-				return reply.type(getMimeType(rawPath)).send(fs.createReadStream(rawPath))
-			} catch (err) {
-				request.server.log.error(err)
-				return reply.status(500).send({ message: '파일 처리 중 오류가 발생했습니다.' })
-			}
-		}
-	)
+	// 		console.log('@@@@@@@@@@@@@@@' + rawPath)
+	// 		try {
+	// 			if (!fs.existsSync(rawPath)) {
+	// 			return reply.status(404).send({ message: '파일을 찾을 수 없습니다.' })
+	// 			}
+	// 			return reply.type(getMimeType(rawPath)).send(fs.createReadStream(rawPath))
+	// 		} catch (err) {
+	// 			request.server.log.error(err)
+	// 			return reply.status(500).send({ message: '파일 처리 중 오류가 발생했습니다.' })
+	// 		}
+	// 	}
+	// )
 }
 
 // 간단한 MIME 타입 추론 함수 (필요 시 더 정교하게 개선 가능)
-function getMimeType(filePath: string): string {
-	const ext = path.extname(filePath).toLowerCase()
-	switch (ext) {
-		case '.png': return 'image/png'
-		case '.jpg':
-		case '.jpeg': return 'image/jpeg'
-		case '.gif': return 'image/gif'
-		case '.webp': return 'image/webp'
-		default: return 'application/octet-stream'
-	}
-}
+// function getMimeType(filePath: string): string {
+// 	const ext = path.extname(filePath).toLowerCase()
+// 	switch (ext) {
+// 		case '.png': return 'image/png'
+// 		case '.jpg':
+// 		case '.jpeg': return 'image/jpeg'
+// 		case '.gif': return 'image/gif'
+// 		case '.webp': return 'image/webp'
+// 		default: return 'application/octet-stream'
+// 	}
+// }
 
 export default plugin

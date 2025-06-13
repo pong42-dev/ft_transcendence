@@ -17,11 +17,9 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 			schema: {
 				response: {
 					200: Type.Object({
-						success: Type.Boolean(),
 						msg: Type.String(),
 					}),
 					500: Type.Object({
-						success: Type.Boolean(),
 						msg: Type.String(),
 					}),
 				},
@@ -42,10 +40,11 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 					await userProfilesRepository.updateRowByColumn("user_id", user_id, "status", false);
 					reply.clearCookie(this.config.COOKIE_NAME, { path: '/' });
 				}
-				return reply.send({ success: true, msg: "Successfully logged out." });
+				return reply.send({ 
+					msg: "Successfully logged out." 
+				});
 			} catch (err) {
 				return reply.status(500).send({
-					success: false,
 					msg: "An internal server error occurred during logout.",
 				});
 			}

@@ -14,7 +14,6 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 			response: {
 				302: Type.Null(), 
 				500: Type.Object({
-					success: Type.Boolean(),
 					msg: Type.String(),
 				}),
 			},
@@ -27,7 +26,6 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 		} catch (err) {
 			request.log.error(err);
 			return reply.status(500).send({
-				success: false,
 				msg: 'An error occurred during Google login redirection.',
 			});
 		}
@@ -38,15 +36,13 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 			querystring: GoogleCallbackQuerySchema,
 			response: {
 				200: Type.Object({
-					success: Type.Boolean(),
-					msg: Type.String(),
+					msg: Type.String()
 				}),
-				401: Type.Object({
-					success: Type.Literal(false),
+				302: Type.Null(),
+				409: Type.Object({
 					msg: Type.String()
 				}),
 				500: Type.Object({
-					success: Type.Boolean(),
 					msg: Type.String(),
 				}),
 			},
@@ -66,7 +62,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 			console.log("userByName: ", userByName);
 			if (!userByEmail) {
 				if (userByName)
-					return reply.status(401).send({ success: false, msg: 'This name is already registered.' });
+					return reply.status(200).send({ msg: 'This name is already registered.' });
 				const user_id = await usersRepository.insertRow(email, '', 'google', provider_id.toString());
 				const picture_path = await downloadImageFromUrl(
 					avatar,
@@ -76,15 +72,12 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				return await loginManager.login(user_id, reply, tokenData.refresh_token);
 			} else {
 				if (userByEmail && userByEmail.provider != 'google')
-					return reply.status(401).send({ success: false, msg: 'This email is already registered.' });
+					return reply.status(200).send({ msg: 'This email is already registered.' });
 				return await loginManager.login(userByEmail.id, reply, tokenData.refresh_token);
 			}
 		} catch (err) {
-			fastify.log.error('Error occurred during OAuth2 callback processing:', err);
-			return reply.status(500).send({
-				success: false,
-				msg: 'An internal server error occurred during OAuth2 callback.',
-			});
+			fastify.log.error(err);
+			return reply.status(500).send({ msg: 'An internal server error occurred during OAuth2 callback.', });
 		}
 	});
 };
