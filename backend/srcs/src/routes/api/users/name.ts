@@ -25,7 +25,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 						msg: Type.String()
 					}),
 				},
-				tags: ['Users']
+				tags: ["Users"]
 			},
 			preHandler: [authenticate]
 		},

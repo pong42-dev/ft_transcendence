@@ -21,12 +21,18 @@ async function handleRegisterFormData(request: FastifyRequest): Promise<Register
 	for await (const part of parts) {
 		if (part.type === 'file') {
 			const filePart = part as MultipartFile;
+			if (!filePart.mimetype || !filePart.mimetype.startsWith('image/')) {
+				filePart.file.resume();
+				continue;
+			}
+			if (filePart.file.truncated) {
+				filePart.file.resume();
+				continue;
+			}
 			files[filePart.fieldname] = filePart;
 		} else if (part.type === 'field') {
 			const textPart = part as MultipartValue<string>;
 			form[textPart.fieldname] = textPart.value;
-		} else {
-			continue;
 		}
 	}
 

@@ -18,7 +18,6 @@ return (error: FastifyError, request: FastifyRequest, reply: FastifyReply) => {
 	}
 	return reply.status(400).send({ success: false, msg: '요청 데이터 형식이 잘못되었습니다.' });
 	}
-
 	request.log.error(error);
 	reply.status(500).send({
 	success: false,
@@ -30,5 +29,5 @@ return (error: FastifyError, request: FastifyRequest, reply: FastifyReply) => {
 }
 
 export default fp(async function (fastify: FastifyInstance) {
-fastify.decorate('customErrorHandler', factory);
+	fastify.decorate('customErrorHandler', factory);
 });

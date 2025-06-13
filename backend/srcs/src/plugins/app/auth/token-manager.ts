@@ -22,11 +22,9 @@ export function manageTokens(fastify: FastifyInstance) {
 	// const ACCESS_TOKEN_EXPIRES_IN = '10m';
 	// const REFRESH_TOKEN_EXPIRES_IN = '7d';
 	const REFRESH_COOKIE_NAME = 'refresh_token';
-	const ACCESS_COOKIE_NAME = 'access_token';
+	// const ACCESS_COOKIE_NAME = 'access_token';
 	const REFRESH_COOKIE_MAX_AGE = 60 * 10;
-	const ACCESS_COOKIE_MAX_AGE = 60 * 5;
-	// const REFRESH_COOKIE_NAME = fastify.config.COOKIE_NAME;
-	// const REFRESH_COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7일
+	// const ACCESS_COOKIE_MAX_AGE = 60 * 5;
 
 	return {
 		async generateToken(
@@ -49,13 +47,14 @@ export function manageTokens(fastify: FastifyInstance) {
 			return this.createRefreshTokenCookie(refreshToken);
 		},
 
-		async generateAccessToken(userData: TokenData): Promise<CookieReturn> {
-			const accessToken = await this.generateToken(userData, ACCESS_TOKEN_EXPIRES_IN, 'access');
-			return this.createAccessTokenCookie(accessToken);
-		},
-		// async generateAccessToken(userData: TokenData): Promise<string> {
-		// 	return this.generateToken(userData, ACCESS_TOKEN_EXPIRES_IN, 'access');
+		// async generateAccessToken(userData: TokenData): Promise<CookieReturn> {
+		// 	const accessToken = await this.generateToken(userData, ACCESS_TOKEN_EXPIRES_IN, 'access');
+		// 	return this.createAccessTokenCookie(accessToken);
 		// },
+
+		async generateAccessToken(userData: TokenData): Promise<string> {
+			return this.generateToken(userData, ACCESS_TOKEN_EXPIRES_IN, 'access');
+		},
 
 		createCookie(name: string, token: string, maxAge: number): CookieReturn {
 			const { config } = fastify;
@@ -85,13 +84,13 @@ export function manageTokens(fastify: FastifyInstance) {
 			);
 		},
 
-		createAccessTokenCookie(token: string): CookieReturn {
-			return this.createCookie(
-				ACCESS_COOKIE_NAME,
-				token,
-				ACCESS_COOKIE_MAX_AGE
-			);
-		},
+		// createAccessTokenCookie(token: string): CookieReturn {
+		// 	return this.createCookie(
+		// 		ACCESS_COOKIE_NAME,
+		// 		token,
+		// 		ACCESS_COOKIE_MAX_AGE
+		// 	);
+		// },
 
 		async verifyRefreshToken(refreshToken: string): Promise<TokenData | null> {
 			const { jwt } = fastify;
@@ -110,8 +109,7 @@ export function manageTokens(fastify: FastifyInstance) {
 			): Promise<boolean> {
 			const { userTokensRepository, passwordManager } = fastify;
 			try {
-				const rows = await userTokensRepository.getRowByColumnValue("user_id", userId);
-				const row = rows[0];
+				const row = await userTokensRepository.getRowByColumnValue("user_id", userId);
 				if (!row) {
 					return false;
 				}

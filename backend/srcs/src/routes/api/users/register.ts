@@ -28,24 +28,31 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 						msg: Type.String()
 					}),
 				},
-				tags: ['Users']
-			},
+				tags: ["Users"]
+			}
 		},
 		async (request: FastifyRequest, reply: FastifyReply) => {
 			try {
+				console.log("start");
 				const formData = await registerFormData(request);
-				if (! await isValidRegisterFormData(formData)){
-					return reply.status(200).send({ success: false, msg: 'Invalid registration format.' });
+				console.log ("formData: ", formData);
+				const validFormDataMsg = isValidRegisterFormData(formData);
+				console.log ("validFormDataMsg: ", validFormDataMsg);
+				if (validFormDataMsg) {
+					console.log("error");
+					return reply.status(200).send({ success: false, msg: validFormDataMsg });
 				}
 				const { email, password, name } = formData;
 				const emailExists = await usersRepository.checkDupRow('email', email)
 				const nameExists = await userProfilesRepository.checkDupRow('name', name)
-				if (emailExists || nameExists) {
-					return reply.status(200).send({ success: false, msg: 'This email or name is already registered.'});
+				if (emailExists) {
+					return reply.status(200).send({ success: false, msg: 'This email is already registered.'});
+				}
+				if (nameExists) {
+					return reply.status(200).send({ success: false, msg: 'This name is already registered.'});
 				}
 				const dirPath = config.UPLOAD_DIRNAME + '/' + config.UPLOAD_AVATAR_DIRNAME || 'uploads/avatars';
 				const avatarPath = await saveFile(formData.files.avatar, dirPath);
-				console.log ('formData:', formData);
 				const hashedPassword = await passwordManager.hashPassword(password);
 				const user_id = await usersRepository.insertRow(email, hashedPassword, 'local', '');
 				await userProfilesRepository.insertRow(user_id, name, avatarPath, 'false');

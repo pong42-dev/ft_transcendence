@@ -15,7 +15,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
             id: Type.Number() 
           }),          
         },
-        tags: ['Users']
+        tags: ["Users"]
       }
     }, 
     async (request, reply) => {
@@ -35,7 +35,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
           200: UserProfileResponseSchema,
           404: Type.Object({ message: Type.String() })
         },
-        tags: ['Users']
+        tags: ["Users"]
       }
     },
     async (request, reply) => {

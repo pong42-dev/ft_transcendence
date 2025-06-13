@@ -1,4 +1,5 @@
 import fastifyMultipart from '@fastify/multipart'
+import fp from 'fastify-plugin'
 
 export const autoConfig = {
 	limits: {
@@ -16,4 +17,7 @@ export const autoConfig = {
  *
  * @see {@link https://github.com/fastify/fastify-multipart}
  */
-export default fastifyMultipart
+// export default fastifyMultipart
+export default fp(async (fastify) => {
+	fastify.register(fastifyMultipart, autoConfig)
+})

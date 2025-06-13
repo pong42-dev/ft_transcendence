@@ -46,7 +46,7 @@ export function createUserProfilesRepository(fastify: FastifyInstance) {
 		async getRowByColumnValue(
 			column: string,
 			value: string | number | boolean
-		): Promise<UserProfile[]> {
+		): Promise<UserProfile> {
 			if (!allowedColumns.includes(column)) {
 				console.log("허용되지 않은 컬럼명");
 				throw new Error('허용되지 않은 컬럼명입니다.');
@@ -54,8 +54,8 @@ export function createUserProfilesRepository(fastify: FastifyInstance) {
 			const result = await knex('user_profiles')
 				.select('*')
 				.where(column, value);
-			console.log("result:", result);
-			return result;
+			// console.log("result:", result);
+			return result[0];
 		},
 
 

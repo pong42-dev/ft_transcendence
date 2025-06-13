@@ -24,52 +24,36 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 						msg: Type.String()
 					})
 				},
-				tags: ['Users']
-			},
-			errorHandler: (error, request, reply) => {
-				request.log.error(error)
-				reply.status(401).send({
-					success: false,
-					msg: '유효하지 않거나 만료된 토큰입니다. 다시 로그인해 주세요.'
-				})
+				tags: ["Users"]
 			}
 		},
 		async (request: FastifyRequest, reply: FastifyReply) => {
 			const { userTokensRepository, passwordManager } = fastify
-			const { refresh_token } = request.cookies
-			// console.log('refresh_token', refresh_token);
-			const unauthorized = () =>
-				reply.status(401).send({
-					success: false,
-					msg: '유효하지 않거나 만료된 토큰입니다. 다시 로그인해 주세요.'
-				})
+			const { refresh_token: refreshToken } = request.cookies
+			// console.log('refreshToken:', refreshToken);
 			try {
-				if (!refresh_token) {
-					return unauthorized()
-					return ;
+				if (!refreshToken) {
+					return reply.status(401).send({ success: false, msg: 'Invalid or expired token.'});
 				}
-				const decoded = await fastify.jwt.verify(refresh_token) as TokenData
+				const decoded = await fastify.jwt.verify(refreshToken) as TokenData
 				if (!decoded || !decoded.user_id) {
-					return unauthorized()
+					return reply.status(401).send({ success: false, msg: 'Invalid or expired token.'});
 				}
 				// console.log("decoded:", decoded);
-				const rows = await userTokensRepository.getRowByColumnValue('user_id', decoded.user_id)
-				const hashedRefreshToken = rows[0]?.server_refresh_token
+				const row = await userTokensRepository.getRowByColumnValue('user_id', decoded.user_id)
+				const hashedRefreshToken = row?.server_refresh_token
 				// console.log("hashedRefreshToken:", hashedRefreshToken);
-				if (
-					!hashedRefreshToken ||
-					!passwordManager.comparePassword(refresh_token, hashedRefreshToken)
-				) {
-					return unauthorized()
+				if (!hashedRefreshToken || !passwordManager.comparePassword(refreshToken, hashedRefreshToken)) {
+					return reply.status(401).send({ success: false, msg: 'Invalid or expired token.'});
 				}
 				const newAccessToken = fastify.jwt.sign({ user_id: decoded.user_id })
-				return reply.send({
-					success: true,
-					accessToken: newAccessToken
-				})
+				return reply.send({ success: true, accessToken: newAccessToken })
 			} catch (err) {
-				request.log.error('토큰 재발급 중 오류:', err)
-				return unauthorized()
+				request.server.log.error(err);
+				return reply.status(500).send({
+					success: false,
+					msg: 'An internal server error occurred while refreshing the token.'
+				});
 			}
 		}
 	)

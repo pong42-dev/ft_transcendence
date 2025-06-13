@@ -1,19 +1,18 @@
 import { FastifyPluginAsyncTypebox, Type } from '@fastify/type-provider-typebox'
-import { UserNameSchema } from '../../../schemas/auth.js'
+import { UserName } from '../../../schemas/auth.js'
 
 const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
-	const { userProfilesRepository, customErrorHandler } = fastify
+	const { userProfilesRepository, isValidName } = fastify
 	fastify.post(
 		'/check-name',
 		{
 			config: {
 				rateLimit: {
-				max: 5,
-				timeWindow: '1 minute'
+					max: 5,
+					timeWindow: '1 minute'
 				}
 			},
 			schema: {
-				body: UserNameSchema,
 				response: {
 					200: Type.Object({
 						success: Type.Boolean(),
@@ -24,30 +23,26 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 						msg: Type.String()
 					}),
 				},
-				tags: ['Users']
-			},
-			errorHandler: customErrorHandler('닉네임 중복확인')
+				tags: ["Users"]
+			}
 		},
 		async function (request, reply) {
 			try {
-				const { name } = request.body as UserNameSchema;
+				const { name } = request.body as UserName;
+				if (!isValidName(name)) {
+					return reply.status(200).send({ success: false, msg: 'Invalid name format.' });
+				}
 				const nameExists = await userProfilesRepository.checkDupRow('name', name);
 				if (nameExists) {
-					return reply.send({
-					success: false,
-					msg: '이미 존재하는 닉네임 입니다.'
-					})
+					return reply.send({ success: false, msg: 'Name already exists.' });
 				}
-				return reply.send({
-				success: true,
-				msg: '사용가능한 닉네임 입니다.'
-				})
+				return reply.send({ success: true, msg: 'Name is available.' });
 			} catch (err) {
 				request.log.error(err)
 				return reply.status(500).send({
-				success: false,
-				msg: '중복검사 처리 중 서버 내부 오류가 발생했습니다.'
-				})
+					success: false,
+					msg: 'An internal server error occurred during name duplication check.'
+				});
 			}
 		}
 	)

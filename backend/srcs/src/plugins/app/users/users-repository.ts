@@ -45,14 +45,14 @@ return {
 	async getRowByColumnValue(
 	column: string, 
 	value: string
-	): Promise<User[]> {
+	): Promise<User> {
 		if (!allowedColumns.includes(column)) {
 			throw new Error('허용되지 않은 컬럼명입니다.');
 		}
 		const result = await knex('users')
 		.select('*')
 		.where(column, value);
-	return result;
+	return result[0];
 	}
 };
 }

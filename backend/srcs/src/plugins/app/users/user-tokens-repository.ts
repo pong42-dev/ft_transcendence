@@ -42,14 +42,14 @@ export function createUserTokensRepository(fastify: FastifyInstance) {
 			}
 		},
 
-		async getRowByColumnValue(column: string, value: number | string | Date): Promise<UserToken[]> {
+		async getRowByColumnValue(column: string, value: number | string | Date): Promise<UserToken> {
 			if (!allowedColumns.includes(column)) {
 				throw new Error('허용되지 않은 컬럼명입니다.');
 			}
 			const result = await knex('user_tokens')
 			.select('*')
 			.where(column, value);
-			return result;
+			return result[0];
 		},
 
 		async deleteRowByColumnValue(column: string, value: number | string | Date): Promise<void> {

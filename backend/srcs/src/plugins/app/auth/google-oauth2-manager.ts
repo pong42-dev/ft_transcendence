@@ -1,6 +1,6 @@
 import { FastifyRequest, FastifyInstance } from 'fastify'
 import fp from 'fastify-plugin'
-import { GoogleCallbackQuery, GoogleUserProfile } from '../../../schemas/auth.js'
+import { GoogleCallbackQuery, GoogleUserProfile, GoogleTokenResponse } from '../../../schemas/auth.js'
 
 declare module 'fastify' {
 	interface FastifyInstance {
@@ -8,7 +8,7 @@ declare module 'fastify' {
 			getGoogleOAuthUrl(): string
 			getTokenFromCode(request: FastifyRequest<{ Querystring: GoogleCallbackQuery }>): Promise<{ access_token: string; [key: string]: any }>
 			revokeGoogleToken(token: string): Promise<void>
-			getUserProfileFromToken(tokenData: { access_token: string }): Promise<GoogleUserProfile>
+			getUserProfileFromToken(access_token: string): Promise<GoogleUserProfile>
 		}
 	}
 }
@@ -16,21 +16,21 @@ declare module 'fastify' {
 export function manageGoogleOauth2(fastify: FastifyInstance) {
 	return {
 		getGoogleOAuthUrl(): string {
-		const CLIENT_ID = fastify.config.GOOGLE_CLIENT_ID
-		const REDIRECT_URI = fastify.config.GOOGLE_REDIRECT_URI
-		const SCOPE = 'email profile'
+			const CLIENT_ID = fastify.config.GOOGLE_CLIENT_ID
+			const REDIRECT_URI = fastify.config.GOOGLE_REDIRECT_URI
+			const SCOPE = 'email profile'
 
-		return `https://accounts.google.com/o/oauth2/v2/auth?` +
-			`client_id=${CLIENT_ID}&` +
-			`redirect_uri=${encodeURIComponent(REDIRECT_URI)}&` +
-			`scope=${encodeURIComponent(SCOPE)}&` +
-			`response_type=code&` +
-			`access_type=offline&` +
-			`prompt=consent`
+			return `https://accounts.google.com/o/oauth2/v2/auth?` +
+				`client_id=${CLIENT_ID}&` +
+				`redirect_uri=${encodeURIComponent(REDIRECT_URI)}&` +
+				`scope=${encodeURIComponent(SCOPE)}&` +
+				`response_type=code&` +
+				`access_type=offline&` +
+				`prompt=consent`
 		},
 
 		async getTokenFromCode(request: FastifyRequest<{ Querystring: GoogleCallbackQuery }>): Promise<{ access_token: string; [key: string]: any }> {
-			const { code } = request.query as GoogleUserProfile;
+			const { code } = request.query;
 
 			const response = await fetch('https://oauth2.googleapis.com/token', {
 				method: 'POST',
@@ -46,17 +46,16 @@ export function manageGoogleOauth2(fastify: FastifyInstance) {
 				}).toString(),
 			})
 
-			const tokenData = await response.json()
+			const tokenData = await response.json() as GoogleTokenResponse
 			if (!tokenData.access_token) {
-				throw new Error('Failed to get access token')
+				throw new Error('Failed to retrieve access token.')
 			}
 
 			return tokenData
 		},
 
 		async revokeGoogleToken(token: string): Promise<void> {
-			fastify.log.info('this is revokeGoogleToken')
-
+			fastify.log.info('Invoking revokeGoogleToken')
 			try {
 				const response = await fetch('https://oauth2.googleapis.com/revoke', {
 					method: 'POST',
@@ -66,29 +65,29 @@ export function manageGoogleOauth2(fastify: FastifyInstance) {
 					body: new URLSearchParams({ token }).toString(),
 				})
 				if (response.ok) {
-					fastify.log.info('구글 토큰 무효화 성공')
+					fastify.log.info('Successfully revoked Google token')
 				} else {
-					const error: { error: string } = await response.json()
-					fastify.log.error('구글 토큰 무효화 실패', error)
+					const error = await response.json() as { error: string };
+					fastify.log.error('Failed to revoke Google token', error)
 				}
 			} catch (err: unknown) {
 				if (err instanceof Error) {
-					fastify.log.error('구글 revoke 요청 실패', err.message)
+					fastify.log.error('Google revoke request failed', err.message)
 				} else {
-					fastify.log.error('알 수 없는 오류 발생')
+					fastify.log.error('An unknown error occurred during revoke')
 				}
 			}
 		},
 
-		async getUserProfileFromToken(tokenData: { access_token: string }): Promise<GoogleUserProfile> {
+		async getUserProfileFromToken(access_token: string): Promise<GoogleUserProfile> {
 			const profileResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
 				headers: {
-					Authorization: `Bearer ${tokenData.access_token}`,
+					Authorization: `Bearer ${access_token}`,
 				},
 			})
-			const userProfile = await profileResponse.json()
+			const userProfile = await profileResponse.json() as GoogleUserProfile
 			if (!userProfile.email) {
-				throw new Error('Invalid user profile response')
+				throw new Error('Invalid user profile response: missing email')
 			}
 			return userProfile
 		},
