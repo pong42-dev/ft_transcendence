@@ -21,8 +21,18 @@ export interface Friend {
   blocked: boolean;
 }
 
+export interface Notification {
+  id: string;
+  type: 'friend_request' | 'game_invite';
+  title: string;
+  message: string;
+  sender?: string;
+  timestamp: number;
+  read: boolean;
+}
+
 export interface AppState {
-  isLoggedIn: boolean;
+  isLoggedIn: boolean | null;
   currentUser: User | null;
   isInGame: boolean;
 }

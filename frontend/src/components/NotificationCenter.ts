@@ -1,4 +1,4 @@
-import { Notification } from '../models/Types';
+import { Notification } from '../types/types.js';
 import { ApiClient } from '../services/ApiClient';
 import { getConfig } from '../config/environment';
 
@@ -207,7 +207,7 @@ export class NotificationCenter {
     
     // 30초마다 랜덤 알림 생성
     this.mockInterval = window.setInterval(() => {
-      if (!this.disabled && this.apiClient.isAuthenticated()) {
+      if (!this.disabled && this.apiClient.hasAuthToken()) {
         this.generateMockNotification();
       }
     }, 30000);

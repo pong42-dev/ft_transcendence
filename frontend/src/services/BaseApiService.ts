@@ -38,7 +38,7 @@ export abstract class BaseApiService {
   }
 
   // 인증된 사용자인지 확인
-  public isAuthenticated(): boolean {
+  public hasAuthToken(): boolean {
     return !!this.token;
   }
 

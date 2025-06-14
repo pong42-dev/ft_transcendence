@@ -19,8 +19,8 @@ export class ApiClient {
   }
 
   // 공통 메서드들 - auth 서비스에 위임
-  isAuthenticated(): boolean {
-    return this.auth.isAuthenticated();
+  hasAuthToken(): boolean {
+    return this.auth.hasAuthToken();
   }
 
   getToken(): string | null {

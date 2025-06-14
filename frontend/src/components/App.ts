@@ -3,7 +3,6 @@ import { PongGame } from './PongGame.js';
 import { ApiClient, ApiError } from '../services/ApiClient.js';
 import { UserProfile } from './UserProfile.js';
 import { Router } from '../utils/Router.js';
-import { Navigation } from './Navigation.js';
 import { validateEmail, validatePassword, validateNickname } from '../utils/validators.js';
 import { AppState } from '../types/types.js';
 
@@ -13,14 +12,13 @@ export class App {
   // Service Objects
   private apiClient: ApiClient;
   private router: Router;
-  private navigation: Navigation;
   // Components
   private pongGame: PongGame;
   private userProfile: UserProfile | null = null;
   private mainTerminal: Terminal;
   
   private state: AppState = {
-    isLoggedIn: false,
+    isLoggedIn: null, // Start in checking state
     currentUser: null,
     isInGame: false,
   };
@@ -31,38 +29,34 @@ export class App {
     this.appElement = document.getElementById('app') as HTMLElement;
     this.apiClient = new ApiClient();
     this.router = new Router();
-    this.navigation = new Navigation(this.router);
     
     this.pongGame = new PongGame((winner) => {
       this.handleGameEnd(winner);
     });
     
     this.mainTerminal = new Terminal(this.handleCommand.bind(this));
-    
-    this.setupRouting();
-    this.checkAuthState();
   }
 
   public init(): void {
-    this.render();
-    if (!this.state.isLoggedIn) {
-      this.pongGame.setGameMode('demo');
-      this.pongGame.start();
-    }
+    this.render(); // Show UI immediately (loading state)
+    this.setupRouting(); // Routes are safe because DOM exists
+    this.checkAuthState(); // Check auth in background
   }
 
   private async checkAuthState(): Promise<void> {
-    if (this.apiClient.isAuthenticated()) {
+    if (this.apiClient.hasAuthToken()) {
       try {
         const user = await this.apiClient.getCurrentUser();
         this.state.isLoggedIn = true;
         this.state.currentUser = user;
-        this.render();
       } catch (error) {
         this.apiClient.clearToken();
-        this.render();
+        this.state.isLoggedIn = false;
       }
+    } else {
+      this.state.isLoggedIn = false;
     }
+    this.render();
   }
 
   private setupRouting(): void {
@@ -77,8 +71,12 @@ export class App {
 
   private showMainView(): void {
     this.state.isInGame = false;
+    // If user is logged in, redirect to their profile instead of showing it at root
+    if (this.state.isLoggedIn && this.state.currentUser) {
+      this.router.navigate('/profile');
+      return;
+    }
     this.updateMainContent();
-    this.navigation.updateCurrentPath();
   }
 
   private showCurrentUserProfile(): void {
@@ -86,10 +84,8 @@ export class App {
       this.router.navigate('/');
       return;
     }
-    
     this.userProfile = new UserProfile(this.state.currentUser!, true);
     this.updateMainContent();
-    this.navigation.updateCurrentPath();
   }
 
   private async showUserProfile(username: string): Promise<void> {
@@ -103,7 +99,6 @@ export class App {
       const isCurrentUser = targetUser.username === this.state.currentUser?.username;
       this.userProfile = new UserProfile(targetUser, isCurrentUser);
       this.updateMainContent();
-      this.navigation.updateCurrentPath();
       this.mainTerminal.appendOutput(`Viewing profile: ${targetUser.nickname || targetUser.username}`);
     } catch (error) {
       this.mainTerminal.appendOutput('User not found.');
@@ -114,13 +109,11 @@ export class App {
   private showGameView(): void {
     this.state.isInGame = true;
     this.updateMainContent();
-    this.navigation.updateCurrentPath();
   }
 
   private showGameMode(_mode: string): void {
     this.state.isInGame = true;
     this.updateMainContent();
-    this.navigation.updateCurrentPath();
   }
 
   // ===== UI & RENDERING =====
@@ -136,7 +129,7 @@ export class App {
             <div class="w-3 h-3 rounded-full bg-terminal-lightGreen"></div>
           </div>
           <div class="flex-grow text-center text-gray-400 text-sm">
-            PONG-CLI v1.0.0 [HASH-ROUTED] 
+            PONG-CLI v1.0.0
             ${this.apiClient.shouldUseMockData() ? '[MOCK]' : '[LIVE]'}
           </div>
         </div>
@@ -152,10 +145,10 @@ export class App {
         <!-- Status Bar -->
         <div class="h-[30px] min-h-[30px] max-h-[30px] flex justify-between items-center px-4 bg-terminal-black border-t border-terminal-gray">
           <div class="flex items-center gap-2">
-            <span class="text-terminal-lightGreen text-sm">${this.state.isLoggedIn ? '●' : '○'}</span>
-            <span class="text-gray-400 text-sm">${this.state.isLoggedIn ? this.state.currentUser?.username : 'Not logged in'}</span>
+            <span class="status-indicator text-terminal-lightGreen text-sm">${this.state.isLoggedIn ? '●' : '○'}</span>
+            <span class="status-text text-gray-400 text-sm">${this.getStatusText()}</span>
           </div>
-          <div class="text-gray-400 text-sm">Route: ${window.location.hash || '#/'}</div>
+          <div class="route-text text-gray-400 text-sm">Route: ${window.location.hash || '#/'}</div>
         </div>
       </div>
     `;
@@ -171,8 +164,15 @@ export class App {
     const mainContent = document.querySelector('.main-content') as HTMLElement;
     if (!mainContent) return;
     
+    // Don't update content until auth is resolved
+    if (this.state.isLoggedIn === null) {
+      mainContent.innerHTML = `<div class="flex items-center justify-center h-full text-terminal-lightGreen">Authenticating...</div>`;
+      return;
+    }
+    
     mainContent.innerHTML = '';
     
+    // Now we know the real auth state - safe to proceed
     if (this.state.isLoggedIn && this.state.currentUser) {
       if (this.state.isInGame) {
         this.pongGame.setGameMode('regular');
@@ -189,6 +189,25 @@ export class App {
       mainContent.appendChild(this.pongGame.render());
       this.pongGame.start();
     }
+    
+    // Update status bar to reflect current state
+    this.updateStatusBar();
+  }
+
+  private updateStatusBar(): void {
+    const statusIndicator = document.querySelector('.status-indicator');
+    const statusElement = document.querySelector('.status-text');
+    const routeElement = document.querySelector('.route-text');
+    
+    if (statusIndicator) statusIndicator.textContent = this.state.isLoggedIn ? '●' : '○';
+    if (statusElement) statusElement.textContent = this.getStatusText();
+    if (routeElement) routeElement.textContent = `Route: ${window.location.hash || '#/'}`;
+  }
+
+  private getStatusText(): string {
+    if (this.state.isLoggedIn === null) return 'Authenticating...';
+    if (this.state.isLoggedIn) return this.state.currentUser?.username || '';
+    return 'Not logged in';
   }
 
   // ===== GAME MANAGEMENT =====
@@ -288,7 +307,7 @@ export class App {
       this.mainTerminal.reset();
       this.mainTerminal.appendOutput(`Welcome back, ${user.username}!`);
       this.mainTerminal.appendOutput('Type "help" to see available commands.');
-      this.render();
+      this.router.navigate('/profile');
     } catch (error) {
       const message = error instanceof ApiError
         ? `Login failed: ${error.data?.message || 'Invalid credentials'}`
@@ -340,7 +359,7 @@ export class App {
       this.mainTerminal.reset();
       this.mainTerminal.appendOutput(`Welcome, ${nickname}!`);
       this.mainTerminal.appendOutput('Type "help" to see available commands.');
-      this.render();
+      this.router.navigate('/profile');
     } catch (error) {
       const message = error instanceof ApiError
         ? `Registration failed: ${error.data?.message || 'Email already exists'}`
@@ -366,7 +385,6 @@ export class App {
     this.userProfile = null;
     this.mainTerminal.reset();
     this.router.navigate('/');
-    this.render();
   }
 
   private handleProfileCommand(args: string[]): void {

@@ -11,7 +11,6 @@ interface Route {
 
 export class Router {
   private routes: Route[] = [];
-  private currentPath: string = '';
 
   constructor() {
     // Listen for hash changes instead of popstate
@@ -41,15 +40,7 @@ export class Router {
   }
 
   navigate(path: string): void {
-    // Use hash instead of pushState
-    const hashPath = '#' + path;
-    if (window.location.hash !== hashPath) {
-      window.location.hash = hashPath;
-    } else {
-      // If hash is already set, manually trigger route change
-      this.currentPath = path;
-      this.handleRouteChange();
-    }
+      window.location.hash = '#' + path;
   }
 
   private handleRouteChange(): void {
@@ -79,9 +70,5 @@ export class Router {
     if (defaultRoute) {
       defaultRoute.handler();
     }
-  }
-
-  getCurrentPath(): string {
-    return this.currentPath || '/';
   }
 } 
