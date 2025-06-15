@@ -4,7 +4,8 @@ import { ApiClient, ApiError } from '../services/ApiClient.js';
 import { UserProfile } from './UserProfile.js';
 import { Router } from '../utils/Router.js';
 import { validateEmail, validatePassword, validateNickname } from '../utils/validators.js';
-import { AppState } from '../types/types.js';
+import { AppState, User } from '../types/types.js';
+import { FileModal } from './FileModal.js';
 
 export class App {
   // UI Elements References
@@ -336,13 +337,11 @@ export class App {
       this.mainTerminal.appendOutput(`Error: ${emailValidation.error}`);
       return;
     }
-
     const passwordValidation = validatePassword(password);
     if (!passwordValidation.isValid) {
       this.mainTerminal.appendOutput(`Error: ${passwordValidation.error}`);
       return;
     }
-
     const nicknameValidation = validateNickname(nickname);
     if (!nicknameValidation.isValid) {
       this.mainTerminal.appendOutput(`Error: ${nicknameValidation.error}`);
@@ -352,19 +351,26 @@ export class App {
     // Attempt registration
     try {
       this.mainTerminal.appendOutput('Creating your account...');
-      const user = await this.apiClient.register(email, password, nickname);
-      
-      this.state.isLoggedIn = true;
-      this.state.currentUser = user;
-      this.mainTerminal.reset();
-      this.mainTerminal.appendOutput(`Welcome, ${nickname}!`);
-      this.mainTerminal.appendOutput('Type "help" to see available commands.');
-      this.router.navigate('/profile');
+      const user = this.apiClient.shouldUseMockData() ? 
+        null /* TODO: implement mock registration */ : 
+        await this.apiClient.register(email, password, nickname);
+
+      const fileModal = new FileModal((file: File) => {
+        if (user) {
+          const imageUrl = URL.createObjectURL(file);
+          this.apiClient.updateUser({ avatarUrl: imageUrl });
+          this.state.isLoggedIn = true;
+          this.state.currentUser = user;
+          this.mainTerminal.reset();
+          this.mainTerminal.appendOutput(`Welcome, ${nickname}!`);
+          this.mainTerminal.appendOutput('Type "help" to see available commands.');
+          this.router.navigate('/profile');
+        }
+      });
+      fileModal.show();
+      // TODO: Error handling
     } catch (error) {
-      const message = error instanceof ApiError
-        ? `Registration failed: ${error.data?.message || 'Email already exists'}`
-        : 'Registration failed. Please check your connection.';
-      this.mainTerminal.appendOutput(message);
+      this.mainTerminal.appendOutput('Registration failed. Email already exists.');
     }
   }
 
@@ -378,7 +384,7 @@ export class App {
     } catch (error) {
       // Logout locally even if server request fails
     }
-    
+
     this.state.isLoggedIn = false;
     this.state.currentUser = null;
     this.state.isInGame = false;
