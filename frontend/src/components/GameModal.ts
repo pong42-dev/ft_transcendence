@@ -7,11 +7,8 @@ export class GameModal {
   private onCancel: () => void;
   private selectedMode: string = '';
   private invitedFriends: Friend[] = [];
-  private matchingTimeout: number | null = null;
   private countdownInterval: number | null = null;
   private isCancelled: boolean = false;
-  private inviteStatuses: Map<string, 'pending' | 'accepted' | 'declined'> =
-    new Map();
   private selectedOpponent: Friend | null = null;
 
   constructor(
@@ -41,12 +38,12 @@ export class GameModal {
       </div>
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <button class="rounded-lg border border-terminal-gray p-4 text-left transition-all hover:bg-terminal-gray hover:bg-opacity-10">
-          <div class="text-lg font-bold mb-2">1vs1</div>
-          <div class="text-sm opacity-70">Challenge a friend</div>
+          <div class="text-lg font-bold mb-2">VS AI</div>
+          <div class="text-sm opacity-70">Challenge AI opponent</div>
         </button>
         <button class="rounded-lg border border-terminal-gray p-4 text-left transition-all hover:bg-terminal-gray hover:bg-opacity-10">
           <div class="text-lg font-bold mb-2">Local</div>
-          <div class="text-sm opacity-70">Play locally</div>
+          <div class="text-sm opacity-70">Play with friends</div>
         </button>
         <button class="rounded-lg border border-terminal-gray p-4 text-left transition-all hover:bg-terminal-gray hover:bg-opacity-10">
           <div class="text-lg font-bold mb-2">Tournament</div>
@@ -62,9 +59,9 @@ export class GameModal {
           button.querySelector('.text-lg')?.textContent?.toLowerCase() || '';
         this.selectedMode = mode;
         if (mode === 'tournament') {
-          this.showFriendInvite(true);
-        } else if (mode === '1vs1') {
-          this.showFriendInvite(false);
+          this.setOpponentNickname(true);
+        } else if (mode === 'local') {
+          this.setOpponentNickname(false);
         } else {
           this.showDualPlayerMatch();
         }
@@ -72,17 +69,15 @@ export class GameModal {
     });
   }
 
-  private showFriendInvite(isTournament: boolean): void {
+  private setOpponentNickname(isTournament: boolean): void {
     this.contentElement.innerHTML = `
       <div class="flex items-center justify-between mb-6">
-        <h3 class="text-terminal-green text-xl font-bold">Invite ${
-          isTournament ? 'Friends' : 'Friend'
-        }</h3>
+        <h3 class="text-terminal-green text-xl font-bold">Enter ${
+          isTournament ? 'Opponents' : 'Opponent'
+        } Nickname</h3>
       </div>
       <div class="border border-terminal-gray rounded-lg p-4 mb-6">
-        <div class="max-h-48 overflow-y-auto space-y-3" id="friends-list">
-          ${this.getFriendsList()}
-        </div>
+        ${isTournament ? this.getTournamentInputs() : this.getSingleInput()}
       </div>
       <div class="flex justify-end gap-3">
         <button class="px-4 py-2 border border-terminal-red text-terminal-red rounded-lg hover:bg-terminal-red hover:bg-opacity-10 transition-all" id="cancel-btn">
@@ -96,187 +91,120 @@ export class GameModal {
 
     const cancelBtn = this.contentElement.querySelector('#cancel-btn');
     const startBtn = this.contentElement.querySelector('#start-btn');
-    const friendsList = this.contentElement.querySelector('#friends-list');
-
-    friendsList?.querySelectorAll('button[data-id]').forEach((button) => {
-      button.addEventListener('click', (e) => {
-        const id = (e.currentTarget as HTMLElement).getAttribute('data-id');
-        if (id) {
-          if (isTournament) {
-            this.handleInvite(id);
-          } else {
-            this.handleSingleInvite(id);
-          }
-        }
-      });
-    });
 
     cancelBtn?.addEventListener('click', () => this.handleCancel());
     startBtn?.addEventListener('click', () => {
       if (isTournament) {
-        this.showTournamentBracket();
+        this.handleTournamentStart();
       } else {
-        if (!this.selectedOpponent) {
-          console.warn('No opponent selected, proceeding anyway...');
-        }
-        this.showDualPlayerMatch();
+        this.handleSingleStart();
       }
     });
-
-    setTimeout(() => {
-      if (!this.isCancelled) {
-        this.simulateFriendResponses();
-      }
-    }, 2000);
   }
 
-  private handleSingleInvite(friendId: string): void {
-    const friends = [
-      { id: '1', name: 'GameMaster', status: 'online', winRate: '75%' },
-      { id: '2', name: 'ProGamer', status: 'online', winRate: '65%' },
-      { id: '3', name: 'PongKing', status: 'offline', winRate: '70%' },
-    ];
-
-    const friend = friends.find((f) => f.id === friendId);
-    if (friend) {
-      this.selectedOpponent = {
-        username: friend.name.toLowerCase(),
-        nickname: friend.name,
-        status: friend.status as 'online' | 'offline' | 'in-game',
-        blocked: false,
-      };
-      this.inviteStatuses.clear();
-      this.inviteStatuses.set(friendId, 'pending');
-      this.updateFriendsList();
-    }
-  }
-
-  private handleInvite(friendId: string): void {
-    if (!this.inviteStatuses.has(friendId)) {
-      this.inviteStatuses.set(friendId, 'pending');
-      this.updateFriendsList();
-    }
-  }
-
-  private simulateFriendResponses(): void {
-    this.inviteStatuses.forEach((status, id) => {
-      if (status === 'pending') {
-        const response = Math.random() > 0.5 ? 'accepted' : 'declined';
-        this.inviteStatuses.set(id, response);
-        if (response === 'accepted' && this.selectedMode === '1vs1') {
-          const friends = [
-            { id: '1', name: 'GameMaster', status: 'online', winRate: '75%' },
-            { id: '2', name: 'ProGamer', status: 'online', winRate: '65%' },
-            { id: '3', name: 'PongKing', status: 'offline', winRate: '70%' },
-          ];
-          const friend = friends.find((f) => f.id === id);
-          if (friend) {
-            this.selectedOpponent = {
-              username: friend.name.toLowerCase(),
-              nickname: friend.name,
-              status: friend.status as 'online' | 'offline' | 'in-game',
-              blocked: false,
-            };
-          }
-        }
-      }
-    });
-    this.updateFriendsList();
-  }
-
-  private updateFriendsList(): void {
-    const friendsList = this.contentElement.querySelector('#friends-list');
-    if (friendsList) {
-      friendsList.innerHTML = this.getFriendsList();
-      friendsList.querySelectorAll('button[data-id]').forEach((button) => {
-        button.addEventListener('click', (e) => {
-          const id = (e.currentTarget as HTMLElement).getAttribute('data-id');
-          if (id) {
-            if (this.selectedMode === 'tournament') {
-              this.handleInvite(id);
-            } else {
-              this.handleSingleInvite(id);
-            }
-          }
-        });
-      });
-    }
-  }
-
-  private getFriendsList(): string {
-    const friends = [
-      { id: '1', name: 'GameMaster', status: 'online', winRate: '75%' },
-      { id: '2', name: 'ProGamer', status: 'online', winRate: '65%' },
-      { id: '3', name: 'PongKing', status: 'offline', winRate: '70%' },
-    ];
-
-    return friends
-      .map((friend) => {
-        const inviteStatus = this.inviteStatuses.get(friend.id);
-
-        let statusElement = '';
-        if (inviteStatus === 'pending') {
-          statusElement = `
-          <div class="flex items-center gap-2">
-            <div class="animate-spin rounded-full h-4 w-4 border border-terminal-green border-t-transparent"></div>
-            <span class="text-sm">Waiting...</span>
-          </div>
-        `;
-        } else if (inviteStatus === 'accepted') {
-          statusElement = `
-          <div class="text-terminal-green flex items-center gap-1">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-            </svg>
-            <span class="text-sm">Accepted</span>
-          </div>
-        `;
-        } else if (inviteStatus === 'declined') {
-          statusElement = `
-          <div class="text-terminal-red flex items-center gap-1">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-            </svg>
-            <span class="text-sm">Declined</span>
-          </div>
-        `;
-        }
-
-        return `
-        <div class="flex items-center justify-between p-4 border border-terminal-gray rounded-lg hover:bg-terminal-gray hover:bg-opacity-5 transition-all">
-          <div class="flex items-center gap-3 min-w-0">
-            <div class="flex flex-col flex-grow">
-              <span class="font-bold truncate">${friend.name}</span>
-              <div class="flex items-center gap-2">
-                <span class="text-xs opacity-50">${friend.status}</span>
-                <span class="text-xs opacity-50">${friend.winRate} WR</span>
-              </div>
-            </div>
-          </div>
-          ${
-            inviteStatus
-              ? statusElement
-              : `
-            <button class="px-3 py-1.5 text-sm border border-terminal-gray rounded-lg hover:bg-terminal-gray hover:bg-opacity-10 transition-all whitespace-nowrap" data-id="${friend.id}">
-              Invite
-            </button>
-          `
-          }
+  private getSingleInput(): string {
+    return `
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium mb-2 text-terminal-green">Opponent Nickname</label>
+          <input 
+            type="text" 
+            id="opponent-nickname" 
+            class="w-full px-3 py-2 bg-terminal-black border border-terminal-gray rounded-lg text-terminal-green focus:outline-none focus:border-terminal-green"
+            placeholder="Enter opponent's nickname..."
+            autocomplete="off"
+          />
         </div>
-      `;
-      })
-      .join('');
+      </div>
+    `;
+  }
+
+  private getTournamentInputs(): string {
+    return `
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium mb-2 text-terminal-green">Tournament Opponents (3 players)</label>
+          <div class="space-y-3">
+            <input 
+              type="text" 
+              id="opponent-1" 
+              class="w-full px-3 py-2 bg-terminal-black border border-terminal-gray rounded-lg text-terminal-green focus:outline-none focus:border-terminal-green"
+              placeholder="Player 2 nickname..."
+              autocomplete="off"
+            />
+            <input 
+              type="text" 
+              id="opponent-2" 
+              class="w-full px-3 py-2 bg-terminal-black border border-terminal-gray rounded-lg text-terminal-green focus:outline-none focus:border-terminal-green"
+              placeholder="Player 3 nickname..."
+              autocomplete="off"
+            />
+            <input 
+              type="text" 
+              id="opponent-3" 
+              class="w-full px-3 py-2 bg-terminal-black border border-terminal-gray rounded-lg text-terminal-green focus:outline-none focus:border-terminal-green"
+              placeholder="Player 4 nickname..."
+              autocomplete="off"
+            />
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  private handleSingleStart(): void {
+    const opponentInput = this.contentElement.querySelector('#opponent-nickname') as HTMLInputElement;
+    const opponentNickname = opponentInput?.value.trim();
+
+    if (!opponentNickname) {
+      alert('Please enter an opponent nickname');
+      return;
+    }
+
+    this.selectedOpponent = {
+      username: opponentNickname.toLowerCase(),
+      nickname: opponentNickname,
+      status: 'online',
+      blocked: false,
+    };
+    
+    this.invitedFriends = [this.selectedOpponent];
+    this.showDualPlayerMatch();
+  }
+
+  private handleTournamentStart(): void {
+    const opponent1Input = this.contentElement.querySelector('#opponent-1') as HTMLInputElement;
+    const opponent2Input = this.contentElement.querySelector('#opponent-2') as HTMLInputElement;
+    const opponent3Input = this.contentElement.querySelector('#opponent-3') as HTMLInputElement;
+
+    const opponent1 = opponent1Input?.value.trim();
+    const opponent2 = opponent2Input?.value.trim();
+    const opponent3 = opponent3Input?.value.trim();
+
+    if (!opponent1 || !opponent2 || !opponent3) {
+      alert('Please enter all 3 opponent nicknames');
+      return;
+    }
+
+    this.invitedFriends = [
+      { username: opponent1.toLowerCase(), nickname: opponent1, status: 'online', blocked: false },
+      { username: opponent2.toLowerCase(), nickname: opponent2, status: 'online', blocked: false },
+      { username: opponent3.toLowerCase(), nickname: opponent3, status: 'online', blocked: false },
+    ];
+
+    this.showTournamentBracket();
   }
 
   private showDualPlayerMatch(): void {
     const players = [
-      { name: 'You', winRate: '75%', isCurrentUser: true },
+      { name: 'You', isCurrentUser: true },
       {
         name:
           this.selectedMode === 'local'
-            ? 'Player 2'
+            ? this.selectedOpponent?.nickname || 'Player 2'
+            : this.selectedMode === 'vs ai'
+            ? 'AI'
             : this.selectedOpponent?.nickname || 'Opponent',
-        winRate: '65%',
         isNextOpponent: true,
       },
     ];
@@ -291,9 +219,6 @@ export class GameModal {
       }">
         <div class="flex flex-col flex-grow min-w-0 mr-2">
           <span class="font-bold truncate text-sm sm:text-base">${player.name}</span>
-          <div class="flex items-center gap-2 flex-wrap">
-            <span class="text-xs opacity-50">${player.winRate} WR</span>
-          </div>
         </div>
         ${
           player.isCurrentUser
@@ -312,7 +237,7 @@ export class GameModal {
     this.contentElement.innerHTML = `
       <div class="flex items-center justify-between mb-6">
         <h3 class="text-terminal-green text-xl font-bold">${
-          this.selectedMode === '1vs1' ? '1vs1 Match' : 'Local Match'
+          this.selectedMode === 'vs ai' ? 'VS AI Match' : 'Local Match'
         }</h3>
       </div>
       <div class="tournament-bracket mb-6">
@@ -370,14 +295,13 @@ export class GameModal {
 
   private showTournamentBracket(): void {
     const players = [
-      { name: 'You', winRate: '75%', isCurrentUser: true },
+      { name: 'You', isCurrentUser: true },
       {
-        name: 'GameMaster',
-        winRate: '65%',
+        name: this.invitedFriends[0]?.nickname || 'Player 2',
         isNextOpponent: true,
       },
-      { name: 'ProGamer', winRate: '80%' },
-      { name: 'PongKing', winRate: '70%' },
+      { name: this.invitedFriends[1]?.nickname || 'Player 3' },
+      { name: this.invitedFriends[2]?.nickname || 'Player 4' },
     ];
 
     const playerCard = (player: any) => `
@@ -390,9 +314,6 @@ export class GameModal {
       }">
         <div class="flex flex-col flex-grow min-w-0 mr-2">
           <span class="font-bold truncate text-sm sm:text-base">${player.name}</span>
-          <div class="flex items-center gap-2 flex-wrap">
-            <span class="text-xs opacity-50">${player.winRate} WR</span>
-          </div>
         </div>
         ${
           player.isCurrentUser
@@ -473,14 +394,12 @@ export class GameModal {
 
   private startGame(): void {
     if (!this.isCancelled) {
-      // TODO: Player setup will be handled by the parent component when game starts
       this.onStart(this.selectedMode, this.invitedFriends);
     }
   }
 
   private handleCancel(): void {
     this.isCancelled = true;
-    if (this.matchingTimeout) clearTimeout(this.matchingTimeout);
     if (this.countdownInterval) clearInterval(this.countdownInterval);
     this.close();
     this.onCancel();
@@ -492,7 +411,6 @@ export class GameModal {
 
   public close(): void {
     this.modalElement.remove();
-    if (this.matchingTimeout) clearTimeout(this.matchingTimeout);
     if (this.countdownInterval) clearInterval(this.countdownInterval);
   }
 }

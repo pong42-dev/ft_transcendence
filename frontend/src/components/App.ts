@@ -4,8 +4,9 @@ import { ApiClient, ApiError } from '../services/ApiClient.js';
 import { UserProfile } from './UserProfile.js';
 import { Router } from '../utils/Router.js';
 import { validateEmail, validatePassword, validateNickname } from '../utils/validators.js';
-import { AppState, User } from '../types/types.js';
+import { AppState, User, Friend } from '../types/types.js';
 import { FileModal } from './FileModal.js';
+import { GameModal } from './GameModal.js';
 
 export class App {
   // UI Elements References
@@ -412,7 +413,42 @@ export class App {
       this.mainTerminal.appendOutput('Please login first to play the game.');
       return;
     }
-    this.router.navigate('/game');
+
+    const gameModal = new GameModal(
+      (mode: string, opponents: Friend[]) => {
+        this.mainTerminal.appendOutput(`Starting ${mode} game...`);
+        this.state.isInGame = true;
+
+        if (this.state.currentUser) {
+          const player1 = {
+            nickname: this.state.currentUser.nickname || this.state.currentUser.username,
+            avatarUrl: this.state.currentUser.avatarUrl,
+          };
+
+          if (mode === 'vs ai') {
+            this.pongGame.setPlayers(player1, { nickname: 'AI' });
+            this.pongGame.setMultiplayerMode(false);
+            this.pongGame.setGameMode('regular');
+          } else if (mode === 'local') {
+            const opponent = opponents[0];
+            this.pongGame.setPlayers(player1, { nickname: opponent.nickname });
+            this.pongGame.setMultiplayerMode(true);
+            this.pongGame.setGameMode('regular');
+          } else if (mode === 'tournament') {
+            const opponent = opponents[0];
+            // TODO: Store full tournament roster and manage bracket
+            this.pongGame.setPlayers(player1, { nickname: opponent.nickname });
+            this.pongGame.setMultiplayerMode(true);
+            this.pongGame.setGameMode('tournament');
+          }
+        }
+        this.router.navigate('/game');
+      },
+      () => {
+        this.mainTerminal.appendOutput('Game cancelled.');
+      }
+    );
+    gameModal.show();
   }
 
   private handleClearCommand(): void {
