@@ -1,6 +1,6 @@
 import { BaseApiService } from './BaseApiService';
 import { transformFriends } from '../core/DataTransformers';
-import { convertToFriendArray } from '../../utils/TypeSafetyUtils';
+import { convertToFriendArray } from '../utils/TypeSafetyUtils';
 import * as Types from '../../types/types';
 
 export class FriendApiService extends BaseApiService {

@@ -1,7 +1,25 @@
-// Simple error handler for PONG-CLI game
+// Enhanced error handler for API and application errors
+
+import { ApiError } from '../services/api/BaseApiService';
+
+export enum ErrorLevel {
+  INFO = 'info',
+  WARNING = 'warning',
+  ERROR = 'error',
+  CRITICAL = 'critical'
+}
+
+export interface ErrorContext {
+  component?: string;
+  action?: string;
+  userId?: string;
+  additionalData?: Record<string, any>;
+}
 
 export class ErrorHandler {
   private static instance: ErrorHandler;
+  private errorQueue: Array<{ error: Error; context: string; level: ErrorLevel; timestamp: number }> = [];
+  private maxQueueSize = 100;
 
   static getInstance(): ErrorHandler {
     if (!ErrorHandler.instance) {
@@ -17,25 +35,92 @@ export class ErrorHandler {
   private setupGlobalHandlers(): void {
     // Handle all errors
     window.addEventListener('error', (event) => {
-      this.handleError(event.error || new Error('Unknown error'), 'Global Error');
+      this.handleError(
+        event.error || new Error(`Script error: ${event.filename}:${event.lineno}`),
+        'Global JavaScript Error',
+        ErrorLevel.ERROR
+      );
     });
 
     // Handle promise rejections
     window.addEventListener('unhandledrejection', (event) => {
       this.handleError(
         event.reason instanceof Error ? event.reason : new Error(String(event.reason)),
-        'Promise Rejection'
+        'Unhandled Promise Rejection',
+        ErrorLevel.ERROR
       );
       event.preventDefault();
     });
   }
 
-  handleError(error: Error, context: string = 'Error'): void {
-    // Log for debugging
-    console.error(`[${context}]`, error);
+  handleError(error: Error, context: string = 'Error', level: ErrorLevel = ErrorLevel.ERROR, errorContext?: ErrorContext): void {
+    // Add to error queue for debugging
+    this.addToErrorQueue(error, context, level);
     
-    // Show user notification
-    this.showNotification(this.getUserMessage(error), 'error');
+    // Enhanced logging with context
+    const logData = {
+      message: error.message,
+      stack: error.stack,
+      context,
+      level,
+      errorContext,
+      timestamp: new Date().toISOString(),
+      userAgent: navigator.userAgent
+    };
+    
+    console.error(`[${level.toUpperCase()}][${context}]`, logData);
+    
+    // Handle API errors specially
+    if (error instanceof ApiError) {
+      this.handleApiError(error, context);
+    } else {
+      // Show user notification for non-API errors
+      this.showNotification(this.getUserMessage(error), this.mapErrorLevelToNotificationType(level));
+    }
+  }
+
+  private handleApiError(apiError: ApiError, context: string): void {
+    const { status, data } = apiError;
+    
+    // Don't show notifications for certain status codes
+    const silentStatuses = [401, 403]; // These are handled by interceptors
+    
+    if (!silentStatuses.includes(status)) {
+      const message = data?.message || this.getUserMessage(apiError);
+      this.showNotification(message, this.mapErrorLevelToNotificationType(this.getErrorLevelFromStatus(status)));
+    }
+  }
+
+  private getErrorLevelFromStatus(status: number): ErrorLevel {
+    if (status >= 500) return ErrorLevel.CRITICAL;
+    if (status >= 400) return ErrorLevel.ERROR;
+    return ErrorLevel.WARNING;
+  }
+
+  private addToErrorQueue(error: Error, context: string, level: ErrorLevel): void {
+    this.errorQueue.push({
+      error,
+      context,
+      level,
+      timestamp: Date.now()
+    });
+
+    // Keep queue size manageable
+    if (this.errorQueue.length > this.maxQueueSize) {
+      this.errorQueue.shift();
+    }
+  }
+
+  private mapErrorLevelToNotificationType(level: ErrorLevel): 'error' | 'success' {
+    switch (level) {
+      case ErrorLevel.INFO:
+      case ErrorLevel.WARNING:
+        return 'success';
+      case ErrorLevel.ERROR:
+      case ErrorLevel.CRITICAL:
+      default:
+        return 'error';
+    }
   }
 
   private getUserMessage(error: Error): string {

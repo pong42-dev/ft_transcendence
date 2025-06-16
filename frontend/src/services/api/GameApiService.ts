@@ -1,5 +1,5 @@
 import { BaseApiService } from './BaseApiService';
-import { convertToMatchHistoryArray } from '../../utils/TypeSafetyUtils';
+import { convertToMatchHistoryArray } from '../utils/TypeSafetyUtils';
 import * as Types from '../../types/types';
 
 export class GameApiService extends BaseApiService {
@@ -8,13 +8,34 @@ export class GameApiService extends BaseApiService {
   }
 
   // 게임 생성
-  async createGame(gameData: Types.GameData): Promise<Types.ActiveGame> {
-    return this.post('/games', gameData);
+  async createGame(gameConfig: Types.GameConfig): Promise<Types.Game> {
+    return this.post('/games', gameConfig);
   }
 
-  // 게임 결과 업데이트
-  async updateGame(gameId: string, result: Types.GameResult): Promise<void> {
-    await this.put(`/games/${gameId}`, result);
+  // 게임 참가
+  async joinGame(gameId: string): Promise<Types.Game> {
+    return this.post(`/games/${gameId}/join`, {});
+  }
+
+  // 게임 정보 조회
+  async getGame(gameId: string): Promise<Types.Game> {
+    return this.get(`/games/${gameId}`);
+  }
+
+  // 게임 움직임/액션
+  async makeMove(gameId: string, move: Types.GameMove): Promise<Types.Game> {
+    return this.post(`/games/${gameId}/move`, move);
+  }
+
+  // 게임 떠나기
+  async leaveGame(gameId: string): Promise<void> {
+    await this.post(`/games/${gameId}/leave`, {});
+  }
+
+  // 게임 히스토리 조회
+  async getGameHistory(page: number = 1, limit: number = 10): Promise<Types.MatchHistory[]> {
+    const historyData = await this.get<Types.MatchHistory[]>(`/games/history?page=${page}&limit=${limit}`);
+    return convertToMatchHistoryArray(historyData);
   }
 
   // 게임 통계 조회
@@ -22,36 +43,34 @@ export class GameApiService extends BaseApiService {
     return this.get('/games/stats');
   }
 
-  // 매치 히스토리 조회 - 인터셉터에서 자동 변환됨
-  async getMatchHistory(): Promise<Types.MatchHistory[]> {
-    const matchHistoryData = await this.get<Types.MatchHistory[]>('/games/history');
-    // 타입 안전성을 위한 변환 검증
-    return convertToMatchHistoryArray(matchHistoryData);
-  }
-
-  // 게임 초대 보내기
-  async sendGameInvite(username: string, gameMode: string = '1v1'): Promise<void> {
-    await this.post('/games/invite', { username, gameMode });
-  }
-
-  // 게임 초대 응답
-  async respondToGameInvite(inviteId: string, accept: boolean): Promise<void> {
-    await this.post(`/games/invite/${inviteId}/respond`, { accept });
-  }
-
-  // 활성 게임 조회
-  async getActiveGames(): Promise<Types.ActiveGame[]> {
+  // 활성 게임 목록 조회
+  async getActiveGames(): Promise<Types.Game[]> {
     return this.get('/games/active');
   }
 
-  // 게임 참가
-  async joinGame(gameId: string): Promise<Types.ActiveGame> {
-    return this.post(`/games/${gameId}/join`, {});
+  // 대기 중인 게임 목록 조회
+  async getWaitingGames(): Promise<Types.Game[]> {
+    return this.get('/games/waiting');
   }
 
-  // 게임 떠나기
-  async leaveGame(gameId: string): Promise<void> {
-    await this.post(`/games/${gameId}/leave`, {});
+  // 게임 초대 보내기
+  async sendGameInvite(username: string, gameConfig: Types.GameConfig): Promise<void> {
+    await this.post('/games/invite', { username, gameConfig });
+  }
+
+  // 게임 초대 응답
+  async respondToGameInvite(inviteId: string, accept: boolean): Promise<Types.Game | null> {
+    if (accept) {
+      return this.post(`/games/invite/${inviteId}/accept`, {});
+    } else {
+      await this.post(`/games/invite/${inviteId}/reject`, {});
+      return null;
+    }
+  }
+
+  // 초대 목록 조회
+  async getPendingInvites(): Promise<Types.GameInvite[]> {
+    return this.get('/games/invites');
   }
 
   // Health check

@@ -1,6 +1,6 @@
 # API Service Layer Guide
 
-> **단순화된 프론트엔드 API 서비스 레이어 사용 가이드**
+> **프론트엔드 API 서비스 레이어 사용 가이드** (v3.0)
 
 ## 🚀 기본 사용법
 
@@ -14,74 +14,99 @@ const apiClient = new ApiClient({
 });
 ```
 
-### 2. 인증 API
+### 2. 인증 API (AuthApiService)
 ```typescript
-// 로그인 (자동 토큰 관리)
+// 로그인 (HttpOnly 쿠키 기반)
 const user = await apiClient.auth.login('email@example.com', 'password');
 
 // 회원가입
 const newUser = await apiClient.auth.register('email@example.com', 'password', 'nickname');
 
+// 토큰 갱신
+const refreshedUser = await apiClient.auth.refreshToken();
+
 // 현재 사용자 정보
 const currentUser = await apiClient.auth.getCurrentUser();
 
-// 사용자 검색
-const users = await apiClient.auth.searchUsers('query');
-
-// 프로필 업데이트
-const updatedUser = await apiClient.auth.updateUser({ nickname: 'new-nickname' });
-
 // 로그아웃 (자동 토큰 정리)
 await apiClient.auth.logout();
+
+// 인증 상태 확인
+const isAuthenticated = apiClient.auth.isAuthenticated();
+const token = apiClient.auth.getToken();
 ```
 
-### 3. 게임 API
+### 3. 사용자 API (UserApiService)
+**참고: UserApiService는 ApiClient에 포함되지 않으며, 필요시 별도로 import하여 사용합니다.**
+
 ```typescript
-// 게임 통계
-const stats = await apiClient.game.getGameStats();
+import { UserApiService } from '../services';
 
-// 매치 히스토리
-const matches = await apiClient.game.getMatchHistory();
+const userApi = new UserApiService();
 
+// 프로필 조회
+const profile = await userApi.getProfile();
+
+// 프로필 업데이트
+const updatedProfile = await userApi.updateProfile({
+  nickname: 'new-nickname',
+  bio: 'Hello world!'
+});
+
+// 아바타 업로드
+const file = /* File object */;
+const userWithNewAvatar = await userApi.uploadAvatar(file);
+
+// 사용자 검색
+const users = await userApi.searchUsers('search query');
+
+// ID로 사용자 조회
+const user = await userApi.getUserById('user-id');
+
+// 사용자명으로 조회
+const user = await userApi.getUserByUsername('username');
+```
+
+### 4. 게임 API (GameApiService)
+```typescript
 // 게임 생성
 const game = await apiClient.game.createGame({
   gameMode: '1v1',
   difficulty: 'medium'
 });
 
-// 게임 결과 업데이트
-await apiClient.game.updateGame('gameId', {
-  winner: 'player1',
-  player1Score: 5,
-  player2Score: 3,
-  duration: 300,
-  endedAt: new Date().toISOString()
-});
-
-// 활성 게임 목록
-const activeGames = await apiClient.game.getActiveGames();
-
 // 게임 참가
 const joinedGame = await apiClient.game.joinGame('gameId');
 
-// 게임 초대
-await apiClient.game.sendGameInvite('username', '1v1');
+// 게임 정보 조회
+const gameInfo = await apiClient.game.getGame('gameId');
+
+// 게임 움직임/액션
+const updatedGame = await apiClient.game.makeMove('gameId', {
+  type: 'paddle_move',
+  data: { y: 100 }
+});
+
+// 게임 떠나기
+await apiClient.game.leaveGame('gameId');
+
+// 게임 히스토리 조회
+const matches = await apiClient.game.getGameHistory(1, 10); // page, limit
+
+// 게임 통계
+const stats = await apiClient.game.getGameStats();
+
+// 활성 게임 목록
+const activeGames = await apiClient.game.getActiveGames();
 ```
 
-### 4. 친구 API
+### 5. 친구 API (FriendApiService)
 ```typescript
 // 친구 목록
 const friends = await apiClient.friend.getFriends();
 
 // 친구 요청 보내기
 await apiClient.friend.addFriend('username');
-
-// 친구 요청 목록
-const requests = await apiClient.friend.getFriendRequests();
-
-// 친구 요청 응답
-await apiClient.friend.respondToFriendRequest('requestId', true); // 수락
-await apiClient.friend.respondToFriendRequest('requestId', false); // 거절
 
 // 친구 삭제
 await apiClient.friend.removeFriend('username');
@@ -90,14 +115,146 @@ await apiClient.friend.removeFriend('username');
 await apiClient.friend.blockFriend('username');
 await apiClient.friend.unblockFriend('username');
 
-// 친구 상태 조회
-const status = await apiClient.friend.getFriendStatus('username');
-const allStatuses = await apiClient.friend.getFriendsStatus();
+// 친구 요청 목록
+const requests = await apiClient.friend.getFriendRequests();
+
+// 친구 요청 응답
+await apiClient.friend.respondToFriendRequest('requestId', true); // 수락
+await apiClient.friend.respondToFriendRequest('requestId', false); // 거절
+
+// 친구 온라인 상태 조회
+const statuses = await apiClient.friend.getFriendsStatus();
 ```
 
 ## 🔧 자동 기능들
 
 ### 백그라운드에서 자동 처리되는 기능들
+
+#### 1. 토큰 관리 (TokenManager)
+- **액세스 토큰**: 메모리에 저장 (XSS 방지)
+- **리프레시 토큰**: HttpOnly 쿠키로 서버가 관리
+- **자동 갱신**: 401 에러 시 자동으로 토큰 갱신 시도
+
+#### 2. 인터셉터 시스템 (SimpleInterceptorManager)
+- **요청 인터셉터**: 자동 토큰 주입, 요청 로깅
+- **응답 인터셉터**: 에러 처리, 응답 로깅, 토큰 갱신
+
+#### 3. 데이터 변환 (DataTransformers)
+- **백엔드 → 프론트엔드**: 서버 응답을 클라이언트 타입으로 변환
+- **타입 안전성**: TypeScript 타입 보장
+
+#### 4. 캐시 관리
+- **자동 캐시**: 서비스별 독립적인 캐시 시스템
+- **캐시 초기화**: `clearCache()` 메서드로 수동 정리 가능
+
+## 🛡️ 보안 특징
+
+### 1. HttpOnly 쿠키 기반 인증
+```typescript
+// 로그인 시 자동으로 설정
+await apiClient.auth.login(email, password);
+// → 액세스 토큰: 메모리 저장
+// → 리프레시 토큰: HttpOnly 쿠키 저장 (서버가 관리)
+```
+
+### 2. 자동 토큰 갱신
+```typescript
+// API 호출 중 401 에러 발생 시 자동으로 처리
+// 사용자는 별도 작업 불필요
+const data = await apiClient.friend.getFriends();
+// → 내부적으로 토큰 갱신 후 재시도
+```
+
+### 3. 안전한 로그아웃
+```typescript
+await apiClient.auth.logout();
+// → 메모리의 액세스 토큰 제거
+// → 서버의 리프레시 토큰 쿠키 제거
+// → 모든 서비스 캐시 초기화
+```
+
+## 🔍 에러 처리
+
+### 자동 에러 처리
+```typescript
+try {
+  const friends = await apiClient.friend.getFriends();
+} catch (error) {
+  // ApiError 타입의 구조화된 에러
+  if (error instanceof ApiError) {
+    console.log('Status:', error.status);
+    console.log('Message:', error.message);
+    console.log('Context:', error.context);
+  }
+}
+```
+
+### 알림 시스템 통합
+```typescript
+const apiClient = new ApiClient({
+  showNotification: (message, type) => {
+    // 사용자 정의 알림 시스템 연결
+    showToast(message, type);
+  }
+});
+// → 에러 발생 시 자동으로 사용자에게 알림
+```
+
+## 📋 타입 정의
+
+모든 API는 완전한 TypeScript 지원을 제공합니다:
+
+```typescript
+// types/types.ts에서 import
+import * as Types from '../../types/types';
+
+// 예시: 사용자 타입
+interface User {
+  id: string;
+  email: string;
+  nickname: string;
+  avatar?: string;
+  // ...
+}
+
+// 예시: 게임 설정 타입
+interface GameConfig {
+  gameMode: '1v1' | 'tournament';
+  difficulty: 'easy' | 'medium' | 'hard';
+  // ...
+}
+```
+
+## 🚀 추가 기능
+
+### 캐시 관리
+```typescript
+// 모든 캐시 초기화
+apiClient.clearAllCaches();
+
+// 특정 서비스 캐시만 초기화
+apiClient.auth.clearCache();
+apiClient.friend.clearCache();
+apiClient.game.clearCache();
+```
+
+### 인터셉터 재설정
+```typescript
+// 인터셉터 시스템 초기화 (디버깅용)
+apiClient.resetInterceptors();
+```
+
+### 토큰 수동 관리 (고급 사용법)
+```typescript
+// 인증 상태 확인
+const isAuth = apiClient.isAuthenticated();
+
+// 토큰 수동 설정 (특수한 경우에만 사용)
+apiClient.setToken('custom-token');
+
+// 토큰 초기화
+apiClient.clearToken();
+```
 - **인증 관리**: 자동 토큰 첨부 및 갱신
 - **데이터 변환**: 백엔드 ↔ 프론트엔드 데이터 자동 변환
 - **에러 처리**: 사용자 친화적 에러 메시지

@@ -1,5 +1,5 @@
 import { BaseApiService, ApiError } from './BaseApiService';
-import { extractUserFromLoginResponse, convertToUser } from '../../utils/TypeSafetyUtils';
+import { extractUserFromLoginResponse, convertToUser } from '../utils/TypeSafetyUtils';
 import { TokenManager } from '../core/TokenManager';
 import * as Types from '../../types/types';
 
@@ -69,34 +69,15 @@ export class AuthApiService extends BaseApiService {
     throw new ApiError(501, 'Google OAuth not implemented', { message: 'Google login not yet implemented' });
   }
 
-  // 현재 사용자 정보 조회 - 인터셉터에서 자동 변환됨
-  async getCurrentUser(): Promise<Types.User> {
-    const userData = await this.get<Types.User>('/users/me');
-    // 타입 안전성을 위한 변환 검증
+  // 토큰 검증 및 사용자 정보 조회
+  async verifyToken(): Promise<Types.User> {
+    const userData = await this.get<Types.User>('/auth/verify');
     return convertToUser(userData);
   }
 
-  // 사용자 검색 (username으로) - 인터셉터에서 자동 변환됨
-  async getUserByUsername(username: string): Promise<Types.User> {
-    const userData = await this.get<Types.User>(`/users/${username}`);
-    // 타입 안전성을 위한 변환 검증
-    return convertToUser(userData);
-  }
-
-  // 사용자 검색 (query로) - 인터셉터에서 자동 변환됨
-  async searchUsers(query: string): Promise<Types.User[]> {
-    const usersData = await this.get<Types.User[]>(`/users/search?q=${encodeURIComponent(query)}`);
-    // 배열의 각 요소가 올바른 타입인지 검증
-    if (Array.isArray(usersData)) {
-      return usersData.map(user => convertToUser(user));
-    }
-    throw new Error('Invalid users data structure. Expected User[] type after interceptor transformation.');
-  }
-
-  // 프로필 업데이트 - 인터셉터에서 자동 변환됨
-  async updateUser(updates: Partial<Types.User>): Promise<Types.User> {
-    const userData = await this.put<Types.User>('/users/me', updates);
-    // 타입 안전성을 위한 변환 검증
-    return convertToUser(userData);
-  }
+  // Note: 사용자 관리 관련 메서드들은 UserApiService로 이동되었습니다.
+  // - getCurrentUser() → UserApiService.getProfile()
+  // - getUserByUsername() → UserApiService.getUserByUsername()
+  // - searchUsers() → UserApiService.searchUsers()
+  // - updateUser() → UserApiService.updateProfile()
 }

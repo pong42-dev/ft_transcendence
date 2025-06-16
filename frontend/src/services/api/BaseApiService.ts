@@ -1,6 +1,7 @@
 import { getConfig } from '../../config/environment';
 import { SimpleInterceptorManager } from '../core/Interceptors';
 import { TokenManager } from '../core/TokenManager';
+import { log } from '../../utils/Logger';
 import { 
   ApiErrorResponse, 
   RequestInterceptor, 
@@ -37,6 +38,7 @@ export abstract class BaseApiService {
   
   // 캐시 스토리지
   private cache = new Map<string, CacheEntry<any>>();
+  private cacheCleanupInterval: number | null = null;
   
   // 재시도 설정
   private readonly maxRetries = 3;
@@ -48,6 +50,9 @@ export abstract class BaseApiService {
     
     // 통합 인터셉터 시스템에서 인터셉터 가져오기
     this.loadInterceptorsFromManager();
+    
+    // 캐시 자동 정리 시작
+    this.startCacheCleanup();
   }
 
   /**
@@ -74,7 +79,7 @@ export abstract class BaseApiService {
         response: [...interceptors.response]
       });
     } catch (error) {
-      console.warn(`⚠️ Failed to load interceptors for ${this.serviceName}:`, error);
+      log.warn(`Failed to load interceptors for ${this.serviceName}`, error, 'Interceptor');
       this.activeRequestInterceptors = [];
       this.activeResponseInterceptors = [];
     }
@@ -145,7 +150,7 @@ export abstract class BaseApiService {
         }
         throw new Error(`Mock handler not found for ${this.serviceName}`);
       } catch (error) {
-        console.error(`[Mock] Failed to load mock for ${this.serviceName}:`, error);
+        log.error(`Mock loading failed for ${this.serviceName}`, error, 'Mock');
         // Mock 로딩 실패 시 기본 Mock 응답
         return {
           success: false,
@@ -167,6 +172,10 @@ export abstract class BaseApiService {
 
     return this.retry(async () => {
       const url = `${this.baseUrl}${endpoint}`;
+      const requestMethod = options.method || 'GET';
+      
+      // API 요청 로깅
+      log.api.request(requestMethod, url, options.body);
       
       // 기본 헤더 설정
       let defaultHeaders: Record<string, string> = {
@@ -193,6 +202,9 @@ export abstract class BaseApiService {
 
       try {
         const response = await fetch(url, requestOptions);
+        
+        // API 응답 로깅
+        log.api.response(requestMethod, url, response.status);
         
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({})) as ApiErrorResponse;
@@ -230,7 +242,7 @@ export abstract class BaseApiService {
   // 인증 실패 처리
   private handleUnauthorized(): void {
     this.clearToken();
-    console.warn('Authentication failed. Token cleared.');
+    log.warn('Authentication failed. Token cleared.', undefined, 'Auth');
   }
 
   // GET 요청 (캐시 지원)
@@ -419,5 +431,44 @@ export abstract class BaseApiService {
       
       throw error;
     }
+  }
+
+  // 캐시 자동 정리 시작
+  private startCacheCleanup(): void {
+    // 5분마다 만료된 캐시 정리
+    this.cacheCleanupInterval = window.setInterval(() => {
+      this.cleanExpiredCache();
+    }, 5 * 60 * 1000);
+  }
+
+  // 만료된 캐시 정리
+  private cleanExpiredCache(): void {
+    const now = Date.now();
+    let cleanedCount = 0;
+    
+    for (const [key, entry] of this.cache.entries()) {
+      if (now > entry.timestamp + entry.ttl) {
+        this.cache.delete(key);
+        cleanedCount++;
+      }
+    }
+    
+    if (cleanedCount > 0) {
+      log.debug(`Cleaned ${cleanedCount} expired cache entries`, { serviceName: this.serviceName }, 'Cache');
+    }
+  }
+
+  // 캐시 정리 중단
+  private stopCacheCleanup(): void {
+    if (this.cacheCleanupInterval) {
+      clearInterval(this.cacheCleanupInterval);
+      this.cacheCleanupInterval = null;
+    }
+  }
+
+  // 서비스 정리 (메모리 리크 방지)
+  public dispose(): void {
+    this.stopCacheCleanup();
+    this.clearCache();
   }
 }

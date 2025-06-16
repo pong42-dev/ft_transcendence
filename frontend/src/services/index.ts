@@ -10,6 +10,7 @@ export { ApiClient, ApiError } from './ApiClient';
 export { AuthApiService } from './api/AuthApiService';
 export { FriendApiService } from './api/FriendApiService';
 export { GameApiService } from './api/GameApiService';
+export { UserApiService } from './api/UserApiService';
 export { BaseApiService } from './api/BaseApiService';
 
 // 핵심 유틸리티들

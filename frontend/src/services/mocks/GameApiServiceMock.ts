@@ -9,52 +9,91 @@ export const getGameApiServiceMockResponse = async <T>(
   endpoint: string,
   options: RequestInit
 ): Promise<T> => {
-  // Mock 데이터 시뮬레이션을 위한 지연
-  await new Promise(resolve => setTimeout(resolve, 100 + Math.random() * 400));
+  // Mock 데이터 시뮬레이션을 위한 지연 (개선된 지연 시간)
+  await new Promise(resolve => setTimeout(resolve, 50 + Math.random() * 200));
   
   const method = options.method || 'GET';
+  const now = new Date();
   
   // 게임 생성 Mock
-  if (endpoint.includes('/games') && method === 'POST') {
-    return {
-      id: Date.now(),
-      status: 'created',
+  if (endpoint === '/games' && method === 'POST') {
+    const mockGame: Types.Game = {
+      id: `game-${Date.now()}`,
       gameMode: '1v1',
-      player1: { id: 'mock-user-id', username: 'mockuser' },
-      player2: null,
-      startedAt: new Date().toISOString(),
-      endedAt: null,
-      winner: null,
-      score: { player1: 0, player2: 0 }
-    } as T;
+      players: [
+        { id: 'user-123', username: 'mockuser', isReady: true },
+      ],
+      status: 'waiting',
+      startedAt: now.toISOString(),
+      maxPlayers: 2,
+      currentScore: { player1: 0, player2: 0 }
+    };
+    return mockGame as T;
   }
-  
-  // 게임 업데이트 Mock
-  if (endpoint.includes('/games/') && method === 'PUT') {
-    return {
-      id: parseInt(endpoint.split('/').pop() || '0'),
-      status: 'completed',
+
+  // 게임 참가 Mock
+  if (endpoint.includes('/join') && method === 'POST') {
+    const gameId = endpoint.split('/')[2];
+    const mockGame: Types.Game = {
+      id: gameId,
       gameMode: '1v1',
-      player1: { id: 'mock-user-id', username: 'mockuser' },
-      player2: { id: 'mock-opponent-id', username: 'opponent' },
-      startedAt: new Date(Date.now() - 300000).toISOString(),
-      endedAt: new Date().toISOString(),
-      winner: 'player1',
-      score: { player1: 11, player2: 7 }
-    } as T;
+      players: [
+        { id: 'user-123', username: 'mockuser', isReady: true },
+        { id: 'user-456', username: 'opponent', isReady: true }
+      ],
+      status: 'in_progress',
+      startedAt: now.toISOString(),
+      maxPlayers: 2,
+      currentScore: { player1: 0, player2: 0 }
+    };
+    return mockGame as T;
   }
-  
+
+  // 게임 정보 조회 Mock
+  if (endpoint.match(/\/games\/[^\/]+$/) && method === 'GET') {
+    const gameId = endpoint.split('/')[2];
+    const mockGame: Types.Game = {
+      id: gameId,
+      gameMode: '1v1',
+      players: [
+        { id: 'user-123', username: 'mockuser', isReady: true },
+        { id: 'user-456', username: 'opponent', isReady: true }
+      ],
+      status: 'in_progress',
+      startedAt: new Date(now.getTime() - 120000).toISOString(),
+      maxPlayers: 2,
+      currentScore: { player1: 3, player2: 2 }
+    };
+    return mockGame as T;
+  }
+
+  // 게임 움직임 Mock
+  if (endpoint.includes('/move') && method === 'POST') {
+    const gameId = endpoint.split('/')[2];
+    const mockGame: Types.Game = {
+      id: gameId,
+      gameMode: '1v1',
+      players: [
+        { id: 'user-123', username: 'mockuser', isReady: true },
+        { id: 'user-456', username: 'opponent', isReady: true }
+      ],
+      status: 'in_progress',
+      startedAt: new Date(now.getTime() - 180000).toISOString(),
+      maxPlayers: 2,
+      currentScore: { player1: 4, player2: 2 }
+    };
+    return mockGame as T;
+  }
+
   // 게임 통계 Mock
   if (endpoint.includes('/games/stats')) {
     return {
-      totalGames: 15,
-      wins: 9,
-      losses: 6,
+      totalGames: 25,
+      gamesWon: 15,
+      gamesLost: 10,
       winRate: 0.6,
       averageScore: 7.5,
-      bestStreak: 4,
-      currentStreak: 2,
-      ranking: 1250
+      favoriteGameMode: '1v1'
     } as T;
   }
   

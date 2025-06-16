@@ -83,6 +83,57 @@ export interface ActiveGame {
   maxPlayers: number;
 }
 
+// 백엔드 호환 게임 타입들
+export interface GameConfig {
+  gameMode: '1v1' | 'tournament';
+  difficulty?: 'easy' | 'medium' | 'hard';
+  maxScore?: number;
+  isPrivate?: boolean;
+}
+
+export interface Game {
+  id: string;
+  gameMode: '1v1' | 'tournament';
+  players: GamePlayer[];
+  status: 'waiting' | 'in_progress' | 'finished';
+  startedAt: string;
+  endedAt?: string;
+  maxPlayers: number;
+  currentScore?: GameScore;
+  winner?: string;
+}
+
+export interface GamePlayer {
+  id: string;
+  username: string;
+  nickname?: string;
+  isReady: boolean;
+}
+
+export interface GameMove {
+  playerId: string;
+  action: 'move_up' | 'move_down' | 'stop';
+  timestamp: number;
+}
+
+export interface GameScore {
+  player1: number;
+  player2: number;
+}
+
+// 게임 초대 관련 타입들
+export interface GameInvite {
+  id: string;
+  inviterId: string;
+  inviterUsername: string;
+  inviteeId: string;
+  inviteeUsername: string;
+  gameConfig: GameConfig;
+  status: 'pending' | 'accepted' | 'rejected' | 'expired';
+  createdAt: string;
+  expiresAt: string;
+}
+
 // API Response types
 export interface ApiResponse<T = unknown> {
   readonly success: boolean;
@@ -244,4 +295,10 @@ export interface ApiClientConfig {
   enableCache?: boolean;
   defaultCacheTTL?: number;
   enableLogging?: boolean;
+}
+
+export interface UpdateProfileData {
+  nickname?: string;
+  avatarUrl?: string;
+  twoFactorEnabled?: boolean;
 }
