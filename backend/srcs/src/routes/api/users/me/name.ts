@@ -5,13 +5,13 @@ import { UserData } from '../../../../schemas/auth.js'
 const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 	const { authenticate, userProfilesRepository } = fastify
 
-	fastify.put(
+	fastify.patch(
 		'/name',
 		{
 			config: {
 				rateLimit: {
-				max: 5,
-				timeWindow: '1 minute'
+					max: 5,
+					timeWindow: '1 minute'
 				}
 			},
 			schema: {
@@ -21,7 +21,6 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 						msg: Type.String()
 					}),
 					500: Type.Object({
-						success: Type.Boolean(),
 						msg: Type.String()
 					}),
 				},
@@ -31,26 +30,25 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 		},
 		async (request: FastifyRequest, reply: FastifyReply) => {
 		try {
-			console.log ("reuqest.user:", request.user);
+			console.log ("request.user:", request.user);
 			const { user_id } = request.user as UserData;
 			const { name: newName } = request.body as UserData;
 			const nameExists = await userProfilesRepository.checkDupRow('name', newName)
 			if (nameExists) {
 				return reply.status(200).send({
 					success: false,
-					msg: '이미 존재하는 닉네임입니다'
+					msg: 'This name is already registered'
 				});
 			}
 			await userProfilesRepository.updateRowByColumn("user_id", user_id, "name", newName);
-			return reply.send({
+			return reply.status(200).send({
 				success: true,
-				msg: '닉네임이 변경 되었습니다.'
+				msg: 'Name has been updated.'
 			});
 		} catch (err) {
-			request.server.log.error(err);
+			fastify.log.error(err);
 			return reply.status(500).send({
-				success: false,
-				msg: '닉네임 변경 처리 중 서버 내부 오류가 발생했습니다.'
+				msg: 'An internal server error occurred while processing the nickname update.'
 			});
 		}
 		}

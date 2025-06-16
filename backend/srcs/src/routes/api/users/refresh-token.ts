@@ -58,7 +58,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 					}
 				})
 			} catch (err) {
-				request.server.log.error(err);
+				fastify.log.error(err);
 				return reply.status(500).send({
 					msg: 'An internal server error occurred while refreshing the token.'
 				});

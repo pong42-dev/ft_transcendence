@@ -45,6 +45,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 					msg: "Successfully logged out." 
 				});
 			} catch (err) {
+				fastify.log.error(err);
 				return reply.status(500).send({
 					msg: "An internal server error occurred during logout.",
 				});

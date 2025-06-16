@@ -26,6 +26,17 @@ export const UserProfileSchema = Type.Object({
 })
 export interface UserProfile extends Static<typeof UserProfileSchema> {}
 
+export const Profiles = Type.Array(UserProfileSchema);
+
+export const FriendSchema = Type.Object({
+	id: IdSchema,
+	user_id: IdSchema,
+	friend_id: IdSchema,
+	status: BooleanSchema,
+	requested_at: DateTimeSchema
+})
+export interface Friend extends Static<typeof FriendSchema> {}
+
 export const UserTokenSchema = Type.Object({
 	user_id: IdSchema,
 	server_refresh_token: StringSchema,

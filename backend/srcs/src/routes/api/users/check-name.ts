@@ -46,7 +46,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 					 msg: 'Name is available.'
 					});
 			} catch (err) {
-				request.log.error(err)
+				fastify.log.error(err)
 				return reply.status(500).send({
 					msg: 'An internal server error occurred during name duplication check.'
 				});

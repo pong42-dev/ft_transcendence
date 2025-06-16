@@ -1,6 +1,6 @@
 import { FastifyPluginAsyncTypebox, Type } from '@fastify/type-provider-typebox'
 import { FastifyRequest, FastifyReply } from 'fastify'
-import { UserData } from '../../../schemas/auth.js'
+import { UserData } from '../../../../schemas/auth.js'
 // import path from 'node:path'
 // import fs from 'node:fs'
 
@@ -12,7 +12,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 	} = fastify;
 
 	fastify.put(
-		'/me/avatar',
+		'/avatar',
 		{
 			config: {
 				rateLimit: {
@@ -57,7 +57,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 					msg: 'Avatar has been successfully updated.'
 				});
 			} catch (err) {
-				request.server.log.error(err);
+				fastify.log.error(err);
 				return reply.status(500).send({ msg: 'An internal server error occurred while updating the avatar.' });
 			}
 		}

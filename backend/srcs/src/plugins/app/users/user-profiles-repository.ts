@@ -14,7 +14,7 @@ export function createUserProfilesRepository(fastify: FastifyInstance) {
 
 	return {
 		// 사용자 프로필 삽입
-		async insertRow(user_id: string, name: string, avatar: string, status: string) {
+		async insertRow(user_id: number, name: string, avatar: string, status: string) {
 			try {
 				await knex('user_profiles')
 				.insert({ 
@@ -30,7 +30,7 @@ export function createUserProfilesRepository(fastify: FastifyInstance) {
 		},
 
 		// 중복 확인
-		async checkDupRow(column: string, value: string): Promise<boolean> {
+		async checkDupRow(column: string, value: string | number | boolean): Promise<boolean> {
 			try {
 				const result = await knex('user_profiles')
 				.where({ [column]: value })
@@ -58,7 +58,6 @@ export function createUserProfilesRepository(fastify: FastifyInstance) {
 			return result[0];
 		},
 
-
 		// 사용자 프로필 업데이트
 		async updateRowByColumn(
 			column: string,
@@ -85,25 +84,26 @@ export function createUserProfilesRepository(fastify: FastifyInstance) {
 				.where('user_id', userId)
 				.first('name', 'avatar')
 
-			if (!profile) return null
+			if (!profile)
+				return null
 
 			// 2. 1v1 게임 전적 조회
-			const stats = await knex('games as g')
-				.join('game_score as gs', 'g.id', 'gs.game_id')
-				.where('g.type', '1v1')
-				.where('g.status', 'finished')
-				.where('gs.user_id', userId)
-				.select(
-					knex.raw('COUNT(CASE WHEN g.winner_id = ? THEN 1 END) as win', [userId]),
-					knex.raw('COUNT(CASE WHEN g.winner_id != ? AND g.winner_id IS NOT NULL THEN 1 END) as loss', [userId])
-				)
-				.first()
+			// const stats = await knex('games as g')
+			// 	.join('game_score as gs', 'g.id', 'gs.game_id')
+			// 	.where('g.type', '1v1')
+			// 	.where('g.status', 'finished')
+			// 	.where('gs.user_id', userId)
+			// 	.select(
+			// 		knex.raw('COUNT(CASE WHEN g.winner_id = ? THEN 1 END) as win', [userId]),
+			// 		knex.raw('COUNT(CASE WHEN g.winner_id != ? AND g.winner_id IS NOT NULL THEN 1 END) as loss', [userId])
+			// 	)
+			// 	.first()
 
 			return {
 				name: profile.name,
 				avatar: profile.avatar,
-				win: stats?.win || 0,
-				loss: stats?.loss || 0
+				// win: stats?.win || 0,
+				// loss: stats?.loss || 0
 			}
 		}
 	};

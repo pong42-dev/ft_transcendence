@@ -67,7 +67,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 					msg: 'Registration completed successfully.' 
 				});
 			} catch (err) {
-				request.log.error(err);
+				fastify.log.error(err);
 				return reply.status(500).send({
 					msg: 'An internal server error occurred during registration.' 
 				});
