@@ -239,6 +239,9 @@ export class App {
       case 'logout':
         await this.handleLogoutCommand();
         break;
+      case 'friend':
+        this.handleFriendCommand();
+        break;
       case 'profile':
         this.handleProfileCommand(args);
         break;
@@ -263,6 +266,7 @@ export class App {
         '  profile  - View user profile (profile <username>)\n' +
         '  play     - Start a game of Pong\n' +
         '  logout   - Log out of current session\n' +
+        '  friend   - Manage friends list\n' +
         '  clear    - Clear the terminal screen'
       : baseHelp + 'Available commands:\n' +
         '  help     - Display this help message\n' +
@@ -392,6 +396,10 @@ export class App {
     this.userProfile = null;
     this.mainTerminal.reset();
     this.router.navigate('/');
+  }
+
+  private handleFriendCommand(): void {
+    this.mainTerminal.appendOutput('Friend command not implemented yet.');
   }
 
   private handleProfileCommand(args: string[]): void {
