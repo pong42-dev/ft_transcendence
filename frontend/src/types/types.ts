@@ -50,6 +50,39 @@ export interface MatchHistory {
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
 export type HttpStatusCode = 200 | 201 | 400 | 401 | 403 | 404 | 409 | 422 | 500 | 503;
 
+// Game API types
+export interface GameData {
+  gameMode: '1v1' | 'tournament';
+  difficulty?: 'easy' | 'medium' | 'hard';
+  maxScore?: number;
+}
+
+export interface GameResult {
+  winner: string;
+  player1Score: number;
+  player2Score: number;
+  duration: number;
+  endedAt: string;
+}
+
+export interface GameStats {
+  totalGames: number;
+  gamesWon: number;
+  gamesLost: number;
+  winRate: number;
+  averageScore: number;
+  favoriteGameMode: string;
+}
+
+export interface ActiveGame {
+  id: string;
+  gameMode: string;
+  players: string[];
+  status: 'waiting' | 'in_progress' | 'finished';
+  startedAt: string;
+  maxPlayers: number;
+}
+
 // API Response types
 export interface ApiResponse<T = unknown> {
   readonly success: boolean;
@@ -58,6 +91,31 @@ export interface ApiResponse<T = unknown> {
   readonly error?: string;
   readonly timestamp: string;
   readonly requestId: string;
+}
+
+// Paginated response for list APIs
+export interface PaginatedResponse<T> extends ApiResponse<T[]> {
+  readonly data: T[];
+  readonly pagination: {
+    readonly page: number;
+    readonly pageSize: number;
+    readonly total: number;
+    readonly totalPages: number;
+  };
+}
+
+// Enhanced error response with more details
+export interface ApiErrorResponse {
+  readonly statusCode: HttpStatusCode;
+  readonly error: string;
+  readonly message: string;
+  readonly details?: {
+    readonly field?: string;
+    readonly code?: string;
+    readonly value?: any;
+  }[];
+  readonly timestamp: string;
+  readonly path?: string;
 }
 
 // Structured error types
@@ -150,4 +208,40 @@ export type DeepReadonly<T> = {
     : T[P] extends Record<string, unknown>
     ? DeepReadonly<T[P]>
     : T[P];
-}; 
+};
+
+// Request interceptor types
+export interface RequestInterceptor {
+  onRequest?: (config: RequestInit, endpoint: string) => RequestInit | Promise<RequestInit>;
+  onRequestError?: (error: Error) => Error | Promise<Error>;
+}
+
+// Response interceptor types  
+export interface ResponseInterceptor {
+  onResponse?: (response: Response, data: any) => any | Promise<any>;
+  onResponseError?: (error: Error) => Error | Promise<Error>;
+}
+
+// Cache configuration
+export interface CacheConfig {
+  enabled: boolean;
+  ttl: number; // TTL in milliseconds
+  key?: string;
+}
+
+export interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+  ttl: number;
+}
+
+// API client configuration
+export interface ApiClientConfig {
+  baseUrl: string;
+  timeout?: number;
+  retryAttempts?: number;
+  retryDelay?: number;
+  enableCache?: boolean;
+  defaultCacheTTL?: number;
+  enableLogging?: boolean;
+}

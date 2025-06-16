@@ -48,7 +48,7 @@ export class App {
   private async checkAuthState(): Promise<void> {
     if (this.apiClient.hasAuthToken()) {
       try {
-        const user = await this.apiClient.getCurrentUser();
+        const user = await this.apiClient.auth.getCurrentUser();
         this.state.isLoggedIn = true;
         this.state.currentUser = user;
       } catch (error) {
@@ -97,7 +97,7 @@ export class App {
     }
     
     try {
-      const targetUser = await this.apiClient.getUserByUsername(username);
+      const targetUser = await this.apiClient.auth.getUserByUsername(username);
       const isCurrentUser = targetUser.username === this.state.currentUser?.username;
       this.userProfile = new UserProfile(targetUser, isCurrentUser);
       this.updateMainContent();
@@ -306,7 +306,7 @@ export class App {
     // Attempt login
     try {
       this.mainTerminal.appendOutput('Authenticating...');
-      const user = await this.apiClient.login(email, password);
+      const user = await this.apiClient.auth.login(email, password);
       
       this.state.isLoggedIn = true;
       this.state.currentUser = user;
@@ -358,12 +358,12 @@ export class App {
       this.mainTerminal.appendOutput('Creating your account...');
       const user = this.apiClient.shouldUseMockData() ? 
         null /* TODO: implement mock registration */ : 
-        await this.apiClient.register(email, password, nickname);
+        await this.apiClient.auth.register(email, password, nickname);
 
       const fileModal = new FileModal((file: File) => {
         if (user) {
           const imageUrl = URL.createObjectURL(file);
-          this.apiClient.updateUser({ avatarUrl: imageUrl });
+          this.apiClient.auth.updateUser({ avatarUrl: imageUrl });
           this.state.isLoggedIn = true;
           this.state.currentUser = user;
           this.mainTerminal.reset();
@@ -385,7 +385,7 @@ export class App {
     }
 
     try {
-      await this.apiClient.logout();
+      await this.apiClient.auth.logout();
     } catch (error) {
       // Logout locally even if server request fails
     }

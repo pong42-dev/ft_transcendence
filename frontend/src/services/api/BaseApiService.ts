@@ -1,13 +1,13 @@
-import { getConfig } from '../config/environment';
-import { SimpleInterceptorManager } from './core/Interceptors';
-import { TokenManager } from '../utils/TokenManager';
+import { getConfig } from '../../config/environment';
+import { SimpleInterceptorManager } from '../core/Interceptors';
+import { TokenManager } from '../core/TokenManager';
 import { 
   ApiErrorResponse, 
   RequestInterceptor, 
   ResponseInterceptor, 
   CacheConfig, 
   CacheEntry
-} from '../types/types';
+} from '../../types/types';
 
 export class ApiError extends Error {
   constructor(
@@ -123,32 +123,27 @@ export abstract class BaseApiService {
 
         switch (this.serviceName) {
           case 'AuthApi': {
-            const module = await import('./mocks/AuthApiServiceMock');
+            const module = await import('../mocks/AuthApiServiceMock');
             mockHandler = module.getAuthApiServiceMockResponse;
             break;
           }
           case 'GameApi': {
-            const module = await import('./mocks/GameApiServiceMock');
+            const module = await import('../mocks/GameApiServiceMock');
             mockHandler = module.getGameApiServiceMockResponse;
             break;
           }
           case 'FriendApi': {
-            const module = await import('./mocks/FriendApiServiceMock');
+            const module = await import('../mocks/FriendApiServiceMock');
             mockHandler = module.getFriendApiServiceMockResponse;
             break;
           }
           default:
-            console.warn(`[Mock] No mock handler configured for service: ${this.serviceName}`);
-            // Mock이 없어도 실제 API 호출로 fallback
-            break;
+            throw new Error(`Mock handler not configured for service: ${this.serviceName}`);
         }
         if (mockHandler) {
-          console.log(`[Mock] Using mock data for ${this.serviceName} - ${endpoint}`);
           return await mockHandler(endpoint, options) as T;
-        } else {
-          console.log(`[Mock] No mock handler found for ${this.serviceName}, falling back to real API`);
-          // Mock이 없으면 실제 API 호출로 계속 진행
         }
+        throw new Error(`Mock handler not found for ${this.serviceName}`);
       } catch (error) {
         console.error(`[Mock] Failed to load mock for ${this.serviceName}:`, error);
         // Mock 로딩 실패 시 기본 Mock 응답

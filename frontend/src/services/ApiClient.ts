@@ -1,10 +1,11 @@
-import { AuthApiService } from './AuthApiService';
-import { GameApiService } from './GameApiService';
-import { FriendApiService } from './FriendApiService';
+import { AuthApiService } from './api/AuthApiService';
+import { GameApiService } from './api/GameApiService';
+import { FriendApiService } from './api/FriendApiService';
+import { BaseApiService } from './api/BaseApiService';
 import { getConfig } from '../config/environment';
-import * as Types from '../types/types';
+import { SimpleInterceptorManager } from './core/Interceptors';
 
-export { ApiError } from './BaseApiService';
+export { ApiError } from './api/BaseApiService';
 
 export class ApiClient {
   public auth: AuthApiService;
@@ -12,15 +13,42 @@ export class ApiClient {
   public friend: FriendApiService;
   private config = getConfig();
 
-  constructor() {
+  constructor(options?: {
+    showNotification?: (message: string, type: 'error' | 'warning' | 'info') => void;
+    environment?: 'development' | 'production' | 'test';
+  }) {
+    // 단순화된 인터셉터 시스템 초기화
+    SimpleInterceptorManager.initialize({
+      showNotification: options?.showNotification,
+      environment: options?.environment || 'development'
+    });
+
+    // 서비스 인스턴스 생성
     this.auth = new AuthApiService();
     this.game = new GameApiService();
     this.friend = new FriendApiService();
   }
 
-  // 공통 메서드들 - auth 서비스에 위임
+  // 캐시 초기화
+  public clearAllCaches(): void {
+    this.auth.clearCache();
+    this.game.clearCache();
+    this.friend.clearCache();
+  }
+
+  // 인터셉터 초기화 (단순화된 시스템)
+  public resetInterceptors(): void {
+    SimpleInterceptorManager.reset();
+    BaseApiService.clearInterceptorCache();
+  }
+
+  // 핵심 공통 메서드들 (최소한의 공통 기능만 유지)
+  isAuthenticated(): boolean {
+    return this.auth.isAuthenticated();
+  }
+
   hasAuthToken(): boolean {
-    return this.auth.hasAuthToken();
+    return this.auth.isAuthenticated();
   }
 
   getToken(): string | null {
@@ -43,83 +71,5 @@ export class ApiClient {
 
   shouldUseMockData(): boolean {
     return this.config.useMockData;
-  }
-
-  // 편의 메서드들 - 직접 서비스에 위임하여 기존 API 호환성 유지
-  
-  // Auth 관련 편의 메서드
-  async login(email: string, password: string): Promise<Types.User> {
-    return this.auth.login(email, password);
-  }
-
-  async register(email: string, password: string, nickname: string): Promise<Types.User> {
-    return this.auth.register(email, password, nickname);
-  }
-
-  async logout(): Promise<void> {
-    return this.auth.logout();
-  }
-
-  async loginWithGoogle(): Promise<Types.User> {
-    return this.auth.loginWithGoogle();
-  }
-
-  async getCurrentUser(): Promise<Types.User> {
-    return this.auth.getCurrentUser();
-  }
-
-  async getUserByUsername(username: string): Promise<Types.User> {
-    return this.auth.getUserByUsername(username);
-  }
-
-  async searchUsers(query: string): Promise<Types.User[]> {
-    return this.auth.searchUsers(query);
-  }
-
-  async updateUser(updates: Partial<Types.User>): Promise<Types.User> {
-    return this.auth.updateUser(updates);
-  }
-
-  // Friend 관련 편의 메서드
-  async getFriends(): Promise<Types.Friend[]> {
-    return this.friend.getFriends();
-  }
-
-  async addFriend(username: string): Promise<void> {
-    return this.friend.addFriend(username);
-  }
-
-  async removeFriend(username: string): Promise<void> {
-    return this.friend.removeFriend(username);
-  }
-
-  async blockFriend(username: string): Promise<void> {
-    return this.friend.blockFriend(username);
-  }
-
-  async unblockFriend(username: string): Promise<void> {
-    return this.friend.unblockFriend(username);
-  }
-
-  // Game 관련 편의 메서드
-  async createGame(gameData: any): Promise<any> {
-    return this.game.createGame(gameData);
-  }
-
-  async updateGame(gameId: number, result: any): Promise<any> {
-    return this.game.updateGame(gameId, result);
-  }
-
-  async getGameStats(): Promise<any> {
-    return this.game.getGameStats();
-  }
-
-  async getMatchHistory(): Promise<Types.MatchHistory[]> {
-    return this.game.getMatchHistory();
-  }
-
-  // Health check
-  async healthCheck(): Promise<{ status: string; timestamp: string }> {
-    return this.game.healthCheck();
   }
 }
