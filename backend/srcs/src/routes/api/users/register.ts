@@ -35,17 +35,24 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 		},
 		async (request: FastifyRequest, reply: FastifyReply) => {
 			try {
+				console.log(1);
 				const formData = await registerFormData(request);
+				console.log(2);
 				const validFormDataMsg = isValidRegisterFormData(formData);
+				console.log(3);
 				if (validFormDataMsg) {
 					return reply.status(200).send({ 
 						success: false,
 						msg: validFormDataMsg 
 					});
 				}
+				console.log(4);
 				const { email, password, name } = formData;
+				console.log(5);
 				const emailExists = await usersRepository.checkDupRow('email', email)
+				console.log(6);
 				const nameExists = await userProfilesRepository.checkDupRow('name', name)
+				console.log(7);
 				if (emailExists) {
 					return reply.status(200).send({
 						success: false,
@@ -59,7 +66,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 					});
 				}
 				const dirPath = config.UPLOAD_DIRNAME + '/' + config.UPLOAD_AVATAR_DIRNAME || 'uploads/avatars';
-				const avatarPath = await saveFile(formData.files.avatar, dirPath);
+				const avatarPath = await saveFile(formData.files.avatar.file, dirPath);
 				const hashedPassword = await passwordManager.hashPassword(password);
 				const user_id = await usersRepository.insertRow(email, hashedPassword, 'local', '');
 				await userProfilesRepository.insertRow(user_id, name, avatarPath, 'false');
@@ -77,3 +84,4 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 }
 
 export default plugin
+

@@ -11,5 +11,6 @@ export const RegisterSchema = Type.Object({
 export interface Register extends Static<typeof RegisterSchema> {}
 
 export interface RegisterFormData extends Register {
-  files: Record<string, MultipartFile>;
+  // files: Record<string, MultipartFile>;
+	files: Record<string, { file: MultipartFile; buffer: Buffer }>
 }

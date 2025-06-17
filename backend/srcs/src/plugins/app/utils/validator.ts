@@ -63,14 +63,15 @@ function validateRegisterFormData(registerFormData: RegisterFormData): string | 
 	if (!validateNameFormat(registerFormData.name)) {
 		return "Name must be 2–16 characters, using letters, numbers, or Korean characters.";
 	}
-	if (!validateProfileImageFormat(registerFormData.files.avatar)) {
+	console.log(registerFormData.files);
+	if (!validateProfileImageFormat(registerFormData.files.avatar.file)) {
 		return "Profile image must be JPEG, PNG, WEBP, or GIF, and <= 5MB.";
 	}
 	return null;
 }
 
 function validateProfileFormData(registerFormData: RegisterFormData) : string | null {
-	if (!validateProfileImageFormat(registerFormData.files.avatar)) {
+	if (!validateProfileImageFormat(registerFormData.files.avatar.file)) {
 		return "Profile image must be JPEG, PNG, WEBP, or GIF, and <= 5MB.";
 	}
 	return null;

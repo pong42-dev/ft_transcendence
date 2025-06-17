@@ -13,23 +13,76 @@ declare module 'fastify' {
 	}
 }
 
-async function handleRegisterFormData(request: FastifyRequest): Promise<RegisterFormData> {
+// async function handleRegisterFormData(request: FastifyRequest): Promise<RegisterFormData> {
+// 	const parts = request.parts();
+// 	const form: Record<string, string> = {};
+// 	const files: Record<string, MultipartFile> = {};
+
+	
+// 	for await (const part of parts) {
+// 		if (part.type === 'file') {
+
+// 			console.log(1);
+// 			const filePart = part as MultipartFile;
+// 			console.log(2);
+// 			if (!filePart.mimetype || !filePart.mimetype.startsWith('image/')) {
+// 				filePart.file.resume();
+// 				continue;
+// 			}
+// 			console.log(3);
+// 			if (filePart.file.truncated) {
+// 				filePart.file.resume();
+// 				continue;
+// 			}
+// 			console.log(4);
+// 			console.log(filePart);
+
+// 			files[filePart.fieldname] = filePart;
+// 			filePart.file.resume();
+// 		} else if (part.type === 'field') {
+// 			const textPart = part as MultipartValue<string>;
+	
+
+// 			form[textPart.fieldname] = textPart.value;
+// 		}
+// 	}
+
+// 	const registerData: Register = {
+// 		email: form.email,
+// 		name: form.name,
+// 		password: form.password,
+// 	};
+
+// 	return {
+// 		...registerData,
+// 		files,
+// 	};
+// }
+
+
+
+async function handleRegisterFormData(request: FastifyRequest): Promise<RegisterFormData>
+{
 	const parts = request.parts();
 	const form: Record<string, string> = {};
-	const files: Record<string, MultipartFile> = {};
+	const files: Record<string, { file: MultipartFile; buffer: Buffer }> = {};
 
 	for await (const part of parts) {
 		if (part.type === 'file') {
 			const filePart = part as MultipartFile;
+
 			if (!filePart.mimetype || !filePart.mimetype.startsWith('image/')) {
-				filePart.file.resume();
+				filePart.file.resume(); // 허용되지 않은 파일은 버림
 				continue;
 			}
+
 			if (filePart.file.truncated) {
-				filePart.file.resume();
+				filePart.file.resume(); // 너무 큰 파일은 버림
 				continue;
 			}
-			files[filePart.fieldname] = filePart;
+
+			const buffer = await filePart.toBuffer();
+			files[filePart.fieldname] = { file: filePart, buffer };
 		} else if (part.type === 'field') {
 			const textPart = part as MultipartValue<string>;
 			form[textPart.fieldname] = textPart.value;
