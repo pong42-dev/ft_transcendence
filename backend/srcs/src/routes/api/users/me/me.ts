@@ -15,6 +15,9 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 							me: UserProfileResponseSchema
 						})
 					}),
+					401: Type.Object({
+						msg: Type.String()
+					}),
 					404: Type.Object({
 						msg: Type.String()
 					}),

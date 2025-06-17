@@ -20,6 +20,9 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 						success: Type.Boolean(),
 						msg: Type.String()
 					}),
+					401: Type.Object({
+						msg: Type.String()
+					}),
 					500: Type.Object({
 						msg: Type.String()
 					}),

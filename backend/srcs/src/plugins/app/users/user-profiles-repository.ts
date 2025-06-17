@@ -3,9 +3,9 @@ import fp from 'fastify-plugin'
 import { UserProfile } from '../../../schemas/auth.js'
 
 declare module 'fastify' {
-interface FastifyInstance {
-	userProfilesRepository: ReturnType<typeof createUserProfilesRepository>;
-}
+	interface FastifyInstance {
+		userProfilesRepository: ReturnType<typeof createUserProfilesRepository>;
+	}
 }
 
 export function createUserProfilesRepository(fastify: FastifyInstance) {
@@ -13,7 +13,7 @@ export function createUserProfilesRepository(fastify: FastifyInstance) {
 	const allowedColumns = ['user_id', 'name', 'avatar', 'status'];
 
 	return {
-		// 사용자 프로필 삽입
+		// Insert user profile
 		async insertRow(user_id: number, name: string, avatar: string, status: string) {
 			try {
 				await knex('user_profiles')
@@ -24,12 +24,12 @@ export function createUserProfilesRepository(fastify: FastifyInstance) {
 					status
 				});
 			} catch (err: any) {
-				fastify.log.error('사용자 프로필 삽입 오류:', err.message);
+				fastify.log.error('Error inserting user profile:', err.message);
 				throw err;
 			}
 		},
 
-		// 중복 확인
+		// Check duplicate
 		async checkDupRow(column: string, value: string | number | boolean): Promise<boolean> {
 			try {
 				const result = await knex('user_profiles')
@@ -37,49 +37,48 @@ export function createUserProfilesRepository(fastify: FastifyInstance) {
 				.first();
 				return !!result;
 			} catch (err: any) {
-				fastify.log.error('중복 사용자 프로필 체크 오류:', err.message);
+				fastify.log.error('Error checking duplicate user profile:', err.message);
 				throw err;
 			}
 		},
 
-		// 컬럼 값으로 사용자 프로필 조회
+		// Get user profile by column value
 		async getRowByColumnValue(
 			column: string,
 			value: string | number | boolean
 		): Promise<UserProfile> {
 			if (!allowedColumns.includes(column)) {
-				console.log("허용되지 않은 컬럼명");
-				throw new Error('허용되지 않은 컬럼명입니다.');
+				console.log("Invalid column name");
+				throw new Error('Invalid column name.');
 			}
 			const result = await knex('user_profiles')
 				.select('*')
 				.where(column, value);
-			// console.log("result:", result);
 			return result[0];
 		},
 
-		// 사용자 프로필 업데이트
+		// Update user profile by column
 		async updateRowByColumn(
 			column: string,
 			value: string | number | boolean,
 			updateColumn: string,
 			updateValue: string | number | boolean
-			) {
+		) {
 			if (!allowedColumns.includes(column) || !allowedColumns.includes(updateColumn)) {
-				throw new Error('허용되지 않은 컬럼명입니다.');
+				throw new Error('Invalid column name.');
 			}
 			try {
 				await knex('user_profiles')
 				.where(column, value)
 				.update({ [updateColumn]: updateValue });
 			} catch (err: any) {
-				fastify.log.error('사용자 프로필 업데이트 오류:', err.message);
+				fastify.log.error('Error updating user profile:', err.message);
 				throw err;
 			}
 		},
 
 		async getUserProfileWithStats(userId: number) {
-			// 1. 유저 프로필 정보 조회
+			// 1. Retrieve user profile info
 			const profile = await knex('user_profiles')
 				.where('user_id', userId)
 				.first('name', 'avatar')
@@ -87,7 +86,7 @@ export function createUserProfilesRepository(fastify: FastifyInstance) {
 			if (!profile)
 				return null
 
-			// 2. 1v1 게임 전적 조회
+			// 2. Retrieve 1v1 game stats (commented out)
 			// const stats = await knex('games as g')
 			// 	.join('game_score as gs', 'g.id', 'gs.game_id')
 			// 	.where('g.type', '1v1')

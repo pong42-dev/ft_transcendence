@@ -22,7 +22,12 @@ async function authenticate(request: FastifyRequest, reply: FastifyReply) {
 	}
 	const token = authHeader.split(' ')[1];
 	try {
-		const decoded = await request.server.jwt.verify(token) as TokenData;
+		let decoded;
+		try {
+			decoded = await request.server.jwt.verify(token) as TokenData;
+		} catch (err) {
+			return reply.status(401).send({ msg: 'Invalid or expired token.' });
+		}
 		console.log("decoded:", decoded);
 		const row = await userProfilesRepository.getRowByColumnValue("user_id", decoded.user_id);
 		console.log("row:", row);
@@ -35,7 +40,7 @@ async function authenticate(request: FastifyRequest, reply: FastifyReply) {
 		return reply.status(401).send({ msg: 'Invalid or expired token.' });
 	} catch (err) {
 		request.log.error(err);
-		return reply.status(401).send({ msg: 'Invalid or expired token.' });
+		return reply.status(500).send({ msg: 'An internal server error occurred.' });
 	}
 }
 

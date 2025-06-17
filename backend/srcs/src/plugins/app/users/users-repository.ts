@@ -25,7 +25,7 @@ export function createUsersRepository(fastify: FastifyInstance) {
 				.returning('id');
 				return result[0].id;
 			} catch (err: any) {
-				fastify.log.error('사용자 삽입 오류:', err.message);
+				fastify.log.error('Error inserting user:', err.message);
 				throw err;
 			}
 		},
@@ -37,17 +37,17 @@ export function createUsersRepository(fastify: FastifyInstance) {
 				.first();
 				return !!result;
 			} catch (err: any) {
-				fastify.log.error('중복 사용자 체크 오류:', err.message);
+				fastify.log.error('Error checking duplicate user:', err.message);
 				throw err;
 			}
 		},
 
 		async getRowByColumnValue(
 		column: string, 
-		value: string
+		value: string | number 
 		): Promise<User> {
 			if (!allowedColumns.includes(column)) {
-				throw new Error('허용되지 않은 컬럼명입니다.');
+				throw new Error('Invalid column name.');
 			}
 			const result = await knex('users')
 			.select('*')

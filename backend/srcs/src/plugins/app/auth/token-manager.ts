@@ -5,15 +5,15 @@ import { CookieSerializeOptions } from '@fastify/cookie';
 
 declare module 'fastify' {
 	interface FastifyInstance {
-		tokenManager: ReturnType<typeof manageTokens>;
+	tokenManager: ReturnType<typeof manageTokens>;
 	}
 }
 
 interface CookieReturn {
-	name: string;
-	value: string;
-	options: CookieSerializeOptions;
-	expiresAt: Date;
+name: string;
+value: string;
+options: CookieSerializeOptions;
+expiresAt: Date;
 }
 
 export function manageTokens(fastify: FastifyInstance) {
@@ -28,9 +28,9 @@ export function manageTokens(fastify: FastifyInstance) {
 
 	return {
 		async generateToken(
-			userData: TokenData,
-			expiresIn: string,
-			type: 'access' | 'refresh'
+		userData: TokenData,
+		expiresIn: string,
+		type: 'access' | 'refresh'
 		): Promise<string> {
 			const { jwt, log } = fastify;
 			try {

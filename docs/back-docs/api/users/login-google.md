@@ -31,7 +31,7 @@ Redirects the user to the **Google OAuth2 login** page.
 
 ```json
 {
-  "msg": "An error occurred during Google login redirection."
+  "msg": "An internal server error occurred during Google login redirection."
 }
 ```
 

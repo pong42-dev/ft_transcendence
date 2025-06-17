@@ -1,34 +1,33 @@
-import { FastifyInstance } from 'fastify'
-import fp from 'fastify-plugin'
-import { UserProfile, Friend } from '../../../schemas/auth.js'
+import { FastifyInstance } from 'fastify';
+import fp from 'fastify-plugin';
+import { Friend } from '../../../schemas/auth.js';
 
 declare module 'fastify' {
-interface FastifyInstance {
-	friendsRepository: ReturnType<typeof createfriendsRepository>;
-}
+	interface FastifyInstance {
+		friendsRepository: ReturnType<typeof createfriendsRepository>;
+	}
 }
 
 export function createfriendsRepository(fastify: FastifyInstance) {
 	const knex = fastify.knex;
 	const allowedColumns = ['id', 'user_id', 'friend_id', 'status', 'requested_at'];
 
-
 	return {
-		// 친구 추가
+		// Add friend
 		async insertRow(user_id: number, friend_id: number, status: string) {
 			try {
-				await knex('friends')
-				.insert({ 
-					user_id, 
-					friend_id, 
+				await knex('friends').insert({
+					user_id,
+					friend_id,
 					status
 				});
 			} catch (err: any) {
-				fastify.log.error('친구 추가 오류:', err.message);
+				fastify.log.error('Error adding friend:', err.message);
 				throw err;
 			}
 		},
 
+		// Check if already friends
 		async isFollowing(user_id: number, friend_id: number): Promise<boolean> {
 			try {
 				const exists = await knex('friends')
@@ -36,39 +35,44 @@ export function createfriendsRepository(fastify: FastifyInstance) {
 					.first();
 				return !!exists;
 			} catch (err: any) {
-				fastify.log.error('친구 존재 여부 확인 오류:', err.message);
+				fastify.log.error('Error checking friendship:', err.message);
 				throw err;
 			}
 		},
-	
+
+		// Get rows by column
 		async getRowsByColumnValue(
 			column: string,
 			value: string | number | boolean
 		): Promise<Friend[]> {
 			if (!allowedColumns.includes(column)) {
-				console.log("허용되지 않은 컬럼명");
-				throw new Error('허용되지 않은 컬럼명입니다.');
+				throw new Error('Invalid column name.');
 			}
-			const result = await knex('friends')
-				.select('*')
-				.where(column, value);
-			// console.log("result:", result);
-			return result;
+			try {
+				const result = await knex('friends')
+					.select('*')
+					.where(column, value);
+				return result;
+			} catch (err: any) {
+				fastify.log.error('Error retrieving friends:', err.message);
+				throw err;
+			}
 		},
 
+		// Delete friendship
 		async deleteFriendship(user_id: number, friend_id: number): Promise<void> {
 			try {
 				const result = await knex('friends')
 					.where({ user_id, friend_id })
 					.del();
-				if (result <= 0)
-					fastify.log.info('삭제할 친구 관계가 없습니다.');
+				if (result <= 0) {
+					fastify.log.info('No friendship found to delete.');
+				}
 			} catch (err: any) {
-				fastify.log.error('친구 관계 삭제 오류:', err.message);
+				fastify.log.error('Error deleting friendship:', err.message);
 				throw err;
 			}
 		}
-
 	};
 }
 

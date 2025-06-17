@@ -26,7 +26,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 		} catch (err) {
 			request.log.error(err);
 			return reply.status(500).send({
-				msg: 'An error occurred during Google login redirection.',
+				msg: 'An internal server error occurred during Google login redirection.',
 			});
 		}
 	});

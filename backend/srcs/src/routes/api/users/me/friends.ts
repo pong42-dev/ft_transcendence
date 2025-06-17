@@ -20,6 +20,9 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 							friends: Profiles
 						})
 					}),
+					401: Type.Object({
+						msg: Type.String()
+					}),
 					500: Type.Object({
 						msg: Type.String()
 					})
@@ -64,6 +67,9 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 						success: Type.Literal(true),
 						msg: Type.String()
 					}),	
+					401: Type.Object({
+						msg: Type.String()
+					}),
 					409: Type.Object({
 						msg: Type.String()
 					}),
@@ -114,6 +120,9 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 							friend: UserProfileResponseSchema
 						})
 					}),
+					401: Type.Object({
+						msg: Type.String()
+					}),
 					404: Type.Object({
 						msg: Type.String()
 					}),
@@ -158,6 +167,9 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 						success: Type.Literal(true),
 						msg: Type.String()
 					}),	
+					401: Type.Object({
+						msg: Type.String()
+					}),
 					409: Type.Object({
 						msg: Type.String()
 					}),

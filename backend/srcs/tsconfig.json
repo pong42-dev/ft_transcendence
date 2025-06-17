@@ -3,6 +3,10 @@
   "compilerOptions": {
     "outDir": "dist",
     "rootDir": "src",
+    "typeRoots": [
+    "./@types",
+    "./node_modules/@types"
+  ]
   },
   "include": ["@types", "src/**/*.ts"]
 }

@@ -63,7 +63,7 @@ async function saveFile(file: MultipartFile, dirPath: string): Promise<string> {
 		fs.writeFileSync(filePath, buffer);
 		return filePath;
 	} catch (err) {
-		console.error('An error occurred while saving the file:', err);
+		console.error('An internal server error occurred while saving the file:', err);
 		throw new Error('Failed to save the file.');
 	}
 }

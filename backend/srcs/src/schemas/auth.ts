@@ -45,6 +45,15 @@ export const UserTokenSchema = Type.Object({
 })
 export interface UserToken extends Static<typeof UserTokenSchema> {}
 
+export const User2FASchema = Type.Object({
+	user_id: IdSchema,
+	two_fa_secret: StringSchema,
+	is_enabled: BooleanSchema,
+	created_at: DateTimeSchema
+})
+export interface User2FA extends Static<typeof User2FASchema> {}
+
+
 // token
 export const TokenDataSchema = Type.Object({
 	user_id:  IdSchema,

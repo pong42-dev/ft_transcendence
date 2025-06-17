@@ -23,9 +23,9 @@ export function createUserTokensRepository(fastify: FastifyInstance) {
 					server_expires_at,
 					google_refresh_token,
 				});
-				fastify.log.info(`사용자 삽입 ${user_id}: ${server_refresh_token}`);
+				fastify.log.info(`Inserted user ${user_id}: ${server_refresh_token}`);
 			} catch (err: any) {
-				fastify.log.error('사용자 삽입 오류:', err.message);
+				fastify.log.error('Error inserting user:', err.message);
 				throw err;
 			}
 		},
@@ -37,14 +37,14 @@ export function createUserTokensRepository(fastify: FastifyInstance) {
 				.first();
 				return !!result;
 			} catch (err: any) {
-				fastify.log.error('중복 사용자 체크 오류:', err.message);
+				fastify.log.error('Error checking duplicate user:', err.message);
 				throw err;
 			}
 		},
 
 		async getRowByColumnValue(column: string, value: number | string | Date): Promise<UserToken> {
 			if (!allowedColumns.includes(column)) {
-				throw new Error('허용되지 않은 컬럼명입니다.');
+				throw new Error('Invalid column name.');
 			}
 			const result = await knex('user_tokens')
 			.select('*')
@@ -54,17 +54,17 @@ export function createUserTokensRepository(fastify: FastifyInstance) {
 
 		async deleteRowByColumnValue(column: string, value: number | string | Date): Promise<void> {
 			if (!allowedColumns.includes(column)) {
-				throw new Error('허용되지 않은 컬럼명입니다.');
+				throw new Error('Invalid column name.');
 			}
 			try {
 				const result = await knex('user_tokens')
 				.where(column, value)
 				.del();
 				if (result > 0) {
-					fastify.log.info('행 삭제 성공:', result);
+					fastify.log.info('Row deletion successful:', result);
 				}
 			} catch (err: any) {
-				fastify.log.error('행 삭제 오류:', err.message);
+				fastify.log.error('Error deleting row:', err.message);
 				throw err;
 			}
 		},
@@ -75,12 +75,12 @@ export function createUserTokensRepository(fastify: FastifyInstance) {
 					.where('server_expires_at', '<', new Date())
 					.del();
 				if (result === 0) {
-					fastify.log.info('만료된 행이 없습니다.');
+					fastify.log.info('No expired rows found.');
 				} else {
-					fastify.log.info('만료된 행 삭제 완료:', result);
+					fastify.log.info('Expired rows deleted:', result);
 				}
 			} catch (err: any) {
-				fastify.log.error('만료된 행 삭제 오류:', err.message);
+				fastify.log.error('Error deleting expired rows:', err.message);
 				throw err;
 			}
 		},
@@ -88,22 +88,19 @@ export function createUserTokensRepository(fastify: FastifyInstance) {
 		async deleteExpiredTokenForUser(userId: number): Promise<boolean> {
 			try {
 				const now = Date.now();
-				// const timestamp = now.getTime(); // 또는 now.valueOf()
-				// console.log(timestamp); // 예: 1747060230409
-				// console.log("now: ", now);
 				const result = await knex('user_tokens')
 					.where('user_id', userId)
 					.andWhere('server_expires_at', '<', now)
 					.del();
 				if (result > 0) {
-					fastify.log.info(`사용자 ${userId}의 만료된 토큰 삭제 완료: ${result}개`);
+					fastify.log.info(`Expired tokens deleted for user ${userId}: ${result}`);
 					return true;
 				} else {
-					fastify.log.info(`사용자 ${userId}의 만료된 토큰이 없습니다.`);
+					fastify.log.info(`No expired tokens found for user ${userId}.`);
 					return false;
 				}
 			} catch (err: any) {
-				fastify.log.error(`사용자 ${userId}의 만료된 토큰 삭제 오류:`, err.message);
+				fastify.log.error(`Error deleting expired tokens for user ${userId}:`, err.message);
 				throw err;
 			}
 		},
@@ -117,10 +114,10 @@ export function createUserTokensRepository(fastify: FastifyInstance) {
 					.count<{ count: string }>('user_id as count')
 					.first();
 				const validTokenCount = Number(result?.count ?? 0);
-				fastify.log.info(`사용자 ${userId}의 유효한 토큰 개수: ${validTokenCount}`);
+				fastify.log.info(`Valid token count for user ${userId}: ${validTokenCount}`);
 				return validTokenCount;
 			} catch (err: any) {
-				fastify.log.error(`사용자 ${userId}의 유효한 토큰 확인 오류:`, err.message);
+				fastify.log.error(`Error checking valid tokens for user ${userId}:`, err.message);
 				throw err;
 			}
 		}
