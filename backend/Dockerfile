@@ -17,3 +17,4 @@ EXPOSE 3000
 
 # 서버 실행 (예: server.ts 또는 dist/server.js 등)
 CMD ["npm", "run", "dev"]
+

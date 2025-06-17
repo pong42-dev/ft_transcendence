@@ -15,26 +15,26 @@ services:
     init: true
     tty: true
 
-  frontend:
-    container_name: nginx
-    build: ./frontend
-    ports:
-      - "443:80"
-    depends_on:
-      - backend
-    networks:
-      - ft_transcendence
-    env_file:
-      - .env
-    restart: always
-    init: true
+  # frontend:
+  #   container_name: nginx
+  #   build: ./frontend
+  #   ports:
+  #     - "443:80"
+  #   depends_on:
+  #     - backend
+  #   networks:
+  #     - ft_transcendence
+  #   env_file:
+  #     - .env
+  #   restart: always
+  #   init: true
 
 volumes:
   fastify_data:
     name: fastify_data
     driver: local
     driver_opts:
-      device: /Users/hyunjoo/Dev/app/temp
+      device: /Users/${LOGIN}/app/dev/tmp
       o: bind
       type: none
 
