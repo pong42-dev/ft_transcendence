@@ -34,7 +34,7 @@ async function authenticate(request: FastifyRequest, reply: FastifyReply) {
 		if (row) {
 			request.user = { user_id: row.user_id, name: row.name };
 			console.log("user_id:", row.user_id, "name:", row.name);
-			request.log.info("AUTHENTICATION MIDDLEWARE COMPLETE");	
+			request.log.info("Completed authentication middleware");
 			return;
 		}
 		return reply.status(401).send({ msg: 'Invalid or expired token.' });

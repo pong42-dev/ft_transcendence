@@ -59,8 +59,6 @@ declare module 'fastify' {
 // 	};
 // }
 
-
-
 async function handleRegisterFormData(request: FastifyRequest): Promise<RegisterFormData>
 {
 	const parts = request.parts();
@@ -70,17 +68,14 @@ async function handleRegisterFormData(request: FastifyRequest): Promise<Register
 	for await (const part of parts) {
 		if (part.type === 'file') {
 			const filePart = part as MultipartFile;
-
 			if (!filePart.mimetype || !filePart.mimetype.startsWith('image/')) {
-				filePart.file.resume(); // 허용되지 않은 파일은 버림
+				filePart.file.resume();
 				continue;
 			}
-
 			if (filePart.file.truncated) {
-				filePart.file.resume(); // 너무 큰 파일은 버림
+				filePart.file.resume();
 				continue;
 			}
-
 			const buffer = await filePart.toBuffer();
 			files[filePart.fieldname] = { file: filePart, buffer };
 		} else if (part.type === 'field') {

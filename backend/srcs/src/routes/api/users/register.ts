@@ -35,24 +35,17 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 		},
 		async (request: FastifyRequest, reply: FastifyReply) => {
 			try {
-				console.log(1);
 				const formData = await registerFormData(request);
-				console.log(2);
 				const validFormDataMsg = isValidRegisterFormData(formData);
-				console.log(3);
 				if (validFormDataMsg) {
 					return reply.status(200).send({ 
 						success: false,
 						msg: validFormDataMsg 
 					});
 				}
-				console.log(4);
 				const { email, password, name } = formData;
-				console.log(5);
 				const emailExists = await usersRepository.checkDupRow('email', email)
-				console.log(6);
 				const nameExists = await userProfilesRepository.checkDupRow('name', name)
-				console.log(7);
 				if (emailExists) {
 					return reply.status(200).send({
 						success: false,

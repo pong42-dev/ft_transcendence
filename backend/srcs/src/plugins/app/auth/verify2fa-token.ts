@@ -33,7 +33,7 @@ reply: FastifyReply
 			await user2FARepository.updateRowByColumn('user_id', userId, 'is_enabled', true);
 		}
 	} catch (err) {
-		return reply.status(500).send({ msg: '2FA 인증 중 오류가 발생했습니다.' });
+		return reply.status(500).send({ msg: 'An internal server error occurred during 2FA authentication.' });
 	}
 }
 

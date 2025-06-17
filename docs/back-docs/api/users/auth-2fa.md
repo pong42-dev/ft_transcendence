@@ -164,6 +164,11 @@ Disable 2FA for the authenticated user.
   "msg": "An internal server error occurred during 2FA setup."
 }
 ```
+```json
+{
+  "msg": "An internal server error occurred during 2FA authentication."
+}
+```
 
 ---
 
