@@ -1,6 +1,15 @@
 // Frontend TypeScript types
 
-// User types
+// =================================================================
+// 1. Core Application State & User Models
+// =================================================================
+
+export interface AppState {
+  isLoggedIn: boolean | null;
+  currentUser: User | null;
+  isInGame: boolean;
+}
+
 export interface User {
   id: string;
   username: string;
@@ -31,10 +40,69 @@ export interface Notification {
   read: boolean;
 }
 
-export interface AppState {
-  isLoggedIn: boolean | null;
-  currentUser: User | null;
-  isInGame: boolean;
+// =================================================================
+// 2. Game & Player Models
+// =================================================================
+
+/**
+ * Represents a player in the context of the game UI.
+ * Can be a registered user, a guest, or an AI.
+ */
+export interface Player {
+  nickname: string;
+  avatarUrl?: string;
+}
+
+/**
+ * Represents a player in a game session from the backend's perspective.
+ */
+export interface GamePlayer {
+  id: string;
+  username: string;
+  nickname?: string;
+  isReady: boolean;
+}
+
+export interface Game {
+  id: string;
+  gameMode: '1v1' | 'tournament';
+  players: GamePlayer[];
+  status: 'waiting' | 'in_progress' | 'finished';
+  startedAt: string;
+  endedAt?: string;
+  maxPlayers: number;
+  currentScore?: GameScore;
+  winner?: string;
+}
+
+export interface GameConfig {
+  gameMode: '1v1' | 'tournament';
+  difficulty?: 'easy' | 'medium' | 'hard';
+  maxScore?: number;
+  isPrivate?: boolean;
+}
+
+export interface GameMove {
+  playerId: string;
+  action: 'move_up' | 'move_down' | 'stop';
+  timestamp: number;
+}
+
+export interface GameScore {
+  player1: number;
+  player2: number;
+}
+
+export interface GameInvite {
+  id: string;
+  inviterId: string;
+  inviterUsername: string;
+  inviteeId: string;
+  inviteeUsername: string;
+  gameConfig: GameConfig;
+  status: 'pending' | 'accepted' | 'rejected' | 'expired';
+  createdAt: string;
+  expiresAt: string;
 }
 
 export interface MatchHistory {
@@ -46,11 +114,6 @@ export interface MatchHistory {
   opponent_score?: number;
 }
 
-// API types for frontend communication
-export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
-export type HttpStatusCode = 200 | 201 | 400 | 401 | 403 | 404 | 409 | 422 | 500 | 503;
-
-// Game API types
 export interface GameData {
   gameMode: '1v1' | 'tournament';
   difficulty?: 'easy' | 'medium' | 'hard';
@@ -83,58 +146,27 @@ export interface ActiveGame {
   maxPlayers: number;
 }
 
-// 백엔드 호환 게임 타입들
-export interface GameConfig {
-  gameMode: '1v1' | 'tournament';
-  difficulty?: 'easy' | 'medium' | 'hard';
-  maxScore?: number;
-  isPrivate?: boolean;
+/**
+ * Represents a player in the context of the game modal UI.
+ */
+export interface PlayerInfo {
+  name: string;
+  isCurrentUser?: boolean;
+  isNextOpponent?: boolean;
 }
 
-export interface Game {
-  id: string;
-  gameMode: '1v1' | 'tournament';
-  players: GamePlayer[];
-  status: 'waiting' | 'in_progress' | 'finished';
-  startedAt: string;
-  endedAt?: string;
-  maxPlayers: number;
-  currentScore?: GameScore;
-  winner?: string;
+export interface GameModalResult {
+  mode: string;
+  opponents: Friend[];
 }
 
-export interface GamePlayer {
-  id: string;
-  username: string;
-  nickname?: string;
-  isReady: boolean;
-}
+// =================================================================
+// 3. API Communication Models
+// =================================================================
 
-export interface GameMove {
-  playerId: string;
-  action: 'move_up' | 'move_down' | 'stop';
-  timestamp: number;
-}
+export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+export type HttpStatusCode = 200 | 201 | 400 | 401 | 403 | 404 | 409 | 422 | 500 | 503;
 
-export interface GameScore {
-  player1: number;
-  player2: number;
-}
-
-// 게임 초대 관련 타입들
-export interface GameInvite {
-  id: string;
-  inviterId: string;
-  inviterUsername: string;
-  inviteeId: string;
-  inviteeUsername: string;
-  gameConfig: GameConfig;
-  status: 'pending' | 'accepted' | 'rejected' | 'expired';
-  createdAt: string;
-  expiresAt: string;
-}
-
-// API Response types
 export interface ApiResponse<T = unknown> {
   readonly success: boolean;
   readonly data?: T;
@@ -144,7 +176,6 @@ export interface ApiResponse<T = unknown> {
   readonly requestId: string;
 }
 
-// Paginated response for list APIs
 export interface PaginatedResponse<T> extends ApiResponse<T[]> {
   readonly data: T[];
   readonly pagination: {
@@ -155,7 +186,15 @@ export interface PaginatedResponse<T> extends ApiResponse<T[]> {
   };
 }
 
-// Enhanced error response with more details
+export interface ApiError {
+  readonly statusCode: HttpStatusCode;
+  readonly error: string;
+  readonly message: string;
+  readonly details?: Record<string, unknown>;
+  readonly timestamp: string;
+  readonly path?: string;
+}
+
 export interface ApiErrorResponse {
   readonly statusCode: HttpStatusCode;
   readonly error: string;
@@ -169,17 +208,8 @@ export interface ApiErrorResponse {
   readonly path?: string;
 }
 
-// Structured error types
-export interface ApiError {
-  readonly statusCode: HttpStatusCode;
-  readonly error: string;
-  readonly message: string;
-  readonly details?: Record<string, unknown>;
-  readonly timestamp: string;
-  readonly path?: string;
-}
+// --- Specific API Endpoints ---
 
-// Authentication types for API requests
 export interface LoginRequest {
   readonly email: string;
   readonly password: string;
@@ -188,7 +218,7 @@ export interface LoginRequest {
 }
 
 export interface LoginResponse {
-  readonly user: BackendUser; // This will be converted to frontend User
+  readonly user: BackendUser;
   readonly accessToken: string;
   readonly refreshToken: string;
   readonly expiresAt: number;
@@ -202,7 +232,20 @@ export interface RegisterRequest {
   readonly acceptTerms: true;
 }
 
-// Backend user type for API responses (before conversion)
+export interface UpdateProfileData {
+  nickname?: string;
+  avatarUrl?: string;
+  twoFactorEnabled?: boolean;
+}
+
+// =================================================================
+// 4. Backend-Specific Data Models
+// =================================================================
+
+/**
+ * Raw user data structure from the backend API.
+ * This is converted to the frontend `User` type.
+ */
 export interface BackendUser {
   readonly id: number;
   readonly username: string;
@@ -235,8 +278,11 @@ export interface BackendGameMatch {
   readonly winner?: number;
 }
 
-// WebSocket types
-export type WebSocketMessageType = 
+// =================================================================
+// 5. WebSocket Models
+// =================================================================
+
+export type WebSocketMessageType =
   | 'game_update'
   | 'friend_status'
   | 'system_message';
@@ -248,32 +294,30 @@ export interface WebSocketMessage<T = unknown> {
   readonly id: string;
 }
 
-// Utility types
-export type Prettify<T> = {
-  [K in keyof T]: T[K];
-} & {};
+// =================================================================
+// 6. API Client Internals
+// =================================================================
 
-export type DeepReadonly<T> = {
-  readonly [P in keyof T]: T[P] extends (infer U)[]
-    ? ReadonlyArray<DeepReadonly<U>>
-    : T[P] extends Record<string, unknown>
-    ? DeepReadonly<T[P]>
-    : T[P];
-};
+export interface ApiClientConfig {
+  baseUrl: string;
+  timeout?: number;
+  retryAttempts?: number;
+  retryDelay?: number;
+  enableCache?: boolean;
+  defaultCacheTTL?: number;
+  enableLogging?: boolean;
+}
 
-// Request interceptor types
 export interface RequestInterceptor {
   onRequest?: (config: RequestInit, endpoint: string) => RequestInit | Promise<RequestInit>;
   onRequestError?: (error: Error) => Error | Promise<Error>;
 }
 
-// Response interceptor types  
 export interface ResponseInterceptor {
   onResponse?: (response: Response, data: any) => any | Promise<any>;
   onResponseError?: (error: Error) => Error | Promise<Error>;
 }
 
-// Cache configuration
 export interface CacheConfig {
   enabled: boolean;
   ttl: number; // TTL in milliseconds
@@ -286,19 +330,19 @@ export interface CacheEntry<T> {
   ttl: number;
 }
 
-// API client configuration
-export interface ApiClientConfig {
-  baseUrl: string;
-  timeout?: number;
-  retryAttempts?: number;
-  retryDelay?: number;
-  enableCache?: boolean;
-  defaultCacheTTL?: number;
-  enableLogging?: boolean;
-}
 
-export interface UpdateProfileData {
-  nickname?: string;
-  avatarUrl?: string;
-  twoFactorEnabled?: boolean;
-}
+// =================================================================
+// 7. Utility Types
+// =================================================================
+
+export type Prettify<T> = {
+  [K in keyof T]: T[K];
+} & {};
+
+export type DeepReadonly<T> = {
+  readonly [P in keyof T]: T[P] extends (infer U)[]
+    ? ReadonlyArray<DeepReadonly<U>>
+    : T[P] extends Record<string, unknown>
+    ? DeepReadonly<T[P]>
+    : T[P];
+};

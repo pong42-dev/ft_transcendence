@@ -1,3 +1,5 @@
+import { Player } from '../types/types.js';
+
 export class PongGame {
   private canvasWidth: number = 600;
   private canvasHeight: number = 400;
@@ -27,8 +29,8 @@ export class PongGame {
   public isTournamentFinal: boolean = false;
   private gameStarted: boolean = false;
   private countdownTimer: number | null = null;
-  private leftPlayer: { nickname: string; avatarUrl?: string } | null = null;
-  private rightPlayer: { nickname: string; avatarUrl?: string } | null = null;
+  private leftPlayer: Player | null = null;
+  private rightPlayer: Player | null = null;
   // TODO: Implement score tracking
   // private _leftScore: number = 0;
   // private _rightScore: number = 0;
@@ -51,7 +53,7 @@ export class PongGame {
     this.resetGame();
   }
 
-  public setPlayers(leftPlayer: { nickname: string; avatarUrl?: string }, rightPlayer: { nickname: string; avatarUrl?: string }): void {
+  public setPlayers(leftPlayer: Player, rightPlayer: Player): void {
     this.leftPlayer = leftPlayer;
     this.rightPlayer = rightPlayer;
     this.updatePlayerInfo();

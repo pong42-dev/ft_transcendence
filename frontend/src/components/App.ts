@@ -4,9 +4,15 @@ import { ApiClient, ApiError } from '../services/ApiClient.js';
 import { UserProfile } from './UserProfile.js';
 import { Router } from '../utils/Router.js';
 import { validateEmail, validatePassword, validateNickname } from '../utils/validators.js';
-import { AppState, User, Friend } from '../types/types.js';
+import {
+  AppState,
+  User,
+  Friend,
+  Player
+} from '../types/types.js';
 import { FileModal } from './FileModal.js';
-import { GameModal } from './GameModal.js';
+import { GameModal, GameModalResult } from './GameModal.js';
+import { ErrorHandler } from '../utils/ErrorHandler.js';
 
 export class App {
   // UI Elements References
@@ -14,6 +20,7 @@ export class App {
   // Service Objects
   private apiClient: ApiClient;
   private router: Router;
+  private errorHandler: ErrorHandler;
   // Components
   private pongGame: PongGame;
   private userProfile: UserProfile | null = null;
@@ -31,6 +38,7 @@ export class App {
     this.appElement = document.getElementById('app') as HTMLElement;
     this.apiClient = new ApiClient();
     this.router = new Router();
+    this.errorHandler = new ErrorHandler();
     
     this.pongGame = new PongGame((winner) => {
       this.handleGameEnd(winner);
@@ -48,7 +56,7 @@ export class App {
   private async checkAuthState(): Promise<void> {
     if (this.apiClient.hasAuthToken()) {
       try {
-        const user = await this.apiClient.auth.getCurrentUser();
+        const user = await this.apiClient.auth.verifyToken();
         this.state.isLoggedIn = true;
         this.state.currentUser = user;
       } catch (error) {
@@ -97,7 +105,7 @@ export class App {
     }
     
     try {
-      const targetUser = await this.apiClient.auth.getUserByUsername(username);
+      const targetUser = await this.apiClient.user.getUserByUsername(username);
       const isCurrentUser = targetUser.username === this.state.currentUser?.username;
       this.userProfile = new UserProfile(targetUser, isCurrentUser);
       this.updateMainContent();
@@ -214,7 +222,7 @@ export class App {
 
   // ===== GAME MANAGEMENT =====
 
-  private handleGameEnd(_winner: 'left' | 'right'): void {
+  private handleGameEnd(winner: 'left' | 'right'): void {
     this.state.isInGame = false;
     this.updateMainContent();
   }
@@ -246,7 +254,7 @@ export class App {
         this.handleProfileCommand(args);
         break;
       case 'play':
-        this.handlePlayCommand();
+        await this.handlePlayCommand();
         break;
       case 'clear':
         this.handleClearCommand();
@@ -356,16 +364,23 @@ export class App {
     // Attempt registration
     try {
       this.mainTerminal.appendOutput('Creating your account...');
-      const user = this.apiClient.shouldUseMockData() ? 
-        null /* TODO: implement mock registration */ : 
+      const user = this.apiClient.shouldUseMockData() ?
+        null /* TODO: implement mock registration */ :
         await this.apiClient.auth.register(email, password, nickname);
 
-      const fileModal = new FileModal((file: File) => {
+      const fileModal = new FileModal(async (file: File) => {
         if (user) {
-          const imageUrl = URL.createObjectURL(file);
-          this.apiClient.auth.updateUser({ avatarUrl: imageUrl });
+          let userForState = user;
+          try {
+            const updatedUser = await this.apiClient.user.uploadAvatar(file);
+            userForState = updatedUser;
+          } catch (e) {
+            this.mainTerminal.appendOutput('Error uploading avatar, using default.');
+          }
+
           this.state.isLoggedIn = true;
-          this.state.currentUser = user;
+          this.state.currentUser = userForState;
+
           this.mainTerminal.reset();
           this.mainTerminal.appendOutput(`Welcome, ${nickname}!`);
           this.mainTerminal.appendOutput('Type "help" to see available commands.');
@@ -416,19 +431,22 @@ export class App {
     }
   }
 
-  private handlePlayCommand(): void {
+  private async handlePlayCommand(): Promise<void> {
     if (!this.state.isLoggedIn) {
       this.mainTerminal.appendOutput('Please login first to play the game.');
       return;
     }
 
-    const gameModal = new GameModal(
-      (mode: string, opponents: Friend[]) => {
+    try {
+      const gameModal = new GameModal();
+      const result = await gameModal.open();
+
+      if (result) {
+        const { mode, opponents } = result;
         this.mainTerminal.appendOutput(`Starting ${mode} game...`);
-        this.state.isInGame = true;
 
         if (this.state.currentUser) {
-          const player1 = {
+          const player1: Player = {
             nickname: this.state.currentUser.nickname || this.state.currentUser.username,
             avatarUrl: this.state.currentUser.avatarUrl,
           };
@@ -451,12 +469,18 @@ export class App {
           }
         }
         this.router.navigate('/game');
-      },
-      () => {
+      } else {
         this.mainTerminal.appendOutput('Game cancelled.');
       }
-    );
-    gameModal.show();
+    } catch (error) {
+      this.mainTerminal.appendOutput(
+        'Error: Could not start the game. Please try again.',
+      );
+      this.errorHandler.handleError(
+        error as Error,
+        'handlePlayCommand',
+      );
+    }
   }
 
   private handleClearCommand(): void {
