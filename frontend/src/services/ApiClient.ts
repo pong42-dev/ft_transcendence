@@ -1,6 +1,7 @@
 import { AuthApiService } from './api/AuthApiService';
 import { GameApiService } from './api/GameApiService';
 import { FriendApiService } from './api/FriendApiService';
+import { UserApiService } from './api/UserApiService';
 import { BaseApiService } from './api/BaseApiService';
 import { getConfig } from '../config/environment';
 import { SimpleInterceptorManager } from './core/Interceptors';
@@ -11,6 +12,7 @@ export class ApiClient {
   public auth: AuthApiService;
   public game: GameApiService;
   public friend: FriendApiService;
+  public user: UserApiService;
   private config = getConfig();
 
   constructor(options?: {
@@ -27,6 +29,7 @@ export class ApiClient {
     this.auth = new AuthApiService();
     this.game = new GameApiService();
     this.friend = new FriendApiService();
+    this.user = new UserApiService();
   }
 
   // 캐시 초기화
@@ -34,6 +37,7 @@ export class ApiClient {
     this.auth.clearCache();
     this.game.clearCache();
     this.friend.clearCache();
+    this.user.clearCache();
   }
 
   // 인터셉터 초기화 (단순화된 시스템)
@@ -60,6 +64,7 @@ export class ApiClient {
     this.auth.setToken(token);
     this.game.setToken(token);
     this.friend.setToken(token);
+    this.user.setToken(token);
   }
 
   clearToken(): void {
@@ -67,6 +72,7 @@ export class ApiClient {
     this.auth.clearToken();
     this.game.clearToken();
     this.friend.clearToken();
+    this.user.clearToken();
   }
 
   shouldUseMockData(): boolean {

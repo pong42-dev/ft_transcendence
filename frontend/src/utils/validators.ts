@@ -4,7 +4,7 @@ export interface ValidationResult {
 }
 
 export const validateEmail = (email: string): ValidationResult => {
-  const emailRegex = /^[^\s@]+@[^\s@]+\\.[^\s@]+$/;
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   
   if (!email) {
     return { isValid: false, error: 'Email is required' };
@@ -39,7 +39,7 @@ export const validateNickname = (nickname: string): ValidationResult => {
   }
   
   // Check for valid characters (alphanumeric, spaces, underscores, hyphens)
-  const nicknameRegex = /^[a-zA-Z0-9\\s_-]+$/;
+  const nicknameRegex = /^[a-zA-Z0-9\s_-]+$/;
   if (!nicknameRegex.test(nickname)) {
     return { isValid: false, error: 'Nickname can only contain letters, numbers, spaces, underscores, and hyphens' };
   }
