@@ -14,188 +14,84 @@ export const getFriendApiServiceMockResponse = async <T>(
   
   const method = options.method || 'GET';
   
-  // 친구 목록 조회 Mock
-  if (endpoint.includes('/friends') && method === 'GET') {
-    return [
-      {
-        id: 1,
-        user: {
-          id: 'friend-1',
-          username: 'friend1',
-          nickname: 'Friend One',
-          avatarUrl: '',
-          twoFactorEnabled: false,
-          gamesPlayed: 5,
-          gamesWon: 3,
-          friends: [],
-          matchHistory: []
-        },
-        status: 'accepted',
-        createdAt: new Date(Date.now() - 86400000).toISOString(),
-        updatedAt: new Date(Date.now() - 86400000).toISOString()
-      },
-      {
-        id: 2,
-        user: {
-          id: 'friend-2',
-          username: 'friend2',
-          nickname: 'Friend Two',
-          avatarUrl: '',
-          twoFactorEnabled: false,
-          gamesPlayed: 8,
-          gamesWon: 6,
-          friends: [],
-          matchHistory: []
-        },
-        status: 'accepted',
-        createdAt: new Date(Date.now() - 172800000).toISOString(),
-        updatedAt: new Date(Date.now() - 172800000).toISOString()
-      },
-      {
-        id: 3,
-        user: {
-          id: 'friend-3',
-          username: 'friend3',
-          nickname: 'Friend Three',
-          avatarUrl: '',
-          twoFactorEnabled: true,
-          gamesPlayed: 12,
-          gamesWon: 7,
-          friends: [],
-          matchHistory: []
-        },
-        status: 'pending',
-        createdAt: new Date(Date.now() - 43200000).toISOString(),
-        updatedAt: new Date(Date.now() - 43200000).toISOString()
+  // 친구 목록 조회 Mock - /api/users/me/friends
+  if (endpoint.includes('/api/users/me/friends') && method === 'GET') {
+    return {
+      success: true,
+      msg: 'Friend list successfully retrieved.',
+      data: {
+        friends: [
+          {
+            user_id: 1,
+            name: 'gabumon_user',
+            avatar: 'https://digi-api.com/images/digimon/w/Gabumon.png',
+            status: true
+          },
+          {
+            user_id: 2,
+            name: 'patamon_user',
+            avatar: 'https://digi-api.com/images/digimon/w/Patamon.png',
+            status: false
+          },
+          {
+            user_id: 3,
+            name: 'tentomon_fighter',
+            avatar: 'https://digi-api.com/images/digimon/w/Tentomon.png',
+            status: true
+          }
+        ]
       }
-    ] as T;
-  }
-  
-  // 친구 요청 보내기 Mock
-  if (endpoint.includes('/friends') && method === 'POST') {
-    return {
-      success: true,
-      requestId: `request-${Date.now()}`,
-      message: 'Friend request sent successfully'
     } as T;
   }
   
-  // 친구 요청 수락/거절 Mock
-  if (endpoint.includes('/friends/') && method === 'PUT') {
-    const action = endpoint.includes('/accept') ? 'accepted' : 'rejected';
+  // 친구 추가 Mock - /api/users/me/friends
+  if (endpoint.includes('/api/users/me/friends') && method === 'POST') {
     return {
       success: true,
-      status: action,
-      message: `Friend request ${action} successfully`
+      msg: 'Successfully followed the user.'
     } as T;
   }
   
-  // 친구 삭제 Mock
-  if (endpoint.includes('/friends/') && method === 'DELETE') {
+  // 특정 친구 정보 조회 Mock - /api/users/me/friends/:id
+  if (endpoint.match(/\/api\/users\/me\/friends\/\d+$/) && method === 'GET') {
     return {
       success: true,
-      message: 'Friend removed successfully'
-    } as T;
-  }
-  
-  // 친구 검색 Mock
-  if (endpoint.includes('/friends/search')) {
-    const query = new URL(`http://dummy${endpoint}`).searchParams.get('q') || '';
-    
-    const mockUsers = [
-      {
-        id: 'search-1',
-        username: `user_${query}1`,
-        nickname: `User ${query} One`,
-        avatarUrl: '',
-        status: 'online' as const,
-        blocked: false
-      },
-      {
-        id: 'search-2',
-        username: `user_${query}2`,
-        nickname: `User ${query} Two`,
-        avatarUrl: '',
-        status: 'offline' as const,
-        blocked: false
-      }
-    ];
-    
-    return mockUsers.filter(user => 
-      user.username.includes(query.toLowerCase()) || 
-      user.nickname.toLowerCase().includes(query.toLowerCase())
-    ) as T;
-  }
-  
-  // 친구 온라인 상태 Mock
-  if (endpoint.includes('/friends/online')) {
-    return [
-      {
-        id: 'friend-1',
-        username: 'friend1',
-        nickname: 'Friend One',
-        status: 'online' as const,
-        blocked: false,
-        lastSeen: new Date().toISOString()
-      },
-      {
-        id: 'friend-2',
-        username: 'friend2',
-        nickname: 'Friend Two',
-        status: 'in-game' as const,
-        blocked: false,
-        lastSeen: new Date(Date.now() - 60000).toISOString(),
-        currentGame: {
-          id: 'game-123',
-          opponent: 'player5',
-          startedAt: new Date(Date.now() - 300000).toISOString()
+      msg: 'Friend Profile successfully retrieved.',
+      data: {
+        friend: {
+          name: 'mock_friend',
+          avatar: 'https://digi-api.com/images/digimon/w/Agumon.png'
         }
       }
-    ] as T;
-  }
-  
-  // 차단 목록 조회 Mock
-  if (endpoint.includes('/friends/blocked')) {
-    return [
-      {
-        id: 'blocked-1',
-        username: 'blockeduser1',
-        nickname: 'Blocked User One',
-        status: 'offline' as const,
-        blocked: true,
-        blockedAt: new Date(Date.now() - 604800000).toISOString()
-      }
-    ] as T;
-  }
-  
-  // 사용자 차단 Mock
-  if (endpoint.includes('/friends/') && endpoint.includes('/block') && method === 'POST') {
-    return {
-      success: true,
-      message: 'User blocked successfully'
     } as T;
   }
   
-  // 사용자 차단 해제 Mock
-  if (endpoint.includes('/friends/') && endpoint.includes('/unblock') && method === 'POST') {
+  // 친구 삭제 Mock - /api/users/me/friends/:id
+  if (endpoint.match(/\/api\/users\/me\/friends\/\d+$/) && method === 'DELETE') {
     return {
       success: true,
-      message: 'User unblocked successfully'
+      msg: 'Successfully unfollowed the user.'
     } as T;
   }
   
-  // 헬스 체크 Mock
-  if (endpoint.includes('/health')) {
+  // 현재 백엔드에서 미구현된 친구 관련 API들
+  if (endpoint.includes('/block') || endpoint.includes('/unblock')) {
     return {
-      status: 'ok',
-      timestamp: new Date().toISOString(),
-      service: 'FriendApiService'
+      error: 'Not Implemented',
+      msg: 'Block/unblock features not implemented in backend'
+    } as T;
+  }
+  
+  if (endpoint.includes('/requests')) {
+    return {
+      error: 'Not Implemented',
+      msg: 'Friend requests not implemented - using direct follow system'
     } as T;
   }
   
   // 기본 응답
   return {
     success: true,
-    message: 'Mock response for FriendApiService'
+    msg: 'Mock response for FriendApiService'
   } as T;
 };

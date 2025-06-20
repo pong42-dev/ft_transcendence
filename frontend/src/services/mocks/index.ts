@@ -6,6 +6,7 @@
 export { getAuthApiServiceMockResponse } from './AuthApiServiceMock';
 export { getGameApiServiceMockResponse } from './GameApiServiceMock';
 export { getFriendApiServiceMockResponse } from './FriendApiServiceMock';
+export { getUserApiServiceMockResponse } from './UserApiServiceMock';
 
 /**
  * 서비스 이름과 Mock 핸들러 매핑
@@ -13,7 +14,8 @@ export { getFriendApiServiceMockResponse } from './FriendApiServiceMock';
 export const MOCK_HANDLERS = {
   AuthApiService: 'getAuthApiServiceMockResponse',
   GameApiService: 'getGameApiServiceMockResponse',
-  FriendApiService: 'getFriendApiServiceMockResponse'
+  FriendApiService: 'getFriendApiServiceMockResponse',
+  UserApiService: 'getUserApiServiceMockResponse'
 } as const;
 
 /**

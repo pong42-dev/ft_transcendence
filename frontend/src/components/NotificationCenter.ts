@@ -220,7 +220,7 @@ export class NotificationCenter {
         type: 'friend_request' as const,
         title: 'Friend Request',
         message: 'MockUser wants to be your friend',
-        timestamp: new Date().toISOString(),
+        timestamp: Date.now(),
         read: false,
         data: { username: 'MockUser' }
       },
@@ -229,18 +229,9 @@ export class NotificationCenter {
         type: 'game_invite' as const,
         title: 'Game Invitation',
         message: 'TestPlayer invited you to a game',
-        timestamp: new Date().toISOString(),
+        timestamp: Date.now(),
         read: false,
         data: { username: 'TestPlayer', gameMode: '1v1' }
-      },
-      {
-        id: `mock_${Date.now()}`,
-        type: 'system' as const,
-        title: 'System Message',
-        message: 'Your account has been verified',
-        timestamp: new Date().toISOString(),
-        read: false,
-        data: {}
       }
     ];
 

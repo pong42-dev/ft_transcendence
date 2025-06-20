@@ -364,9 +364,7 @@ export class App {
     // Attempt registration
     try {
       this.mainTerminal.appendOutput('Creating your account...');
-      const user = this.apiClient.shouldUseMockData() ?
-        null /* TODO: implement mock registration */ :
-        await this.apiClient.auth.register(email, password, nickname);
+      const user = await this.apiClient.auth.register(email, password, nickname);
 
       const fileModal = new FileModal(async (file: File) => {
         if (user) {
@@ -388,9 +386,8 @@ export class App {
         }
       });
       fileModal.show();
-      // TODO: Error handling
     } catch (error) {
-      this.mainTerminal.appendOutput('Registration failed. Email already exists.');
+        this.mainTerminal.appendOutput(`Registration failed.`);
     }
   }
 

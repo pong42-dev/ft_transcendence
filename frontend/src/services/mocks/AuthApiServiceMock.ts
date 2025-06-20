@@ -14,98 +14,78 @@ export const getAuthApiServiceMockResponse = async <T>(
   
   const method = options.method || 'GET';
   
-  // 로그인 Mock
-  if (endpoint.includes('/auth/login') && method === 'POST') {
+  // 로그인 Mock - /api/users/login/local
+  if (endpoint.includes('/api/users/login/local') && method === 'POST') {
     return {
       success: true,
-      user: {
-        id: 'mock-user-id',
-        username: 'mockuser',
-        nickname: 'Mock User',
-        avatarUrl: '',
-        twoFactorEnabled: false,
-        gamesPlayed: 10,
-        gamesWon: 6,
-        friends: [],
-        matchHistory: []
-      },
-      accessToken: 'mock_jwt_token_here',
-      refreshToken: 'mock_refresh_token_here'
+      msg: 'Successfully logged in.',
+      data: {
+        accessToken: 'mock_jwt_token_here'
+      }
     } as T;
   }
   
-  // 회원가입 Mock
-  if (endpoint.includes('/auth/register') && method === 'POST') {
+  // 회원가입 Mock - /api/users/register
+  if (endpoint.includes('/api/users/register') && method === 'POST') {
+    return {
+      msg: 'Registration completed successfully.'
+    } as T;
+  }
+  
+  // 현재 사용자 정보 Mock - /api/users/me
+  if (endpoint.includes('/api/users/me') && method === 'GET') {
     return {
       success: true,
-      user: {
-        id: 'mock-new-user-id',
-        username: 'newmockuser',
-        nickname: 'New Mock User',
-        avatarUrl: '',
-        twoFactorEnabled: false,
-        gamesPlayed: 0,
-        gamesWon: 0,
-        friends: [],
-        matchHistory: []
-      },
-      accessToken: 'mock_jwt_token_new_user',
-      refreshToken: 'mock_refresh_token_new_user'
+      msg: 'User Profile successfully retrieved.',
+      data: {
+        me: {
+          name: 'agumon_trainer',
+          avatar: 'https://digi-api.com/images/digimon/w/Agumon.png'
+        }
+      }
     } as T;
   }
   
-  // 현재 사용자 정보 Mock
-  if (endpoint.includes('/auth/me') && method === 'GET') {
-    return {
-      id: 'mock-user-id',
-      username: 'mockuser',
-      nickname: 'Mock User',
-      avatarUrl: '',
-      twoFactorEnabled: false,
-      gamesPlayed: 10,
-      gamesWon: 6,
-      friends: [],
-      matchHistory: []
-    } as T;
-  }
-  
-  // 로그아웃 Mock
-  if (endpoint.includes('/auth/logout') && method === 'POST') {
+  // 로그아웃 Mock - /api/users/logout
+  if (endpoint.includes('/api/users/logout') && method === 'POST') {
     return {
       success: true,
-      message: 'Successfully logged out'
+      msg: 'Successfully logged out'
     } as T;
   }
   
-  // 토큰 갱신 Mock
-  if (endpoint.includes('/auth/refresh') && method === 'POST') {
+  // 토큰 갱신 Mock - /api/users/refresh-token
+  if (endpoint.includes('/api/users/refresh-token') && method === 'POST') {
     return {
-      accessToken: 'new_mock_jwt_token',
-      refreshToken: 'new_mock_refresh_token'
+      success: true,
+      msg: 'Token refreshed successfully.',
+      data: {
+        accessToken: 'new_mock_jwt_token'
+      }
     } as T;
   }
   
-  // 이메일 중복 확인 Mock
-  if (endpoint.includes('/auth/check-email') && method === 'POST') {
+  // 이메일 중복 확인 Mock - /api/users/check-email
+  if (endpoint.includes('/api/users/check-email') && method === 'POST') {
     return {
-      available: Math.random() > 0.5,
-      message: Math.random() > 0.5 ? '사용 가능한 이메일입니다.' : '이미 사용 중인 이메일입니다.'
+      success: true,
+      msg: '사용 가능한 이메일입니다.'
     } as T;
   }
   
-  // 닉네임 중복 확인 Mock
-  if (endpoint.includes('/auth/check-nickname') && method === 'POST') {
+  // 닉네임 중복 확인 Mock - /api/users/check-name
+  if (endpoint.includes('/api/users/check-name') && method === 'POST') {
     return {
-      available: Math.random() > 0.5,
-      message: Math.random() > 0.5 ? '사용 가능한 닉네임입니다.' : '이미 사용 중인 닉네임입니다.'
+      success: true,
+      msg: '사용 가능한 닉네임입니다.'
     } as T;
   }
   
-  // Google OAuth Mock (구현 예정)
-  if (endpoint.includes('/auth/google')) {
+  // Google OAuth Mock - /api/users/login/google (구현 예정)
+  if (endpoint.includes('/api/users/login/google')) {
     return {
       error: 'Google OAuth not implemented',
-      message: 'Google login not yet implemented'
+      msg: 'Google login not yet implemented'
     } as T;
   }
   

@@ -3,7 +3,7 @@
  * 인터셉터에서 변환된 데이터의 검증
  */
 
-import * as Types from '../types/types';
+import * as Types from '../../types/types';
 
 // 간단한 타입 가드들
 export const isUser = (obj: any): obj is Types.User => 

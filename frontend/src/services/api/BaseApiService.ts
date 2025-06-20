@@ -48,6 +48,12 @@ export abstract class BaseApiService {
     this.baseUrl = baseUrl || this.config.apiUrl;
     this.serviceName = serviceName || this.constructor.name;
     
+    console.log(`[${this.serviceName}] Config:`, {
+      useMockData: this.config.useMockData,
+      apiUrl: this.config.apiUrl,
+      enableLogging: this.config.enableLogging
+    });
+    
     // 통합 인터셉터 시스템에서 인터셉터 가져오기
     this.loadInterceptorsFromManager();
     
@@ -122,22 +128,28 @@ export abstract class BaseApiService {
   ): Promise<T> {
     // Mock 데이터 사용 시 동적 임포트로 Mock 핸들러 로드
     if (this.config.useMockData) {
+      console.log(`[${this.serviceName}] Using mock data for endpoint: ${endpoint}`);
       try {
         // Vite 호환성을 위한 명시적 임포트 방식
         let mockHandler: Function | undefined;
 
         switch (this.serviceName) {
-          case 'AuthApi': {
+          case 'AuthApiService': {
             const module = await import('../mocks/AuthApiServiceMock');
             mockHandler = module.getAuthApiServiceMockResponse;
             break;
           }
-          case 'GameApi': {
+          case 'UserApiService': {
+            const module = await import('../mocks/UserApiServiceMock');
+            mockHandler = module.getUserApiServiceMockResponse;
+            break;
+          }
+          case 'GameApiService': {
             const module = await import('../mocks/GameApiServiceMock');
             mockHandler = module.getGameApiServiceMockResponse;
             break;
           }
-          case 'FriendApi': {
+          case 'FriendApiService': {
             const module = await import('../mocks/FriendApiServiceMock');
             mockHandler = module.getFriendApiServiceMockResponse;
             break;
@@ -158,6 +170,8 @@ export abstract class BaseApiService {
           message: `Failed to load mock data for ${this.serviceName}`
         } as T;
       }
+    } else {
+      console.log(`[${this.serviceName}] Using real API for endpoint: ${endpoint} (useMockData: ${this.config.useMockData})`);
     }
 
     // 캐시 확인 (GET 요청만)
