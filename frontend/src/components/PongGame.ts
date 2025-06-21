@@ -185,6 +185,9 @@ export class PongGame {
     let count = 3;
     this.countdownElement.style.opacity = '1';
     
+    // Hide ball during countdown
+    this.ball.style.opacity = '0';
+    
     const updateCount = () => {
       if (count > 0) {
         this.countdownElement.innerHTML = `
@@ -239,6 +242,9 @@ export class PongGame {
     this.leftPaddleY = this.canvasHeight / 2 - this.paddleHeight / 2;
     this.rightPaddleY = this.canvasHeight / 2 - this.paddleHeight / 2;
     this.gameStarted = false;
+    
+    // Immediately update DOM elements to reflect the reset positions
+    this.updateDOMElements();
   }
 
   private resetRound(): void {
