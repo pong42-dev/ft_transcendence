@@ -1,4 +1,4 @@
-import { Player } from '../types/types.js';
+import { Player, GameResult } from '../types/types.js';
 
 export class PongGame {
   private canvasWidth: number = 600;
@@ -253,22 +253,28 @@ export class PongGame {
   }
 
   private handleRoundEnd(winner: 'left' | 'right'): void {
+    console.log('handleRoundEnd called, winner:', winner, 'current roundWins:', this.roundWins); // Debug log
+    
     if (winner === 'left') {
       this.roundWins.left++;
     } else {
       this.roundWins.right++;
     }
 
+    console.log('After incrementing, roundWins:', this.roundWins); // Debug log
     this.updateScore();
 
     if (this.roundWins.left >= 2 || this.roundWins.right >= 2) {
       // Match is over
+      console.log('Match is over, calling onGameEnd'); // Debug log
       if (this.onGameEnd) {
-        this.stop();
+        // Call onGameEnd BEFORE stopping the game to preserve roundWins
         this.onGameEnd(this.roundWins.left > this.roundWins.right ? 'left' : 'right');
+        this.stop();
       }
     } else {
       // Start next round
+      console.log('Starting next round'); // Debug log
       this.currentRound++;
       this.updateRound();
       this.resetRound();
@@ -396,5 +402,27 @@ export class PongGame {
     this.ball.style.top = `${this.ballY}px`;
     this.leftPaddle.style.top = `${this.leftPaddleY}px`;
     this.rightPaddle.style.top = `${this.rightPaddleY}px`;
+  }
+
+  public getGameResult(): GameResult {
+    console.log('getGameResult called, roundWins:', this.roundWins); // Debug log
+    const winner: 'left' | 'right' = this.roundWins.left > this.roundWins.right ? 'left' : 'right';
+    const result: GameResult = {
+      winner,
+      leftPlayer: {
+        nickname: this.leftPlayer?.nickname || 'Player 1',
+        score: this.roundWins.left,
+        avatarUrl: this.leftPlayer?.avatarUrl
+      },
+      rightPlayer: {
+        nickname: this.rightPlayer?.nickname || 'Player 2', 
+        score: this.roundWins.right,
+        avatarUrl: this.rightPlayer?.avatarUrl
+      },
+      totalRounds: this.roundWins.left + this.roundWins.right,
+      gameMode: this.gameMode as 'regular' | 'tournament' | 'demo'
+    };
+    console.log('getGameResult returning:', result); // Debug log
+    return result;
   }
 }

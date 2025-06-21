@@ -1,4 +1,5 @@
 // Removed unused import
+import { GameResult } from '../types/types.js';
 
 export class GameEndModal {
   private modalElement: HTMLElement;
@@ -6,9 +7,17 @@ export class GameEndModal {
   private onNextMatch?: () => void;
   private isTournament: boolean;
   private isFinal: boolean;
+  private gameResult: GameResult;
 
-  constructor(isTournament: boolean, isFinal: boolean, onProfileClick: () => void, onNextMatch?: () => void) {
+  constructor(
+    gameResult: GameResult, 
+    isTournament: boolean, 
+    isFinal: boolean, 
+    onProfileClick: () => void, 
+    onNextMatch?: () => void
+  ) {
     this.modalElement = document.createElement('div');
+    this.gameResult = gameResult;
     this.onProfileClick = onProfileClick;
     this.onNextMatch = onNextMatch;
     this.isTournament = isTournament;
@@ -22,13 +31,17 @@ export class GameEndModal {
     const content = document.createElement('div');
     content.className = 'bg-terminal-black border border-terminal-gray p-6 rounded-lg w-[400px] max-w-full';
     
+    // Determine if current user won (assuming right player is the user in most cases)
+    const userWon = this.gameResult.winner === 'right';
+    const winnerName = this.gameResult.winner === 'left' ? this.gameResult.leftPlayer.nickname : this.gameResult.rightPlayer.nickname;
+    
     content.innerHTML = `
       <div class="text-center mb-6">
         <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-terminal-gray bg-opacity-10 mb-3">
-          <div class="text-3xl">🏆</div>
+          <div class="text-3xl">${userWon ? '🏆' : '💪'}</div>
         </div>
-        <h3 class="text-terminal-green text-2xl font-bold mb-1">Victory!</h3>
-        <div class="text-sm opacity-70">Congratulations!</div>
+        <h3 class="text-terminal-green text-2xl font-bold mb-1">${userWon ? 'Victory!' : 'Good Game!'}</h3>
+        <div class="text-sm opacity-70">${userWon ? 'Congratulations!' : `${winnerName} wins!`}</div>
       </div>
       
       <div class="bg-terminal-gray bg-opacity-5 rounded-lg p-4 mb-6">
@@ -39,28 +52,28 @@ export class GameEndModal {
         
         <div class="flex justify-between items-center mb-4">
           <div class="flex items-center gap-2">
-            <div class="w-8 h-8 rounded-lg bg-terminal-gray bg-opacity-20 flex items-center justify-center font-bold text-sm">
-              You
+            <div class="w-8 h-8 rounded-lg ${this.gameResult.winner === 'left' ? 'bg-terminal-green bg-opacity-20' : 'bg-terminal-gray bg-opacity-20'} flex items-center justify-center font-bold text-sm">
+              ${this.gameResult.leftPlayer.nickname.substring(0, 2)}
             </div>
-            <div class="text-xl font-bold">5</div>
+            <div class="text-xl font-bold">${this.gameResult.leftPlayer.score}</div>
           </div>
           <div class="text-xs opacity-50">vs</div>
           <div class="flex items-center gap-2">
-            <div class="text-xl font-bold">3</div>
-            <div class="w-8 h-8 rounded-lg bg-terminal-red bg-opacity-20 flex items-center justify-center font-bold text-sm">
-              Opp
+            <div class="text-xl font-bold">${this.gameResult.rightPlayer.score}</div>
+            <div class="w-8 h-8 rounded-lg ${this.gameResult.winner === 'right' ? 'bg-terminal-green bg-opacity-20' : 'bg-terminal-red bg-opacity-20'} flex items-center justify-center font-bold text-sm">
+              ${this.gameResult.rightPlayer.nickname.substring(0, 2)}
             </div>
           </div>
         </div>
         
         <div class="grid grid-cols-2 gap-3 text-center">
           <div class="bg-terminal-gray bg-opacity-10 rounded-lg p-2">
-            <div class="text-xl font-bold mb-1">87%</div>
-            <div class="text-xs opacity-50">Accuracy</div>
+            <div class="text-xl font-bold mb-1">${this.gameResult.totalRounds}</div>
+            <div class="text-xs opacity-50">Total Rounds</div>
           </div>
           <div class="bg-terminal-gray bg-opacity-10 rounded-lg p-2">
-            <div class="text-xl font-bold mb-1">12</div>
-            <div class="text-xs opacity-50">Rally Length</div>
+            <div class="text-xl font-bold mb-1">${this.gameResult.gameMode.toUpperCase()}</div>
+            <div class="text-xs opacity-50">Game Mode</div>
           </div>
         </div>
       </div>

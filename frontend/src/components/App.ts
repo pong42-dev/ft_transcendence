@@ -239,11 +239,13 @@ export class App {
   private handleGameEnd(winner: 'left' | 'right'): void {
     console.log('Game ended, winner:', winner); // Debug log
     
-    // Stop the game first
-    this.pongGame.stop();
+    // Get actual game result from PongGame (should be called before stop() in PongGame)
+    const gameResult = this.pongGame.getGameResult();
+    console.log('Received game result:', gameResult); // Debug log
     
-    // Show game end modal
+    // Show game end modal with real data
     const gameEndModal = new GameEndModal(
+      gameResult,
       false, // isTournament - TODO: detect actual tournament mode
       true,  // isFinal
       () => {

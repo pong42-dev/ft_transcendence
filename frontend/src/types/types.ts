@@ -121,11 +121,19 @@ export interface GameData {
 }
 
 export interface GameResult {
-  winner: string;
-  player1Score: number;
-  player2Score: number;
-  duration: number;
-  endedAt: string;
+  winner: 'left' | 'right';
+  leftPlayer: {
+    nickname: string;
+    score: number;
+    avatarUrl?: string;
+  };
+  rightPlayer: {
+    nickname: string;
+    score: number;
+    avatarUrl?: string;
+  };
+  totalRounds: number;
+  gameMode: 'regular' | 'tournament' | 'demo';
 }
 
 export interface GameStats {
