@@ -1,16 +1,13 @@
 import fp from 'fastify-plugin';
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { TokenData } from '../../../schemas/auth.js';
+import { TokenData, UserData, UserProfile } from '../../../schemas/auth.js';
 
 declare module 'fastify' {
 	interface FastifyInstance {
 		authenticate: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
 	}
 	interface FastifyRequest {
-		user: {
-			user_id: number
-			name: string
-		}
+		user: UserProfile;
 	}
 }
 
@@ -29,11 +26,15 @@ async function authenticate(request: FastifyRequest, reply: FastifyReply) {
 			return reply.status(401).send({ msg: 'Invalid or expired token.' });
 		}
 		console.log("decoded:", decoded);
-		const row = await userProfilesRepository.getRowByColumnValue("user_id", decoded.user_id);
-		console.log("row:", row);
-		if (row) {
-			request.user = { user_id: row.user_id, name: row.name };
-			console.log("user_id:", row.user_id, "name:", row.name);
+		const userProfileRow = await userProfilesRepository.getRowByColumnValue("user_id", Number(decoded.user_id));			
+		if (!userProfileRow) {
+			return reply.status(404).send({ msg: 'User not found.' });
+		}
+		console.log("row:", userProfileRow);
+		if (userProfileRow) {
+			request.user = userProfileRow;
+			// request.user = { user_id: userProfileRow.user_id as number, name: userProfileRow.name };
+			console.log("userProfile: ", userProfileRow);
 			request.log.info("Completed authentication middleware");
 			return;
 		}

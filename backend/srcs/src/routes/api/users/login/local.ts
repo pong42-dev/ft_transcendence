@@ -2,7 +2,7 @@ import { FastifyPluginAsyncTypebox, Type } from '@fastify/type-provider-typebox'
 import { Credentials } from '../../../../schemas/auth.js'
 
 const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
-	const { usersRepository, passwordManager, loginManager } = fastify;
+	const { usersRepository, passwordManager, loginManager, twoFAManager } = fastify;
 	fastify.post(
 		'/local',
 		{
@@ -16,10 +16,11 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				response: {
 					200: Type.Object({
 						success: Type.Literal(true),
+						requires2FA: Type.Optional(Type.Boolean()),
 						msg: Type.String(),
-						data: Type.Object({
-							accessToken: Type.String()
-						})
+						data: Type.Optional(Type.Object({
+							token: Type.String()
+						})),
 					}),
 					401: Type.Object({
 						msg: Type.String()
@@ -45,7 +46,15 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				if (!isMatch) {
 					return reply.status(401).send({ msg: 'Email or password is incorrect.' });
 				}
-				console.log ("local user:", user);
+				const tmpToken = await twoFAManager.require2FA(request, reply, user.id);
+				if (tmpToken) {
+					return reply.send({
+					success: true,
+					requires2FA: true,
+					msg: 'Two-factor authentication is required.',
+					data: { token: tmpToken }
+					});
+				}
 				await loginManager.login(user.id, reply, '');
 			} catch (err) {
 				fastify.log.error(err);

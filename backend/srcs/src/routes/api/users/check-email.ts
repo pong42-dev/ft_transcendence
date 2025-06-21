@@ -30,7 +30,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 			try {
 				const { email } = request.body as UserEmail;
 				if (!isValidEmail(email)) {
-					return reply.status(200).send({ 
+					return reply.send({ 
 						success: false, 
 						msg: 'Invalid email format.'
 					});

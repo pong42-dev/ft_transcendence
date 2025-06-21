@@ -1,30 +1,36 @@
+
+# 🧾 Friends API
+
+**Authenticated user’s friend management endpoints**
+Provides functionality to follow users, retrieve friend lists, view friend profiles, and unfollow users.
+
 ---
 
 ## 📌 `/api/users/me/friends` \[GET]
 
-Endpoint for **retrieving the list of friends** for the authenticated user.
+**🔍 Retrieve the list of friends for the authenticated user**
 
 ---
 
 ### ✅ Request
 
-* **Content-Type**: `application/json`
 * **Method**: `GET`
+* **Content-Type**: `application/json`
 * **Authentication**: ✅ Required (`Bearer <token>`)
 
 ---
 
 ### 📥 Expected Headers
 
-| Header          | Value            | Required | Description |
-| --------------- | ---------------- | -------- | ----------- |
-| `Authorization` | `Bearer <token>` | ✅        | JWT token   |
+| Header        | Value            | Required | Description      |
+| ------------- | ---------------- | -------- | ---------------- |
+| Authorization | `Bearer <token>` | ✅        | JWT access token |
 
 ---
 
 ### ✅ Response
 
-### ▶ Success (HTTP 200)
+#### ▶ Success (HTTP 200)
 
 ```json
 {
@@ -36,14 +42,14 @@ Endpoint for **retrieving the list of friends** for the authenticated user.
         "user_id": "string",
         "name": "string",
         "avatar": "string",
-		"status": "boolean",
+        "status": true
       }
     ]
   }
 }
 ```
 
-### ▶ Server Error (HTTP 500)
+#### ▶ Server Error (HTTP 500)
 
 ```json
 {
@@ -55,22 +61,22 @@ Endpoint for **retrieving the list of friends** for the authenticated user.
 
 ### 🧩 Additional Notes
 
-* Only friends with valid profiles are returned.
+* Only valid friend profiles are returned.
 * Uses `friendsRepository.getRowsByColumnValue()` internally.
-* Returns enriched profile data via `userProfilesRepository`.
+* Enriched with user profile info from `userProfilesRepository`.
 
 ---
 
 ## 📌 `/api/users/me/friends` \[POST]
 
-Endpoint for **following a user** by their display name.
+**➕ Follow a user by their display name**
 
 ---
 
 ### ✅ Request
 
-* **Content-Type**: `application/json`
 * **Method**: `POST`
+* **Content-Type**: `application/json`
 * **Authentication**: ✅ Required
 
 ---
@@ -91,7 +97,7 @@ Endpoint for **following a user** by their display name.
 
 ### ✅ Response
 
-### ▶ Success (HTTP 200)
+#### ▶ Success (HTTP 200)
 
 ```json
 {
@@ -100,17 +106,23 @@ Endpoint for **following a user** by their display name.
 }
 ```
 
-### ▶ Conflict (HTTP 409)
+#### ▶ Conflict – User Not Found (HTTP 409)
 
 ```json
-{ "msg": "User does not exist." }
+{
+  "msg": "User does not exist."
+}
 ```
+
+#### ▶ Conflict – Already Following (HTTP 409)
 
 ```json
-{ "msg": "You are already following this user." }
+{
+  "msg": "You are already following this user."
+}
 ```
 
-### ▶ Server Error (HTTP 500)
+#### ▶ Server Error (HTTP 500)
 
 ```json
 {
@@ -122,14 +134,14 @@ Endpoint for **following a user** by their display name.
 
 ### 🧩 Additional Notes
 
-* Checks if the user exists before following.
-* Prevents duplicate follow actions.
+* Verifies user existence before following.
+* Prevents duplicate follow attempts.
 
 ---
 
 ## 📌 `/api/users/me/friends/:id` \[GET]
 
-Endpoint for **retrieving a friend's profile** with stats by their ID.
+**👁️ View a specific friend’s profile and status**
 
 ---
 
@@ -150,7 +162,7 @@ Endpoint for **retrieving a friend's profile** with stats by their ID.
 
 ### ✅ Response
 
-### ▶ Success (HTTP 200)
+#### ▶ Success (HTTP 200)
 
 ```json
 {
@@ -169,7 +181,7 @@ Endpoint for **retrieving a friend's profile** with stats by their ID.
 }
 ```
 
-### ▶ Not Found (HTTP 404)
+#### ▶ Not Found (HTTP 404)
 
 ```json
 {
@@ -177,7 +189,7 @@ Endpoint for **retrieving a friend's profile** with stats by their ID.
 }
 ```
 
-### ▶ Server Error (HTTP 500)
+#### ▶ Server Error (HTTP 500)
 
 ```json
 {
@@ -189,7 +201,7 @@ Endpoint for **retrieving a friend's profile** with stats by their ID.
 
 ## 📌 `/api/users/me/friends/:id` \[DELETE]
 
-Endpoint for **unfollowing a user** by their ID.
+**❌ Unfollow a user by their ID**
 
 ---
 
@@ -210,7 +222,7 @@ Endpoint for **unfollowing a user** by their ID.
 
 ### ✅ Response
 
-### ▶ Success (HTTP 200)
+#### ▶ Success (HTTP 200)
 
 ```json
 {
@@ -219,17 +231,23 @@ Endpoint for **unfollowing a user** by their ID.
 }
 ```
 
-### ▶ Conflict (HTTP 409)
+#### ▶ Conflict – Invalid ID (HTTP 409)
 
 ```json
-{ "msg": "Invalid friend ID." }
+{
+  "msg": "Invalid friend ID."
+}
 ```
+
+#### ▶ Conflict – Not Following (HTTP 409)
 
 ```json
-{ "msg": "You are not following this user." }
+{
+  "msg": "You are not following this user."
+}
 ```
 
-### ▶ Server Error (HTTP 500)
+#### ▶ Server Error (HTTP 500)
 
 ```json
 {
@@ -241,8 +259,7 @@ Endpoint for **unfollowing a user** by their ID.
 
 ### 🧩 Additional Notes
 
-* Validates follow status before deletion.
-* Ensures the user is not unfollowing themselves.
+* Validates that the user is currently following the target before deletion.
+* Prevents self-unfollow scenarios.
 
 ---
-

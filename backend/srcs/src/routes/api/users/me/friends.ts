@@ -1,8 +1,7 @@
 import { FastifyPluginAsyncTypebox, Type } from '@fastify/type-provider-typebox'
-import { FriendListResponseSchema, UserProfileResponseSchema } from '../../../../schemas/users.js'
+import { UserProfileResponseSchema } from '../../../../schemas/users.js'
 import { IdSchema } from '../../../../schemas/common.js'
-import { Profiles, Friend, UserData } from '../../../../schemas/auth.js'
-import { UserProfileResponse } from '../../../../schemas/users.js'
+import { Profiles, UserData } from '../../../../schemas/auth.js'
 
 const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 	const { userProfilesRepository, friendsRepository, authenticate } = fastify
@@ -43,7 +42,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 						friendsProfile.push(friendProfile);
 					}
 				}
-				reply.status(200).send({
+				reply.send({
 					success: true,
 					msg: 'Friend list successfully retrieved.',
 					data: {
@@ -95,7 +94,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 					return reply.status(409).send({ msg: 'You are already following this user.' });
 
 				await friendsRepository.insertRow(userId, friendId, 'following');
-				return reply.status(200).send({ 
+				return reply.send({ 
 					success: true,
 					msg: 'Successfully followed the user.' 
 				});
@@ -142,7 +141,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 					return reply.status(404).send({ msg: 'User not found.' });
 				}
 				// return profile;
-				reply.status(200).send({
+				reply.send({
 					success: true,
 					msg: 'Friend Profile successfully retrieved.',
 					data: {
@@ -194,7 +193,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 					return reply.status(409).send({ msg: 'You are not following this user.' });
 
 				await friendsRepository.deleteFriendship(userId, friendId);
-				return reply.status(200).send({ 
+				return reply.send({ 
 					success: true,
 					msg: 'Successfully unfollowed the user.' 
 				});

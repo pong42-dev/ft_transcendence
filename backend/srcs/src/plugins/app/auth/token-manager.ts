@@ -17,13 +17,13 @@ expiresAt: Date;
 }
 
 export function manageTokens(fastify: FastifyInstance) {
-	const ACCESS_TOKEN_EXPIRES_IN = '5m';
-	const REFRESH_TOKEN_EXPIRES_IN = '10m';
+	const ACCESS_TOKEN_EXPIRES_IN = '20m';
+	const REFRESH_TOKEN_EXPIRES_IN = '60m';
 	// const ACCESS_TOKEN_EXPIRES_IN = '10m';
 	// const REFRESH_TOKEN_EXPIRES_IN = '7d';
 	const REFRESH_COOKIE_NAME = 'refresh_token';
 	// const ACCESS_COOKIE_NAME = 'access_token';
-	const REFRESH_COOKIE_MAX_AGE = 60 * 10;
+	const REFRESH_COOKIE_MAX_AGE = 60 * 60;
 	// const ACCESS_COOKIE_MAX_AGE = 60 * 5;
 
 	return {

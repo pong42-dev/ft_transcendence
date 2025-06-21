@@ -63,7 +63,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 			console.log("userByName: ", userByName);
 			if (!userByEmail) {
 				if (userByName)
-					return reply.status(200).send({ 
+					return reply.send({ 
 						success: false,
 						msg: 'This name is already registered.'
 					});
@@ -76,7 +76,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				return await loginManager.login(user_id, reply, tokenData.refresh_token);
 			} else {
 				if (userByEmail && userByEmail.provider != 'google')
-					return reply.status(200).send({ 
+					return reply.send({ 
 						success: false,
 						msg: 'This email is already registered.' 
 					});

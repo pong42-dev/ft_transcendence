@@ -1,25 +1,24 @@
 import { FastifyPluginAsyncTypebox, Type } from '@fastify/type-provider-typebox'
+import { InitUser2FASchema } from '../../../../schemas/auth.js';
 
 const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
-	const { user2FARepository, usersRepository, authenticate, verify2FAToken, speakeasy, qrcode } = fastify
+	const { user2FARepository, authenticate, twoFAManager, loginManager } = fastify
 
 	fastify.post(
-		'/2fa/enable',
+		'/2fa/enable/init',
 		{
 			schema: {
 			response: {
 				200: Type.Object({
 				success: Type.Literal(true),
 				msg: Type.String(),
-				data: Type.Object({
-					qrCodeUrl: Type.String()
-				})
+				data: InitUser2FASchema
 				}),
 				401: Type.Object({
-					msg: Type.String()
+				msg: Type.String()
 				}),
 				404: Type.Object({
-					msg: Type.String()
+				msg: Type.String()
 				}),
 				500: Type.Object({
 				msg: Type.String()
@@ -31,30 +30,14 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 		},
 		async (request, reply): Promise<void> => {
 			try {
-				const userId = request.user.user_id;
-				const user = await usersRepository.getRowByColumnValue("id", Number(userId));
-				if (!user) {
-					return reply.status(404).send({ msg: 'User not found.' });
-				}
-				const userEmail = user.email;
-				const secret = speakeasy.generateSecret({
-					name: `MyApp (${userEmail})`
-				});
-				if (!secret || !secret.otpauth_url)
-					throw new Error('');
-				const qrCodeUrl = await qrcode.toDataURL(secret.otpauth_url);
-				// Store secret.base32 in DB
-				try {
-					await user2FARepository.deleteRowByColumnValue('user_id', userId);
-				} catch (err) {
-					request.log.warn(err, "Failed to delete 2FA, but continuing");
-				}
-				await user2FARepository.insertRow(userId, secret.base32);
-				return reply.status(200).send({
+				const data = await twoFAManager.init2FA(request, reply);
+				return reply.send({
 					success: true,
 					msg: 'QR code for 2FA setup has been generated.',
 					data: {
-						qrCodeUrl
+						qrCodeUrl: data.qrCodeUrl,
+						secret: data.secret,
+						token: data.token
 					}
 				});
 			} catch (err) {
@@ -64,7 +47,58 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 	);
 
 	fastify.post(
-		"/2fa",
+		"/2fa/enable",
+		{
+			schema: {
+			body: Type.Object({
+				token: Type.String(),
+				tmpToken: Type.String()
+			}),
+			response: {
+				200: Type.Object({
+				success: Type.Literal(true),
+				msg: Type.String()
+				}),
+				401: Type.Object({
+				msg: Type.String()
+				}),
+				404: Type.Object({
+				msg: Type.String()
+				}),
+				409: Type.Object({
+				msg: Type.String()
+				}),
+				500: Type.Object({
+				msg: Type.String()
+				})
+			},
+			tags: ["Users"]
+			},
+			preHandler: [authenticate, twoFAManager.verify2FAToken]
+		},
+		async (request, reply): Promise<void> => {
+			try {
+				const userId = request.user.user_id;
+				const user2FARow = await user2FARepository.getRowByColumnValue('user_id', userId);
+				if (!user2FARow || (user2FARow && !user2FARow.is_enabled)) {
+					reply.status(409).send({
+						msg: "This account already has 2FA enabled. Please disable it before setting up again."
+					})
+				}
+				await user2FARepository.updateRowByColumn('user_id', userId, 'is_enabled', true);
+				return reply.send({
+					success: true,
+					msg: '2FA has been enabled successfully.'
+				});
+			} catch (err) {
+				return reply.status(500).send({ msg: 'An internal server error occurred during 2FA setup.' });
+			}
+		}
+	);
+
+
+	fastify.post(
+		"/2fa/disable",
 		{
 			schema: {
 			body: Type.Object({
@@ -76,31 +110,12 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				msg: Type.String()
 				}),
 				401: Type.Object({
-					msg: Type.String()
-				}),
-				500: Type.Object({
 				msg: Type.String()
-				})
-			},
-			tags: ["Users"]
-			},
-			preHandler: [authenticate, verify2FAToken]
-		},
-		async (request, reply): Promise<void> => {
-			return reply.status(200).send({
-				success: true,
-				msg: "valid token"
-			});
-		}
-	);
-
-	fastify.post(
-		"/2fa/disable",
-		{
-			schema: {
-			response: {
-				200: Type.Object({
-				success: Type.Literal(true),
+				}),
+				404: Type.Object({
+				msg: Type.String()
+				}),
+				409: Type.Object({
 				msg: Type.String()
 				}),
 				500: Type.Object({
@@ -109,19 +124,64 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 			},
 			tags: ["Users"]
 			},
-			preHandler: [authenticate, verify2FAToken]
+			preHandler: [authenticate, twoFAManager.verify2FATokenWithoutTmpToken]
 		},
 		async (request, reply): Promise<void> => {
 			try {
 				const userId = request.user.user_id;
+				const user2FARow = await user2FARepository.getRowByColumnValue('user_id', userId);
+				if (!user2FARow || (user2FARow && !user2FARow.is_enabled)) {
+					reply.status(409).send({
+						msg: "This account already has 2FA disabled. Please enable it before setting up again."
+					})
+				}
 				await user2FARepository.deleteRowByColumnValue('user_id', userId);
 				return reply.send({
 					success: true,
-					msg: "2FA has been disabled successfully."
+					msg: '2FA has been disabled successfully.'
 				});
 			} catch (err) {
 				return reply.status(500).send({ msg: 'An internal server error occurred during 2FA setup.', });
 			}
+		}
+	);
+
+	fastify.post(
+		"/2fa",
+		{
+			schema: {
+			body: Type.Object({
+				tmpToken: Type.String(),
+				token: Type.String()
+			}),
+			response: {
+				200: Type.Object({
+				success: Type.Literal(true),
+				msg: Type.String(),
+				data: Type.Object({
+					token: Type.String()
+				})
+				}),
+				401: Type.Object({
+				msg: Type.String()
+				}),
+				404: Type.Object({
+				msg: Type.String()
+				}),
+				409: Type.Object({
+				msg: Type.String()
+				}),
+				500: Type.Object({
+				msg: Type.String()
+				})
+			},
+			tags: ["Users"]
+			},
+			preHandler: [twoFAManager.verify2FAToken]
+		},
+		async (request, reply): Promise<void> => {
+			const { user_id:userId } = request.user;
+			await loginManager.login(userId, reply, '');
 		}
 	);
 

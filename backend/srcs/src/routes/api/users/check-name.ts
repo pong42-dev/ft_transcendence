@@ -29,14 +29,14 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 			try {
 				const { name } = request.body as UserName;
 				if (!isValidName(name)) {
-					return reply.status(200).send({
+					return reply.send({
 						success: false,
 						msg: 'Invalid name format.'
 					});
 				}
 				const nameExists = await userProfilesRepository.checkDupRow('name', name);
 				if (nameExists) {
-					return reply.status(200).send({
+					return reply.send({
 						success: false,
 						msg: 'Name already exists.'
 					});

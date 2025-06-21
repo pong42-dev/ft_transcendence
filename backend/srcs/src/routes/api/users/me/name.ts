@@ -23,6 +23,9 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 					401: Type.Object({
 						msg: Type.String()
 					}),
+					404: Type.Object({
+						msg: Type.String()
+					}),
 					500: Type.Object({
 						msg: Type.String()
 					}),
@@ -38,13 +41,13 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 			const { name: newName } = request.body as UserData;
 			const nameExists = await userProfilesRepository.checkDupRow('name', newName)
 			if (nameExists) {
-				return reply.status(200).send({
+				return reply.send({
 					success: false,
 					msg: 'This name is already registered'
 				});
 			}
 			await userProfilesRepository.updateRowByColumn("user_id", user_id, "name", newName);
-			return reply.status(200).send({
+			return reply.send({
 				success: true,
 				msg: 'Name has been updated.'
 			});

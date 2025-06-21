@@ -1,8 +1,9 @@
 import { FastifyPluginAsyncTypebox, Type } from '@fastify/type-provider-typebox'
-import { UserProfileResponse, UserProfileResponseSchema } from '../../../../schemas/users.js'
+import { UserProfileResponseSchema } from '../../../../schemas/users.js'
 
 const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
-	const { userProfilesRepository, authenticate } = fastify
+	const { authenticate } = fastify
+
 	fastify.get(
 		'/',
 		{
@@ -31,12 +32,8 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 		}, 
 		async (request, reply) : Promise<void> => {
 			try {
-				const userId = request.user.user_id;
-				const profile = await userProfilesRepository.getUserProfileWithStats(userId);
-				if (!profile) {
-					return reply.status(404).send({ msg: 'User not found.' });
-				}
-				reply.status(200).send({
+				const profile = request.user;
+				reply.send({
 					success: true,
 					msg: 'User Profile successfully retrieved.',
 					data: {

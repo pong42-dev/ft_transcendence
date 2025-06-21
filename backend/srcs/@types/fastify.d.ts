@@ -6,5 +6,6 @@ declare module 'fastify' {
   interface FastifyInstance {
     speakeasy: typeof speakeasy
     qrcode: typeof qrcode
+    uuid: () => string
   }
 }

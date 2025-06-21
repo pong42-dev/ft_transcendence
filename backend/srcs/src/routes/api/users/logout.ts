@@ -3,7 +3,8 @@ import { Type } from '@sinclair/typebox';
 import { UserData } from '../../../schemas/auth.js';
 
 const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
-	const { userProfilesRepository, userTokensRepository, googleOAuth2Manager, authenticate } = fastify;
+	const { userProfilesRepository, userTokensRepository, tmpTokenRepository,
+		googleOAuth2Manager, authenticate } = fastify;
 
 	fastify.post(
 		'/logout',
@@ -18,6 +19,9 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				response: {
 					200: Type.Object({
 						success: Type.Literal(true),
+						msg: Type.String()
+					}),
+					404: Type.Object({
 						msg: Type.String()
 					}),
 					500: Type.Object({
@@ -38,10 +42,12 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 						await googleOAuth2Manager.revokeGoogleToken(userToken.google_refresh_token);
 					}
 					await userTokensRepository.deleteRowByColumnValue("user_id", user_id);
+					await tmpTokenRepository.deleteRowByColumnValue("user_id", user_id);
 					await userProfilesRepository.updateRowByColumn("user_id", user_id, "status", false);
 					reply.clearCookie(this.config.COOKIE_NAME, { path: '/' });
 				}
 				return reply.send({ 
+					success: true,
 					msg: "Successfully logged out." 
 				});
 			} catch (err) {

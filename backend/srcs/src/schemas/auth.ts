@@ -53,6 +53,22 @@ export const User2FASchema = Type.Object({
 })
 export interface User2FA extends Static<typeof User2FASchema> {}
 
+export const InitUser2FASchema = Type.Object({
+	qrCodeUrl: StringSchema,
+	secret: StringSchema,
+	token: StringSchema
+})
+export interface InitUser2FA extends Static<typeof InitUser2FASchema> {}
+
+export const TmpTokenSchema = Type.Object({
+	token: StringSchema,
+	user_id: IdSchema,
+	type: StringSchema,
+	created_at: DateTimeSchema,
+	expires_at: DateTimeSchema
+})
+export interface TmpToken extends Static<typeof TmpTokenSchema> {}
+
 
 // token
 export const TokenDataSchema = Type.Object({
