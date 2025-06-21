@@ -94,6 +94,8 @@ export class App {
       this.router.navigate('/');
       return;
     }
+    console.log('showCurrentUserProfile called'); // Debug log
+    this.state.isInGame = false; // Explicitly set game state to false
     this.userProfile = new UserProfile(this.state.currentUser!, true);
     this.updateMainContent();
   }
@@ -117,11 +119,13 @@ export class App {
   }
 
   private showGameView(): void {
+    console.log('showGameView called'); // Debug log
     this.state.isInGame = true;
     this.updateMainContent();
   }
 
   private showGameMode(_mode: string): void {
+    console.log('showGameMode called with mode:', _mode); // Debug log
     this.state.isInGame = true;
     this.updateMainContent();
   }
@@ -180,17 +184,26 @@ export class App {
       return;
     }
     
+    console.log('updateMainContent called with state:', { 
+      isLoggedIn: this.state.isLoggedIn, 
+      isInGame: this.state.isInGame, 
+      currentPath: window.location.hash 
+    }); // Debug log
+    
     mainContent.innerHTML = '';
     
     // Now we know the real auth state - safe to proceed
     if (this.state.isLoggedIn && this.state.currentUser) {
       if (this.state.isInGame) {
+        console.log('Rendering game view'); // Debug log
         this.pongGame.setGameMode('regular');
         mainContent.appendChild(this.pongGame.render());
         this.pongGame.start();
       } else if (this.userProfile) {
+        console.log('Rendering existing user profile'); // Debug log
         mainContent.appendChild(this.userProfile.render());
       } else {
+        console.log('Rendering new user profile'); // Debug log
         this.userProfile = new UserProfile(this.state.currentUser, true);
         mainContent.appendChild(this.userProfile.render());
       }
@@ -230,9 +243,12 @@ export class App {
   // ===== COMMAND HANDLING =====
 
   private async handleCommand(command: string): Promise<void> {
+    console.log('handleCommand called with:', command); // Debug log
     const parts = command.trim().split(' ');
     const commandName = parts[0].toLowerCase();
     const args = parts.slice(1);
+
+    console.log('Command name:', commandName, 'Args:', args); // Debug log
 
     switch (commandName) {
       case 'help':
@@ -254,6 +270,7 @@ export class App {
         this.handleProfileCommand(args);
         break;
       case 'play':
+        console.log('About to call handlePlayCommand'); // Debug log
         await this.handlePlayCommand();
         break;
       case 'clear':
@@ -429,14 +446,19 @@ export class App {
   }
 
   private async handlePlayCommand(): Promise<void> {
+    console.log('handlePlayCommand called'); // Debug log
     if (!this.state.isLoggedIn) {
       this.mainTerminal.appendOutput('Please login first to play the game.');
       return;
     }
 
     try {
+      console.log('Creating game modal'); // Debug log
       const gameModal = new GameModal();
+      console.log('Opening game modal'); // Debug log
       const result = await gameModal.open();
+
+      console.log('Game modal result:', result); // Debug log
 
       if (result) {
         const { mode, opponents } = result;
@@ -448,28 +470,40 @@ export class App {
             avatarUrl: this.state.currentUser.avatarUrl,
           };
 
+          // Set up game configuration before navigating
           if (mode === 'vs ai') {
+            console.log('Setting up VS AI game'); // Debug log
             this.pongGame.setPlayers(player1, { nickname: 'AI' });
             this.pongGame.setMultiplayerMode(false);
             this.pongGame.setGameMode('regular');
           } else if (mode === 'local') {
+            console.log('Setting up local game'); // Debug log
             const opponent = opponents[0];
             this.pongGame.setPlayers(player1, { nickname: opponent.nickname });
             this.pongGame.setMultiplayerMode(true);
             this.pongGame.setGameMode('regular');
           } else if (mode === 'tournament') {
+            console.log('Setting up tournament game'); // Debug log
             const opponent = opponents[0];
             // TODO: Store full tournament roster and manage bracket
             this.pongGame.setPlayers(player1, { nickname: opponent.nickname });
             this.pongGame.setMultiplayerMode(true);
             this.pongGame.setGameMode('tournament');
           }
+
+          // Set game state BEFORE navigating
+          console.log('Setting isInGame to true before navigation'); // Debug log
+          this.state.isInGame = true;
+          
+          // Navigate to game route after configuration
+          console.log('Navigating to /game'); // Debug log
+          this.router.navigate('/game');
         }
-        this.router.navigate('/game');
       } else {
         this.mainTerminal.appendOutput('Game cancelled.');
       }
     } catch (error) {
+      console.error('Error in handlePlayCommand:', error); // Debug log
       this.mainTerminal.appendOutput(
         'Error: Could not start the game. Please try again.',
       );
