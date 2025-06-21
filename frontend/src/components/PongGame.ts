@@ -280,11 +280,8 @@ export class PongGame {
       return; // Round ended
     }
     
-    if (this.isMultiplayer) {
-      this.updatePlayerPaddle();
-    } else {
-      this.updateAIPaddles();
-    }
+    // Always update player paddles (handles both multiplayer and AI modes)
+    this.updatePlayerPaddle();
     
     this.updateDOMElements();
     this.animationId = requestAnimationFrame(this.update.bind(this));
@@ -342,54 +339,50 @@ export class PongGame {
   private updatePlayerPaddle(): void {
     const paddleSpeed = 8;
     
-    if (this.keyState['ArrowUp']) {
-      this.rightPaddleY = Math.max(0, this.rightPaddleY - paddleSpeed);
-    }
-    if (this.keyState['ArrowDown']) {
-      this.rightPaddleY = Math.min(this.canvasHeight - this.paddleHeight, this.rightPaddleY + paddleSpeed);
-    }
-    
-    const leftPaddleCenter = this.leftPaddleY + this.paddleHeight / 2;
-    const leftTargetY = this.ballY + this.ballSize / 2;
-    
-    if (this.ballSpeedX < 0) {
-      if (leftPaddleCenter < leftTargetY - 10) {
-        this.leftPaddleY += 6;
-      } else if (leftPaddleCenter > leftTargetY + 10) {
-        this.leftPaddleY -= 6;
+    if (this.isMultiplayer) {
+      // Local multiplayer mode: Player1 (W/S) controls left paddle, Player2 (Arrow keys) controls right paddle
+      
+      // Player1 controls (W/S for left paddle)
+      if (this.keyState['w'] || this.keyState['W']) {
+        this.leftPaddleY = Math.max(0, this.leftPaddleY - paddleSpeed);
       }
-    }
-    
-    this.leftPaddleY = Math.max(0, Math.min(this.canvasHeight - this.paddleHeight, this.leftPaddleY));
-  }
-
-  private updateAIPaddles(): void {
-    const paddleSpeed = 6;
-    
-    const leftPaddleCenter = this.leftPaddleY + this.paddleHeight / 2;
-    const leftTargetY = this.ballY + this.ballSize / 2;
-    
-    if (this.ballSpeedX < 0) {
-      if (leftPaddleCenter < leftTargetY - 10) {
-        this.leftPaddleY += paddleSpeed;
-      } else if (leftPaddleCenter > leftTargetY + 10) {
-        this.leftPaddleY -= paddleSpeed;
+      if (this.keyState['s'] || this.keyState['S']) {
+        this.leftPaddleY = Math.min(this.canvasHeight - this.paddleHeight, this.leftPaddleY + paddleSpeed);
       }
-    }
-    
-    const rightPaddleCenter = this.rightPaddleY + this.paddleHeight / 2;
-    const rightTargetY = this.ballY + this.ballSize / 2;
-    
-    if (this.ballSpeedX > 0) {
-      if (rightPaddleCenter < rightTargetY - 10) {
-        this.rightPaddleY += paddleSpeed;
-      } else if (rightPaddleCenter > rightTargetY + 10) {
-        this.rightPaddleY -= paddleSpeed;
+      
+      // Player2 controls (Arrow keys for right paddle)
+      if (this.keyState['ArrowUp']) {
+        this.rightPaddleY = Math.max(0, this.rightPaddleY - paddleSpeed);
       }
+      if (this.keyState['ArrowDown']) {
+        this.rightPaddleY = Math.min(this.canvasHeight - this.paddleHeight, this.rightPaddleY + paddleSpeed);
+      }
+    } else {
+      // VS AI mode: Player (Arrow keys) controls right paddle, AI controls left paddle
+      
+      // Player controls (Arrow keys for right paddle)
+      if (this.keyState['ArrowUp']) {
+        this.rightPaddleY = Math.max(0, this.rightPaddleY - paddleSpeed);
+      }
+      if (this.keyState['ArrowDown']) {
+        this.rightPaddleY = Math.min(this.canvasHeight - this.paddleHeight, this.rightPaddleY + paddleSpeed);
+      }
+      
+      // AI controls left paddle
+      const leftPaddleCenter = this.leftPaddleY + this.paddleHeight / 2;
+      const leftTargetY = this.ballY + this.ballSize / 2;
+      const aiSpeed = 6;
+      
+      if (this.ballSpeedX < 0) { // Ball moving towards AI paddle
+        if (leftPaddleCenter < leftTargetY - 10) {
+          this.leftPaddleY += aiSpeed;
+        } else if (leftPaddleCenter > leftTargetY + 10) {
+          this.leftPaddleY -= aiSpeed;
+        }
+      }
+      
+      this.leftPaddleY = Math.max(0, Math.min(this.canvasHeight - this.paddleHeight, this.leftPaddleY));
     }
-    
-    this.leftPaddleY = Math.max(0, Math.min(this.canvasHeight - this.paddleHeight, this.leftPaddleY));
-    this.rightPaddleY = Math.max(0, Math.min(this.canvasHeight - this.paddleHeight, this.rightPaddleY));
   }
 
   private updateDOMElements(): void {

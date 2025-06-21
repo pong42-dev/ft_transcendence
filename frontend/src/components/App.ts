@@ -493,7 +493,8 @@ export class App {
           // Set up game configuration before navigating
           if (mode === 'vs ai') {
             console.log('Setting up VS AI game'); // Debug log
-            this.pongGame.setPlayers(player1, { nickname: 'AI' });
+            // AI mode: AI (left) vs Player (right)
+            this.pongGame.setPlayers({ nickname: 'AI' }, player1);
             this.pongGame.setMultiplayerMode(false);
             this.pongGame.setGameMode('regular');
           } else if (mode === 'local') {
