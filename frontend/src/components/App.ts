@@ -12,6 +12,7 @@ import {
 } from '../types/types.js';
 import { FileModal } from './FileModal.js';
 import { GameModal, GameModalResult } from './GameModal.js';
+import { GameEndModal } from './GameEndModal.js';
 import { ErrorHandler } from '../utils/ErrorHandler.js';
 
 export class App {
@@ -236,8 +237,24 @@ export class App {
   // ===== GAME MANAGEMENT =====
 
   private handleGameEnd(winner: 'left' | 'right'): void {
-    this.state.isInGame = false;
-    this.updateMainContent();
+    console.log('Game ended, winner:', winner); // Debug log
+    
+    // Stop the game first
+    this.pongGame.stop();
+    
+    // Show game end modal
+    const gameEndModal = new GameEndModal(
+      false, // isTournament - TODO: detect actual tournament mode
+      true,  // isFinal
+      () => {
+        // On profile click
+        console.log('Game end modal: returning to profile'); // Debug log
+        this.state.isInGame = false;
+        this.router.navigate('/profile');
+      }
+    );
+    
+    gameEndModal.show();
   }
 
   // ===== COMMAND HANDLING =====
@@ -453,6 +470,9 @@ export class App {
     }
 
     try {
+      // Stop any existing game first
+      this.pongGame.stop();
+      
       console.log('Creating game modal'); // Debug log
       const gameModal = new GameModal();
       console.log('Opening game modal'); // Debug log
