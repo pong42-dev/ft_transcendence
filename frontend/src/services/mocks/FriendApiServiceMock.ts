@@ -14,8 +14,8 @@ export const getFriendApiServiceMockResponse = async <T>(
   
   const method = options.method || 'GET';
   
-  // 친구 목록 조회 Mock - /api/users/me/friends
-  if (endpoint.includes('/api/users/me/friends') && method === 'GET') {
+  // 친구 목록 조회 Mock - /api/users/me/friends (exact match)
+  if (endpoint === '/api/users/me/friends' && method === 'GET') {
     return {
       success: true,
       msg: 'Friend list successfully retrieved.',
@@ -44,8 +44,8 @@ export const getFriendApiServiceMockResponse = async <T>(
     } as T;
   }
   
-  // 친구 추가 Mock - /api/users/me/friends
-  if (endpoint.includes('/api/users/me/friends') && method === 'POST') {
+  // 친구 추가 Mock - /api/users/me/friends (exact match)
+  if (endpoint === '/api/users/me/friends' && method === 'POST') {
     return {
       success: true,
       msg: 'Successfully followed the user.'

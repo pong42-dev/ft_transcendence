@@ -12,6 +12,7 @@ import {
 } from '../types/types.js';
 import { FileModal } from './FileModal.js';
 import { GameModal, GameModalResult } from './GameModal.js';
+import { FriendModal } from './FriendModal.js';
 import { ErrorHandler } from '../utils/ErrorHandler.js';
 
 export class App {
@@ -248,7 +249,7 @@ export class App {
         await this.handleLogoutCommand();
         break;
       case 'friend':
-        this.handleFriendCommand();
+        await this.handleFriendCommand();
         break;
       case 'profile':
         this.handleProfileCommand(args);
@@ -410,8 +411,18 @@ export class App {
     this.router.navigate('/');
   }
 
-  private handleFriendCommand(): void {
-    this.mainTerminal.appendOutput('Friend command not implemented yet.');
+  private async handleFriendCommand(): Promise<void> {
+    if (!this.state.isLoggedIn) {
+      this.mainTerminal.appendOutput('Please login first to manage friends.');
+      return;
+    }
+
+    try {
+      const friendModal = new FriendModal(this.apiClient);
+      await friendModal.open();
+    } catch (error) {
+      this.mainTerminal.appendOutput('Error opening friend manager.');
+    }
   }
 
   private handleProfileCommand(args: string[]): void {
