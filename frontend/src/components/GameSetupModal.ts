@@ -1,9 +1,9 @@
-import { Friend, GameModalResult, PlayerInfo } from '../types/types.js';
+import { Friend, GameSetupResult, PlayerInfo } from '../types/types.js';
 
-export class GameModal {
+export class GameSetupModal {
   private modalElement: HTMLElement;
   private contentElement: HTMLElement;
-  private resolvePromise: ((value: GameModalResult | null) => void) | null =
+  private resolvePromise: ((value: GameSetupResult | null) => void) | null =
     null;
   private selectedMode: string = '';
   private invitedFriends: Friend[] = [];
@@ -17,7 +17,7 @@ export class GameModal {
     this.setupModal();
   }
 
-  public open(): Promise<GameModalResult | null> {
+  public open(): Promise<GameSetupResult | null> {
     this.isCancelled = false;
     this.renderModeSelectionView();
     this.show();
@@ -359,32 +359,39 @@ export class GameModal {
   private startCountdown(): void {
     let countdown = 5;
     const countdownElement = this.contentElement.querySelector('#countdown');
+    console.log('Starting countdown'); // Debug log
 
     this.countdownInterval = window.setInterval(() => {
       if (this.isCancelled) {
+        console.log('Countdown cancelled'); // Debug log
         if (this.countdownInterval) clearInterval(this.countdownInterval);
         return;
       }
 
       countdown--;
+      console.log('Countdown:', countdown); // Debug log
       if (countdownElement) countdownElement.textContent = countdown.toString();
 
       if (countdown <= 0) {
+        console.log('Countdown finished, starting game'); // Debug log
         if (this.countdownInterval) clearInterval(this.countdownInterval);
         if (!this.isCancelled) {
+          this.startGame(); // Call startGame BEFORE closing
           this.close();
-          setTimeout(() => this.startGame(), 100);
         }
       }
     }, 1000);
   }
 
   private startGame(): void {
+    console.log('startGame called, isCancelled:', this.isCancelled, 'resolvePromise exists:', !!this.resolvePromise); // Debug log
     if (!this.isCancelled && this.resolvePromise) {
+      console.log('Resolving with result:', { mode: this.selectedMode, opponents: this.invitedFriends }); // Debug log
       this.resolvePromise({
         mode: this.selectedMode,
         opponents: this.invitedFriends,
       });
+      this.resolvePromise = null; // Clear after resolving
     }
   }
 
@@ -402,8 +409,10 @@ export class GameModal {
   }
 
   public close(): void {
+    console.log('GameModal close called'); // Debug log
     this.modalElement.remove();
     if (this.countdownInterval) clearInterval(this.countdownInterval);
-    this.resolvePromise = null;
+    // Don't set resolvePromise to null immediately - let startGame handle it
+    // this.resolvePromise = null;
   }
 }

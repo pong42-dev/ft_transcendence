@@ -1,17 +1,18 @@
 import { Terminal } from './Terminal.js';
-import { PongGame } from './PongGame.js';
+import { PongGameModular as PongGame } from '../game/PongGameModular.js';
 import { ApiClient, ApiError } from '../services/ApiClient.js';
 import { UserProfile } from './UserProfile.js';
 import { Router } from '../utils/Router.js';
 import { validateEmail, validatePassword, validateNickname } from '../utils/validators.js';
 import {
   AppState,
-  User,
-  Friend,
+  // User,
+  // Friend,
   Player
 } from '../types/types.js';
 import { FileModal } from './FileModal.js';
-import { GameModal, GameModalResult } from './GameModal.js';
+import { GameSetupModal } from './GameSetupModal.js';
+import { GameEndModal } from './GameEndModal.js';
 import { FriendModal } from './FriendModal.js';
 import { ErrorHandler } from '../utils/ErrorHandler.js';
 
@@ -95,6 +96,7 @@ export class App {
       this.router.navigate('/');
       return;
     }
+    this.state.isInGame = false; // Explicitly set game state to false
     this.userProfile = new UserProfile(this.state.currentUser!, true);
     this.updateMainContent();
   }
@@ -223,9 +225,23 @@ export class App {
 
   // ===== GAME MANAGEMENT =====
 
-  private handleGameEnd(winner: 'left' | 'right'): void {
-    this.state.isInGame = false;
-    this.updateMainContent();
+  private handleGameEnd(_winner: 'left' | 'right'): void {
+    // Get actual game result from PongGame (should be called before stop() in PongGame)
+    const gameResult = this.pongGame.getGameResult();
+    
+    // Show game end modal with real data
+    const gameEndModal = new GameEndModal(
+      gameResult,
+      false, // isTournament - TODO: detect actual tournament mode
+      true,  // isFinal
+      () => {
+        // On profile click
+        this.state.isInGame = false;
+        this.router.navigate('/profile');
+      }
+    );
+    
+    gameEndModal.show();
   }
 
   // ===== COMMAND HANDLING =====
@@ -446,8 +462,11 @@ export class App {
     }
 
     try {
-      const gameModal = new GameModal();
-      const result = await gameModal.open();
+      // Stop any existing game first
+      this.pongGame.stop();
+      
+      const gameSetupModal = new GameSetupModal();
+      const result = await gameSetupModal.open();
 
       if (result) {
         const { mode, opponents } = result;
@@ -459,8 +478,10 @@ export class App {
             avatarUrl: this.state.currentUser.avatarUrl,
           };
 
+          // Set up game configuration before navigating
           if (mode === 'vs ai') {
-            this.pongGame.setPlayers(player1, { nickname: 'AI' });
+            // AI mode: AI (left) vs Player (right)
+            this.pongGame.setPlayers({ nickname: 'AI' }, player1);
             this.pongGame.setMultiplayerMode(false);
             this.pongGame.setGameMode('regular');
           } else if (mode === 'local') {
@@ -475,8 +496,13 @@ export class App {
             this.pongGame.setMultiplayerMode(true);
             this.pongGame.setGameMode('tournament');
           }
+
+          // Set game state BEFORE navigating
+          this.state.isInGame = true;
+          
+          // Navigate to game route after configuration
+          this.router.navigate('/game');
         }
-        this.router.navigate('/game');
       } else {
         this.mainTerminal.appendOutput('Game cancelled.');
       }
@@ -494,4 +520,4 @@ export class App {
   private handleClearCommand(): void {
     this.mainTerminal.clearOutput();
   }
-} 
+}
