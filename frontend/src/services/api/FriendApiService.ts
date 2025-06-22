@@ -7,7 +7,7 @@ export class FriendApiService extends BaseApiService {
   }
 
   // 친구 목록 조회 - /api/users/me/friends
-  async getFriends(): Promise<Types.Friend[]> {
+  async getFriends(): Promise<Array<Types.Friend & { user_id: number }>> {
     const response = await this.get<{
       success: boolean;
       msg: string;
@@ -21,12 +21,13 @@ export class FriendApiService extends BaseApiService {
       };
     }>('/api/users/me/friends');
     
-    // Friend 객체로 변환
+    // Friend 객체로 변환 (user_id 포함)
     return response.data.friends.map(friend => ({
       username: friend.name,
       nickname: friend.name,
       status: friend.status ? 'online' : 'offline' as 'online' | 'offline' | 'in-game',
-      blocked: false
+      blocked: false,
+      user_id: friend.user_id
     }));
   }
 
@@ -43,7 +44,7 @@ export class FriendApiService extends BaseApiService {
   }
 
   // 친구 삭제 (언팔로우) - /api/users/me/friends/:id
-  async removeFriend(friendId: string): Promise<void> {
+  async removeFriend(friendId: number): Promise<void> {
     await this.delete<{
       success: boolean;
       msg: string;
@@ -51,7 +52,7 @@ export class FriendApiService extends BaseApiService {
   }
 
   // 특정 친구 정보 조회 - /api/users/me/friends/:id
-  async getFriendProfile(friendId: string): Promise<Types.User> {
+  async getFriendProfile(friendId: number): Promise<Types.User> {
     const response = await this.get<{
       success: boolean;
       msg: string;
@@ -65,7 +66,7 @@ export class FriendApiService extends BaseApiService {
     
     // User 객체로 변환
     return {
-      id: friendId,
+      id: friendId.toString(),
       username: response.data.friend.name,
       nickname: response.data.friend.name,
       avatarUrl: response.data.friend.avatar || undefined,
