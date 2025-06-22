@@ -1,9 +1,9 @@
-import { Friend, GameModalResult, PlayerInfo } from '../types/types.js';
+import { Friend, GameSetupResult, PlayerInfo } from '../types/types.js';
 
-export class GameModal {
+export class GameSetupModal {
   private modalElement: HTMLElement;
   private contentElement: HTMLElement;
-  private resolvePromise: ((value: GameModalResult | null) => void) | null =
+  private resolvePromise: ((value: GameSetupResult | null) => void) | null =
     null;
   private selectedMode: string = '';
   private invitedFriends: Friend[] = [];
@@ -17,7 +17,7 @@ export class GameModal {
     this.setupModal();
   }
 
-  public open(): Promise<GameModalResult | null> {
+  public open(): Promise<GameSetupResult | null> {
     this.isCancelled = false;
     this.renderModeSelectionView();
     this.show();

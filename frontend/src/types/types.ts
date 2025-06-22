@@ -75,7 +75,7 @@ export interface Game {
   winner?: string;
 }
 
-export interface GameConfig {
+export interface GameInviteConfig {
   gameMode: '1v1' | 'tournament';
   difficulty?: 'easy' | 'medium' | 'hard';
   maxScore?: number;
@@ -99,7 +99,7 @@ export interface GameInvite {
   inviterUsername: string;
   inviteeId: string;
   inviteeUsername: string;
-  gameConfig: GameConfig;
+  gameConfig: GameInviteConfig;
   status: 'pending' | 'accepted' | 'rejected' | 'expired';
   createdAt: string;
   expiresAt: string;
@@ -163,7 +163,7 @@ export interface PlayerInfo {
   isNextOpponent?: boolean;
 }
 
-export interface GameModalResult {
+export interface GameSetupResult {
   mode: string;
   opponents: Friend[];
 }
