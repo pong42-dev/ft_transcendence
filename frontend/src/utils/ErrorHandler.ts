@@ -68,14 +68,29 @@ export class ErrorHandler {
       userAgent: navigator.userAgent
     };
     
-    console.error(`[${level.toUpperCase()}][${context}]`, logData);
+    // Use appropriate console method based on error level
+    switch (level) {
+      case ErrorLevel.INFO:
+        console.info(`[${level.toUpperCase()}][${context}]`, logData);
+        break;
+      case ErrorLevel.WARNING:
+        console.warn(`[${level.toUpperCase()}][${context}]`, logData);
+        break;
+      case ErrorLevel.ERROR:
+      case ErrorLevel.CRITICAL:
+      default:
+        console.error(`[${level.toUpperCase()}][${context}]`, logData);
+        break;
+    }
     
     // Handle API errors specially
     if (error instanceof ApiError) {
       this.handleApiError(error, context);
     } else {
-      // Show user notification for non-API errors
-      this.showNotification(this.getUserMessage(error), this.mapErrorLevelToNotificationType(level));
+      // Only show user notifications for errors and critical issues, not info/warnings
+      if (level === ErrorLevel.ERROR || level === ErrorLevel.CRITICAL) {
+        this.showNotification(this.getUserMessage(error), this.mapErrorLevelToNotificationType(level));
+      }
     }
   }
 

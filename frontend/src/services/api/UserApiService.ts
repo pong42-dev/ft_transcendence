@@ -1,4 +1,5 @@
-import { BaseApiService, ApiError } from './BaseApiService';
+import { BaseApiService } from './BaseApiService';
+import { ErrorLevel } from '../../utils/ErrorHandler';
 import * as Types from '../../types/types';
 
 export class UserApiService extends BaseApiService {
@@ -61,21 +62,4 @@ export class UserApiService extends BaseApiService {
     return await this.getProfile();
   }
 
-  // 사용자 이름으로 조회 (현재 백엔드에 해당 API가 없으므로 임시 구현)
-  async getUserByUsername(username: string): Promise<Types.User> {
-    // 백엔드에 사용자 검색 API가 구현되면 수정 필요
-    throw new ApiError(501, 'Not Implemented', { message: 'User search by username not implemented in backend' });
-  }
-
-  // 사용자 검색 (현재 백엔드에 해당 API가 없으므로 임시 구현)
-  async searchUsers(query: string): Promise<Types.User[]> {
-    // 백엔드에 사용자 검색 API가 구현되면 수정 필요
-    throw new ApiError(501, 'Not Implemented', { message: 'User search not implemented in backend' });
-  }
-
-  // ID로 사용자 조회 (현재 백엔드에 해당 API가 없으므로 임시 구현)
-  async getUserById(id: string): Promise<Types.User> {
-    // 백엔드에 사용자 조회 API가 구현되면 수정 필요
-    throw new ApiError(501, 'Not Implemented', { message: 'User lookup by ID not implemented in backend' });
-  }
 }

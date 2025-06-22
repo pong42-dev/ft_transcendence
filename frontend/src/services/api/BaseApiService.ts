@@ -2,6 +2,7 @@ import { getConfig } from '../../config/environment';
 import { SimpleInterceptorManager } from '../core/Interceptors';
 import { TokenManager } from '../core/TokenManager';
 import { log } from '../../utils/Logger';
+import { ErrorHandler, ErrorLevel } from '../../utils/ErrorHandler';
 import { 
   ApiErrorResponse, 
   RequestInterceptor, 
@@ -30,6 +31,7 @@ export abstract class BaseApiService {
   protected baseUrl: string;
   protected config = getConfig();
   protected serviceName: string;
+  protected errorHandler = ErrorHandler.getInstance();
   
   // 통합 인터셉터 시스템에서 관리되는 인터셉터들 (캐시됨)
   private static interceptorCache = new Map<string, { request: RequestInterceptor[], response: ResponseInterceptor[] }>();
@@ -39,26 +41,41 @@ export abstract class BaseApiService {
   // 캐시 스토리지
   private cache = new Map<string, CacheEntry<any>>();
   private cacheCleanupInterval: number | null = null;
+  private isDisposed = false; // 서비스 정리 상태 추적
   
   // 재시도 설정
   private readonly maxRetries = 3;
   private readonly retryDelay = 1000;
+  
+  // 정적 인스턴스 추적 (전역 정리를 위함)
+  private static instances = new Set<BaseApiService>();
 
   constructor(baseUrl?: string, serviceName?: string) {
     this.baseUrl = baseUrl || this.config.apiUrl;
     this.serviceName = serviceName || this.constructor.name;
     
-    console.log(`[${this.serviceName}] Config:`, {
-      useMockData: this.config.useMockData,
-      apiUrl: this.config.apiUrl,
-      enableLogging: this.config.enableLogging
-    });
+    // Only log service initialization in development mode
+    if (this.config.enableLogging) {
+      console.info(`[${this.serviceName}] Service initialized:`, {
+        useMockData: this.config.useMockData,
+        apiUrl: this.config.apiUrl,
+        enableLogging: this.config.enableLogging
+      });
+    }
     
     // 통합 인터셉터 시스템에서 인터셉터 가져오기
     this.loadInterceptorsFromManager();
     
     // 캐시 자동 정리 시작
     this.startCacheCleanup();
+    
+    // 전역 인스턴스 추적에 추가
+    BaseApiService.instances.add(this);
+    
+    // 페이지 언로드 시 정리 리스너 등록 (한 번만)
+    if (BaseApiService.instances.size === 1) {
+      this.setupGlobalCleanup();
+    }
   }
 
   /**
@@ -85,7 +102,15 @@ export abstract class BaseApiService {
         response: [...interceptors.response]
       });
     } catch (error) {
-      log.warn(`Failed to load interceptors for ${this.serviceName}`, error, 'Interceptor');
+      this.errorHandler.handleError(
+        error as Error,
+        'BaseApiService.loadInterceptors',
+        ErrorLevel.WARNING,
+        {
+          component: this.serviceName,
+          action: 'loadInterceptors'
+        }
+      );
       this.activeRequestInterceptors = [];
       this.activeResponseInterceptors = [];
     }
@@ -126,9 +151,16 @@ export abstract class BaseApiService {
     options: RequestInit = {},
     cacheConfig?: CacheConfig
   ): Promise<T> {
+    // 정리된 서비스에서 요청 방지
+    if (this.isDisposed) {
+      throw new Error(`Cannot make request from disposed service: ${this.serviceName}`);
+    }
     // Mock 데이터 사용 시 동적 임포트로 Mock 핸들러 로드
     if (this.config.useMockData) {
-      console.log(`[${this.serviceName}] Using mock data for endpoint: ${endpoint}`);
+      // Log mock usage for debugging
+      if (this.config.enableLogging) {
+        console.info(`[${this.serviceName}] Using mock data for endpoint: ${endpoint}`);
+      }
       try {
         // Vite 호환성을 위한 명시적 임포트 방식
         let mockHandler: Function | undefined;
@@ -162,7 +194,16 @@ export abstract class BaseApiService {
         }
         throw new Error(`Mock handler not found for ${this.serviceName}`);
       } catch (error) {
-        log.error(`Mock loading failed for ${this.serviceName}`, error, 'Mock');
+        this.errorHandler.handleError(
+          error as Error,
+          'BaseApiService.mockLoading',
+          ErrorLevel.ERROR,
+          {
+            component: this.serviceName,
+            action: 'mockLoading',
+            additionalData: { endpoint }
+          }
+        );
         // Mock 로딩 실패 시 기본 Mock 응답
         return {
           success: false,
@@ -171,7 +212,10 @@ export abstract class BaseApiService {
         } as T;
       }
     } else {
-      console.log(`[${this.serviceName}] Using real API for endpoint: ${endpoint} (useMockData: ${this.config.useMockData})`);
+      // Log real API usage for debugging
+      if (this.config.enableLogging) {
+        console.info(`[${this.serviceName}] Using real API for endpoint: ${endpoint}`);
+      }
     }
 
     // 캐시 확인 (GET 요청만)
@@ -256,7 +300,15 @@ export abstract class BaseApiService {
   // 인증 실패 처리
   private handleUnauthorized(): void {
     this.clearToken();
-    log.warn('Authentication failed. Token cleared.', undefined, 'Auth');
+    this.errorHandler.handleError(
+      new Error('Authentication failed'),
+      'BaseApiService.handleUnauthorized',
+      ErrorLevel.WARNING,
+      {
+        component: this.serviceName,
+        action: 'tokenCleared'
+      }
+    );
   }
 
   // GET 요청 (캐시 지원)
@@ -418,7 +470,7 @@ export abstract class BaseApiService {
   // 인터셉터 캐시 초기화 (정적 메서드)
   public static clearInterceptorCache(): void {
     BaseApiService.interceptorCache.clear();
-    console.log('🗑️ Interceptor cache cleared');
+    console.info('🗑️ Interceptor cache cleared');
   }
 
   // 재시도 로직 (네트워크 에러 포함)
@@ -439,19 +491,46 @@ export abstract class BaseApiService {
       
       if (shouldRetry) {
         const delay = this.retryDelay * (this.maxRetries - attempts + 1); // 지수 백오프
+        this.errorHandler.handleError(
+          error as Error,
+          'BaseApiService.retry',
+          ErrorLevel.WARNING,
+          {
+            component: this.serviceName,
+            action: 'retryAttempt',
+            additionalData: { attemptsRemaining: attempts - 1, delay }
+          }
+        );
         await new Promise(resolve => setTimeout(resolve, delay));
         return this.retry(fn, attempts - 1);
       }
       
+      // 최종 실패 시 에러 로깅
+      this.errorHandler.handleError(
+        error as Error,
+        'BaseApiService.retryFailed',
+        ErrorLevel.ERROR,
+        {
+          component: this.serviceName,
+          action: 'retryExhausted'
+        }
+      );
       throw error;
     }
   }
 
   // 캐시 자동 정리 시작
   private startCacheCleanup(): void {
+    // 정리되었거나 이미 간격이 설정된 경우 중복 방지
+    if (this.isDisposed || this.cacheCleanupInterval !== null) {
+      return;
+    }
+    
     // 5분마다 만료된 캐시 정리
     this.cacheCleanupInterval = window.setInterval(() => {
-      this.cleanExpiredCache();
+      if (!this.isDisposed) {
+        this.cleanExpiredCache();
+      }
     }, 5 * 60 * 1000);
   }
 
@@ -467,22 +546,63 @@ export abstract class BaseApiService {
       }
     }
     
-    if (cleanedCount > 0) {
-      log.debug(`Cleaned ${cleanedCount} expired cache entries`, { serviceName: this.serviceName }, 'Cache');
+    if (cleanedCount > 0 && this.config.enableLogging) {
+      console.info(`[${this.serviceName}] Cache cleanup: ${cleanedCount} expired entries removed`);
     }
   }
 
   // 캐시 정리 중단
   private stopCacheCleanup(): void {
-    if (this.cacheCleanupInterval) {
+    if (this.cacheCleanupInterval !== null) {
       clearInterval(this.cacheCleanupInterval);
       this.cacheCleanupInterval = null;
     }
   }
 
+  // 전역 정리 설정 (페이지 언로드 시 모든 인스턴스 정리)
+  private setupGlobalCleanup(): void {
+    const cleanupHandler = () => {
+      BaseApiService.disposeAll();
+    };
+    
+    // 페이지 언로드 이벤트에 정리 핸들러 등록
+    window.addEventListener('beforeunload', cleanupHandler);
+    window.addEventListener('unload', cleanupHandler);
+    
+    // 개발 환경에서 HMR 지원
+    if (import.meta.hot) {
+      import.meta.hot.dispose(cleanupHandler);
+    }
+  }
+  
   // 서비스 정리 (메모리 리크 방지)
   public dispose(): void {
+    if (this.isDisposed) {
+      return; // 이미 정리됨
+    }
+    
+    this.isDisposed = true;
     this.stopCacheCleanup();
     this.clearCache();
+    
+    // 전역 인스턴스 추적에서 제거
+    BaseApiService.instances.delete(this);
+    
+    if (this.config.enableLogging) {
+      console.info(`[${this.serviceName}] Service disposed`);
+    }
+  }
+  
+  // 모든 인스턴스 정리 (정적 메서드)
+  public static disposeAll(): void {
+    const instanceCount = BaseApiService.instances.size;
+    console.info(`🗑️ Disposing ${instanceCount} BaseApiService instances`);
+    
+    for (const instance of BaseApiService.instances) {
+      instance.dispose();
+    }
+    
+    BaseApiService.instances.clear();
+    BaseApiService.interceptorCache.clear();
   }
 }

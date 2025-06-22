@@ -1,45 +1,46 @@
 import { ApiClient, ApiError } from '../services/ApiClient.js';
 import { Friend, User } from '../types/types.js';
+import { BaseModal } from './BaseModal.js';
 
-export class FriendModal {
-  private modalElement: HTMLElement;
-  private contentElement: HTMLElement;
+export class FriendModal extends BaseModal {
   private apiClient: ApiClient;
   private friends: Array<Friend & { user_id: number }> = [];
   private currentView: 'list' | 'add' | 'profile' = 'list';
   private selectedFriendId: number | null = null;
 
   constructor(apiClient: ApiClient) {
+    super();
     this.apiClient = apiClient;
-    this.modalElement = document.createElement('div');
-    this.contentElement = document.createElement('div');
-    this.setupModal();
   }
 
   public async open(): Promise<void> {
     await this.loadFriends();
-    this.renderListView();
     this.show();
   }
 
-  private setupModal(): void {
-    this.modalElement.className =
-      'fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50';
+  protected setupModal(): void {
+    super.setupModal();
     this.contentElement.className =
-      'bg-terminal-black border border-terminal-gray p-6 rounded-lg w-[600px] max-w-[95%] max-h-[80vh] overflow-hidden flex flex-col';
-    this.modalElement.appendChild(this.contentElement);
+      'bg-terminal-black border border-terminal-gray p-6 rounded-lg w-[600px] max-w-[95%] max-h-[80vh] overflow-y-auto flex flex-col';
+  }
 
-    this.modalElement.addEventListener('click', (e) => {
-      if (e.target === this.modalElement) {
-        this.close();
-      }
-    });
+  protected onShow(): void {
+    this.renderListView();
+  }
+
+  protected onClose(): void {
+    // 특별한 정리 작업 없음
+  }
+
+  protected render(): void {
+    this.renderListView();
   }
 
   private async loadFriends(): Promise<void> {
     try {
       this.friends = await this.apiClient.friend.getFriends();
     } catch (error) {
+      this.handleError(error as Error, 'Failed to load friends list');
       this.friends = [];
     }
   }
@@ -269,6 +270,8 @@ export class FriendModal {
         usernameInput.value = '';
         await this.loadFriends();
       } catch (error) {
+        this.handleError(error, 'FriendModal.addFriend');
+        
         if (error instanceof ApiError && error.status === 409) {
           resultDiv.className = 'mb-4 p-3 rounded bg-terminal-yellow bg-opacity-20 border border-terminal-yellow text-terminal-yellow';
           resultDiv.textContent = `Already following ${username}.`;
@@ -314,11 +317,5 @@ export class FriendModal {
     });
   }
 
-  public show(): void {
-    document.body.appendChild(this.modalElement);
-  }
-
-  public close(): void {
-    this.modalElement.remove();
-  }
+  // BaseModal의 show/close 메서드 사용
 }

@@ -1,4 +1,5 @@
-import { BaseApiService, ApiError } from './BaseApiService';
+import { BaseApiService } from './BaseApiService';
+import { ErrorLevel } from '../../utils/ErrorHandler';
 import * as Types from '../../types/types';
 
 export class FriendApiService extends BaseApiService {
@@ -78,40 +79,4 @@ export class FriendApiService extends BaseApiService {
     };
   }
 
-  // 아래 API들은 현재 백엔드에 구현되지 않음 (향후 구현 예정)
-  
-  // 친구 차단 (백엔드 미구현)
-  async blockFriend(username: string): Promise<void> {
-    throw new ApiError(501, 'Not Implemented', { message: 'Block friend not implemented in backend' });
-  }
-
-  // 친구 차단 해제 (백엔드 미구현)
-  async unblockFriend(username: string): Promise<void> {
-    throw new ApiError(501, 'Not Implemented', { message: 'Unblock friend not implemented in backend' });
-  }
-
-  // 친구 요청 목록 조회 (백엔드 미구현 - 현재는 즉시 팔로우 방식)
-  async getFriendRequests(): Promise<Types.Friend[]> {
-    throw new ApiError(501, 'Not Implemented', { message: 'Friend requests not implemented - using direct follow system' });
-  }
-
-  // 친구 요청 응답 (백엔드 미구현 - 현재는 즉시 팔로우 방식)
-  async respondToFriendRequest(requestId: string, accept: boolean): Promise<void> {
-    throw new ApiError(501, 'Not Implemented', { message: 'Friend request response not implemented - using direct follow system' });
-  }
-
-  // 친구 온라인 상태 조회 (백엔드 미구현)
-  async getFriendsStatus(): Promise<{ [username: string]: 'online' | 'offline' | 'in-game' }> {
-    throw new ApiError(501, 'Not Implemented', { message: 'Friends status not implemented in backend' });
-  }
-
-  // 특정 친구 상태 조회 (백엔드 미구현)
-  async getFriendStatus(username: string): Promise<'online' | 'offline' | 'in-game'> {
-    throw new ApiError(501, 'Not Implemented', { message: 'Friend status not implemented in backend' });
-  }
-
-  // 차단된 사용자 목록 조회 (백엔드 미구현)
-  async getBlockedUsers(): Promise<Types.Friend[]> {
-    throw new ApiError(501, 'Not Implemented', { message: 'Blocked users not implemented in backend' });
-  }
 }

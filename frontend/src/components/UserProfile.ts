@@ -1,14 +1,17 @@
 import { User, MatchHistory } from '../types/types.js';
+import { ApiClient } from '../services/ApiClient.js';
 
 export class UserProfile {
   private user: User;
   private profileElement: HTMLElement;
   private isCurrentUser: boolean;
+  private apiClient: ApiClient;
 
-  constructor(user: User, isCurrentUser: boolean = false) {
+  constructor(user: User, isCurrentUser: boolean = false, apiClient?: ApiClient) {
     this.user = user;
     this.profileElement = document.createElement('div');
     this.isCurrentUser = isCurrentUser;
+    this.apiClient = apiClient || new ApiClient();
   }
 
   public render(): HTMLElement {
@@ -24,6 +27,11 @@ export class UserProfile {
     // Clear and update profile element
     this.profileElement.innerHTML = '';
     this.profileElement.appendChild(contentWrapper);
+    
+    // Add event listeners for current user
+    if (this.isCurrentUser) {
+      this.attachEventListeners();
+    }
     
     return this.profileElement;
   }
@@ -68,11 +76,26 @@ export class UserProfile {
       nameContainer.appendChild(email);
       
       const securityStatus = document.createElement('div');
-      securityStatus.className = 'flex items-center mt-2 text-sm';
-      securityStatus.innerHTML = `
+      securityStatus.className = 'flex items-center justify-between mt-2';
+      
+      const statusInfo = document.createElement('div');
+      statusInfo.className = 'flex items-center text-sm';
+      statusInfo.innerHTML = `
         2FA ${this.user.twoFactorEnabled ? 'Enabled' : 'Disabled'}
         <div class="ml-2 w-2 h-2 rounded-full ${this.user.twoFactorEnabled ? 'bg-terminal-green' : 'bg-terminal-red'}"></div>
       `;
+      
+      const twoFAButton = document.createElement('button');
+      twoFAButton.className = `px-3 py-1 text-xs rounded border transition-all ${
+        this.user.twoFactorEnabled 
+          ? 'border-terminal-red text-terminal-red hover:bg-terminal-red hover:bg-opacity-10' 
+          : 'border-terminal-green text-terminal-green hover:bg-terminal-green hover:bg-opacity-10'
+      }`;
+      twoFAButton.textContent = this.user.twoFactorEnabled ? 'Disable 2FA' : 'Enable 2FA';
+      twoFAButton.id = 'twofa-toggle-btn';
+      
+      securityStatus.appendChild(statusInfo);
+      securityStatus.appendChild(twoFAButton);
       userDetails.appendChild(securityStatus);
     }
     
@@ -129,11 +152,34 @@ export class UserProfile {
     matchHistorySection.className = 'bg-terminal-gray bg-opacity-10 rounded-lg p-3';
     
     const matchHistoryTitle = document.createElement('div');
-    matchHistoryTitle.className = 'text-lg text-terminal-green mb-2 font-bold';
+    matchHistoryTitle.className = 'text-lg text-terminal-green mb-3 font-bold';
     matchHistoryTitle.textContent = 'Match History';
     
-    const matchHistoryList = document.createElement('div');
-    matchHistoryList.className = 'space-y-2 max-h-[300px] overflow-y-auto scrollbar-hide';
+    // Create tab container
+    const tabContainer = document.createElement('div');
+    tabContainer.className = 'flex mb-3 border-b border-terminal-gray border-opacity-30';
+    
+    const oneVsOneTab = document.createElement('button');
+    oneVsOneTab.className = 'px-4 py-2 text-sm font-medium text-terminal-green border-b-2 border-terminal-green';
+    oneVsOneTab.textContent = '1vs1';
+    oneVsOneTab.setAttribute('data-tab', '1v1');
+    
+    const tournamentTab = document.createElement('button');
+    tournamentTab.className = 'px-4 py-2 text-sm font-medium text-terminal-gray border-b-2 border-transparent hover:text-terminal-green hover:border-terminal-green hover:border-opacity-50';
+    tournamentTab.textContent = 'Tournament';
+    tournamentTab.setAttribute('data-tab', 'tournament');
+    
+    tabContainer.appendChild(oneVsOneTab);
+    tabContainer.appendChild(tournamentTab);
+    
+    // Create content containers
+    const oneVsOneList = document.createElement('div');
+    oneVsOneList.className = 'space-y-2 max-h-[300px] overflow-y-auto scrollbar-hide';
+    oneVsOneList.setAttribute('data-content', '1v1');
+    
+    const tournamentList = document.createElement('div');
+    tournamentList.className = 'space-y-2 max-h-[300px] overflow-y-auto scrollbar-hide hidden';
+    tournamentList.setAttribute('data-content', 'tournament');
 
     // Add sample match history data (replace with actual data)
     const sampleHistory: MatchHistory[] = [
@@ -158,15 +204,75 @@ export class UserProfile {
         type: '1v1',
         my_score: 3,
         opponent_score: 5
+      },
+      {
+        date: '2025-01-12',
+        opponent: ['Champion', 'ProPlayer', 'GameMaster', 'PongKing'],
+        rank: 1,
+        type: 'tournament'
+      },
+      {
+        date: '2025-01-11',
+        opponent: 'Champion',
+        rank: 1,
+        type: '1v1',
+        my_score: 5,
+        opponent_score: 2
       }
     ];
 
-    sampleHistory.forEach(match => {
-      matchHistoryList.appendChild(this.renderMatchHistoryItem(match));
+    // Separate matches by type
+    const oneVsOneMatches = sampleHistory.filter(match => match.type === '1v1');
+    const tournamentMatches = sampleHistory.filter(match => match.type === 'tournament');
+
+    oneVsOneMatches.forEach(match => {
+      oneVsOneList.appendChild(this.renderMatchHistoryItem(match));
     });
+
+    tournamentMatches.forEach(match => {
+      tournamentList.appendChild(this.renderMatchHistoryItem(match));
+    });
+
+    // Add empty state for tabs if no matches
+    if (oneVsOneMatches.length === 0) {
+      const emptyState = document.createElement('div');
+      emptyState.className = 'text-center py-8 text-terminal-gray opacity-70';
+      emptyState.textContent = 'No 1vs1 matches yet';
+      oneVsOneList.appendChild(emptyState);
+    }
+
+    if (tournamentMatches.length === 0) {
+      const emptyState = document.createElement('div');
+      emptyState.className = 'text-center py-8 text-terminal-gray opacity-70';
+      emptyState.textContent = 'No tournament matches yet';
+      tournamentList.appendChild(emptyState);
+    }
+
+    // Add tab event listeners
+    const handleTabClick = (e: Event) => {
+      const target = e.target as HTMLElement;
+      const tabType = target.getAttribute('data-tab');
+      
+      if (!tabType) return;
+      
+      // Update tab styles
+      tabContainer.querySelectorAll('[data-tab]').forEach(tab => {
+        tab.className = 'px-4 py-2 text-sm font-medium text-terminal-gray border-b-2 border-transparent hover:text-terminal-green hover:border-terminal-green hover:border-opacity-50';
+      });
+      target.className = 'px-4 py-2 text-sm font-medium text-terminal-green border-b-2 border-terminal-green';
+      
+      // Update content visibility
+      oneVsOneList.classList.toggle('hidden', tabType !== '1v1');
+      tournamentList.classList.toggle('hidden', tabType !== 'tournament');
+    };
+
+    oneVsOneTab.addEventListener('click', handleTabClick);
+    tournamentTab.addEventListener('click', handleTabClick);
     
     matchHistorySection.appendChild(matchHistoryTitle);
-    matchHistorySection.appendChild(matchHistoryList);
+    matchHistorySection.appendChild(tabContainer);
+    matchHistorySection.appendChild(oneVsOneList);
+    matchHistorySection.appendChild(tournamentList);
 
     return matchHistorySection;
   }
@@ -237,5 +343,49 @@ export class UserProfile {
 
     item.appendChild(content);
     return item;
+  }
+
+  private attachEventListeners(): void {
+    const twoFAButton = this.profileElement.querySelector('#twofa-toggle-btn');
+    
+    twoFAButton?.addEventListener('click', async () => {
+      await this.handleTwoFAToggle();
+    });
+  }
+
+  private async handleTwoFAToggle(): Promise<void> {
+    const { TwoFAModal } = await import('./TwoFAModal.js');
+    
+    if (this.user.twoFactorEnabled) {
+      // Disable 2FA
+      const twoFAModal = new TwoFAModal(
+        this.apiClient,
+        'disable',
+        () => {
+          // Update user state and re-render
+          this.user.twoFactorEnabled = false;
+          this.render();
+        },
+        () => {
+          // Cancel - no action needed
+        }
+      );
+      await twoFAModal.show();
+    } else {
+      // Enable 2FA
+      const twoFAModal = new TwoFAModal(
+        this.apiClient,
+        'enable',
+        () => {
+          // Update user state and re-render
+          this.user.twoFactorEnabled = true;
+          this.render();
+        },
+        () => {
+          // Cancel - no action needed
+        }
+      );
+      await twoFAModal.show();
+    }
   }
 }

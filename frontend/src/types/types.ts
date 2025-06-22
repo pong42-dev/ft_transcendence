@@ -26,7 +26,7 @@ export interface User {
 export interface Friend {
   username: string;
   nickname: string;
-  status: 'online' | 'offline' | 'in-game';
+  status: 'online' | 'offline' | 'inGame';
   blocked: boolean;
 }
 
@@ -67,7 +67,7 @@ export interface Game {
   id: string;
   gameMode: '1v1' | 'tournament';
   players: GamePlayer[];
-  status: 'waiting' | 'in_progress' | 'finished';
+  status: 'waiting' | 'inProgress' | 'finished';
   startedAt: string;
   endedAt?: string;
   maxPlayers: number;
@@ -110,8 +110,8 @@ export interface MatchHistory {
   opponent: string | string[];
   rank: number;
   type: '1v1' | 'tournament';
-  my_score?: number;
-  opponent_score?: number;
+  myScore?: number;
+  opponentScore?: number;
 }
 
 export interface GameData {
@@ -149,7 +149,7 @@ export interface ActiveGame {
   id: string;
   gameMode: string;
   players: string[];
-  status: 'waiting' | 'in_progress' | 'finished';
+  status: 'waiting' | 'inProgress' | 'finished';
   startedAt: string;
   maxPlayers: number;
 }
@@ -231,6 +231,8 @@ export interface LoginResponse {
   readonly refreshToken: string;
   readonly expiresAt: number;
   readonly tokenType: 'Bearer';
+  readonly requires2FA?: boolean;
+  readonly tmpToken?: string;
 }
 
 export interface RegisterRequest {
@@ -244,6 +246,30 @@ export interface UpdateProfileData {
   nickname?: string;
   avatarUrl?: string;
   twoFactorEnabled?: boolean;
+}
+
+// =================================================================
+// 2FA Types
+// =================================================================
+
+export interface TwoFAInitResponse {
+  qrCodeUrl: string;
+  secret: string;
+  token: string;
+}
+
+export interface TwoFAEnableRequest {
+  token: string;      // 6-digit TOTP
+  tmpToken: string;   // From init response
+}
+
+export interface TwoFAVerifyRequest {
+  tmpToken: string;   // From login response
+  token: string;      // 6-digit TOTP
+}
+
+export interface TwoFADisableRequest {
+  token: string;      // Current 6-digit TOTP
 }
 
 // =================================================================

@@ -11,6 +11,7 @@ import {
 } from './DataTransformers';
 import { ApiError } from '../api/BaseApiService';
 import { TokenManager } from './TokenManager';
+import { ErrorHandler, ErrorLevel } from '../../utils/ErrorHandler';
 
 // URL 패턴 매칭을 위한 간단한 헬퍼
 const URL_PATTERNS = {
@@ -78,8 +79,16 @@ export const createInterceptors = (options?: {
         }
       } catch (error) {
         // 변환 실패 시 원본 데이터 반환 및 로그
-        // 개발 환경에서만 경고 출력
-        console.warn('Data transformation failed:', error);
+        ErrorHandler.getInstance().handleError(
+          error as Error,
+          'Interceptors.dataTransformationInterceptor',
+          ErrorLevel.WARNING,
+          {
+            component: 'Interceptors',
+            action: 'dataTransformationFailed',
+            additionalData: { url }
+          }
+        );
       }
       
       return data;
@@ -99,14 +108,30 @@ export const createInterceptors = (options?: {
           if (response.ok) {
             const { accessToken } = await response.json();
             TokenManager.updateAccessToken(accessToken);
-            console.log('🔄 Token refreshed successfully');
+            console.info('🔄 Token refreshed successfully');
           } else {
             TokenManager.clearTokens();
-            console.warn('🔄 Token refresh failed - clearing tokens');
+            ErrorHandler.getInstance().handleError(
+              new Error('Token refresh failed - clearing tokens'),
+              'Interceptors.tokenRefreshInterceptor',
+              ErrorLevel.WARNING,
+              {
+                component: 'Interceptors',
+                action: 'tokenRefreshFailed'
+              }
+            );
           }
         } catch (refreshError) {
           TokenManager.clearTokens();
-          console.error('🔄 Token refresh error:', refreshError);
+          ErrorHandler.getInstance().handleError(
+            refreshError as Error,
+            'Interceptors.tokenRefreshInterceptor',
+            ErrorLevel.ERROR,
+            {
+              component: 'Interceptors',
+              action: 'tokenRefreshError'
+            }
+          );
         }
       }
       
