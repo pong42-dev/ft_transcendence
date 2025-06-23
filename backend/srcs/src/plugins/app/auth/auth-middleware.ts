@@ -7,9 +7,10 @@ declare module 'fastify' {
 		authenticate: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
 	}
 	interface FastifyRequest {
-		user: UserProfile;
+		user: UserData;
 	}
 }
+
 
 async function authenticate(request: FastifyRequest, reply: FastifyReply) {
 	const { userProfilesRepository } = request.server;
@@ -32,9 +33,8 @@ async function authenticate(request: FastifyRequest, reply: FastifyReply) {
 		}
 		console.log("row:", userProfileRow);
 		if (userProfileRow) {
-			request.user = userProfileRow;
-			// request.user = { user_id: userProfileRow.user_id as number, name: userProfileRow.name };
-			console.log("userProfile: ", userProfileRow);
+			request.user = { user_id: userProfileRow.user_id as number, name: userProfileRow.name };
+			console.log("user_id:", userProfileRow.user_id, "name:", userProfileRow.name);
 			request.log.info("Completed authentication middleware");
 			return;
 		}

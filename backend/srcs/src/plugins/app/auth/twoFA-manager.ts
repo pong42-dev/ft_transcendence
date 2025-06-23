@@ -1,6 +1,6 @@
 import fp from 'fastify-plugin';
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { InitUser2FA, UserData } from '../../../schemas/auth.js';
+import { InitUser2FA, UserData, UserProfile } from '../../../schemas/auth.js';
 
 declare module 'fastify' {
 	interface FastifyInstance {
@@ -64,7 +64,7 @@ export function manageTwoFA(fastify: FastifyInstance) {
 					return reply.status(401).send({ msg: 'Invalid tmp token.' });
 				}
 				const userId = tokenRow.user_id;
-				request.user = { user_id: userId as number, name: '' };
+				request.user = { user_id: userId as number, name: ''};
 				const row = await user2FARepository.getRowByColumnValue('user_id', userId);
 				if (!row || !row.two_fa_secret) {
 					return reply.status(401).send({ msg: '2FA is not enabled.' });

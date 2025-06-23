@@ -8,6 +8,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 		'/2fa/enable/init',
 		{
 			schema: {
+			security: [{ bearerAuth: [] }],
 			response: {
 				200: Type.Object({
 				success: Type.Literal(true),
@@ -50,6 +51,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 		"/2fa/enable",
 		{
 			schema: {
+			security: [{ bearerAuth: [] }],
 			body: Type.Object({
 				token: Type.String(),
 				tmpToken: Type.String()
@@ -101,6 +103,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 		"/2fa/disable",
 		{
 			schema: {
+			security: [{ bearerAuth: [] }],
 			body: Type.Object({
 				token: Type.String()
 			}),
@@ -151,8 +154,8 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 		{
 			schema: {
 			body: Type.Object({
-				tmpToken: Type.String(),
-				token: Type.String()
+				token: Type.String(),
+				tmpToken: Type.String()
 			}),
 			response: {
 				200: Type.Object({

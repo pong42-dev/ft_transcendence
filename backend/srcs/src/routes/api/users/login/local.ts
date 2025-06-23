@@ -13,6 +13,10 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				}
 			},
 			schema: {
+				body: Type.Object({
+					email: Type.String(),
+					password: Type.String()
+				}),
 				response: {
 					200: Type.Object({
 						success: Type.Literal(true),

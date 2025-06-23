@@ -1,36 +1,29 @@
 
-# 🧾 Friends API
+---
 
-**Authenticated user’s friend management endpoints**
-Provides functionality to follow users, retrieve friend lists, view friend profiles, and unfollow users.
+# 👤 User Friends API Summary (Fastify Plugin)
+
+This plugin provides user friend management functionality, including:
+
+* Retrieving friend list
+* Following a user (adding a friend)
+* Getting a friend's profile
+* Unfollowing a user (removing a friend)
 
 ---
 
-## 📌 `/api/users/me/friends` \[GET]
+## 📌 `GET /api/users/me/friends`
 
-**🔍 Retrieve the list of friends for the authenticated user**
-
----
+**Description**:
+Retrieves the authenticated user's friend list with their profiles.
 
 ### ✅ Request
 
-* **Method**: `GET`
-* **Content-Type**: `application/json`
-* **Authentication**: ✅ Required (`Bearer <token>`)
-
----
-
-### 📥 Expected Headers
-
-| Header        | Value            | Required | Description      |
-| ------------- | ---------------- | -------- | ---------------- |
-| Authorization | `Bearer <token>` | ✅        | JWT access token |
-
----
+* **Authentication required** (`Bearer` token)
 
 ### ✅ Response
 
-#### ▶ Success (HTTP 200)
+* **200 OK**
 
 ```json
 {
@@ -39,17 +32,26 @@ Provides functionality to follow users, retrieve friend lists, view friend profi
   "data": {
     "friends": [
       {
-        "user_id": "string",
-        "name": "string",
-        "avatar": "string",
-        "status": true
-      }
+        "user_id": 123,
+        "name": "FriendName",
+        "avatar": "avatar_url",
+        // other profile fields ...
+      },
+      ...
     ]
   }
 }
 ```
 
-#### ▶ Server Error (HTTP 500)
+* **401 Unauthorized**
+
+```json
+{
+  "msg": "Unauthorized"
+}
+```
+
+* **500 Internal Server Error**
 
 ```json
 {
@@ -59,45 +61,24 @@ Provides functionality to follow users, retrieve friend lists, view friend profi
 
 ---
 
-### 🧩 Additional Notes
+## 📌 `POST /api/users/me/friends`
 
-* Only valid friend profiles are returned.
-* Uses `friendsRepository.getRowsByColumnValue()` internally.
-* Enriched with user profile info from `userProfilesRepository`.
-
----
-
-## 📌 `/api/users/me/friends` \[POST]
-
-**➕ Follow a user by their display name**
-
----
+**Description**:
+Follow another user by their display name.
 
 ### ✅ Request
 
-* **Method**: `POST`
-* **Content-Type**: `application/json`
-* **Authentication**: ✅ Required
-
----
-
-### 📥 Expected Body
-
 ```json
 {
-  "friend_name": "username"
+  "friend_name": "FriendName"
 }
 ```
 
-| Field         | Type   | Required | Description                        |
-| ------------- | ------ | -------- | ---------------------------------- |
-| `friend_name` | string | ✅        | Display name of the user to follow |
-
----
+* **Authentication required**
 
 ### ✅ Response
 
-#### ▶ Success (HTTP 200)
+* **200 OK**
 
 ```json
 {
@@ -106,7 +87,15 @@ Provides functionality to follow users, retrieve friend lists, view friend profi
 }
 ```
 
-#### ▶ Conflict – User Not Found (HTTP 409)
+* **401 Unauthorized**
+
+```json
+{
+  "msg": "Unauthorized"
+}
+```
+
+* **409 Conflict**
 
 ```json
 {
@@ -114,7 +103,7 @@ Provides functionality to follow users, retrieve friend lists, view friend profi
 }
 ```
 
-#### ▶ Conflict – Already Following (HTTP 409)
+or
 
 ```json
 {
@@ -122,7 +111,7 @@ Provides functionality to follow users, retrieve friend lists, view friend profi
 }
 ```
 
-#### ▶ Server Error (HTTP 500)
+* **500 Internal Server Error**
 
 ```json
 {
@@ -132,56 +121,44 @@ Provides functionality to follow users, retrieve friend lists, view friend profi
 
 ---
 
-### 🧩 Additional Notes
+## 📌 `GET /api/users/me/friends/:id`
 
-* Verifies user existence before following.
-* Prevents duplicate follow attempts.
-
----
-
-## 📌 `/api/users/me/friends/:id` \[GET]
-
-**👁️ View a specific friend’s profile and status**
-
----
+**Description**:
+Retrieve profile and stats of a friend by their user ID.
 
 ### ✅ Request
 
-* **Method**: `GET`
-* **Authentication**: ✅ Required
-
----
-
-### 📥 Expected Path Params
-
-| Param | Type   | Required | Description      |
-| ----- | ------ | -------- | ---------------- |
-| `id`  | string | ✅        | Friend’s user ID |
-
----
+* **Authentication required**
+* URL parameter: `id` (friend's user ID)
 
 ### ✅ Response
 
-#### ▶ Success (HTTP 200)
+* **200 OK**
 
 ```json
 {
   "success": true,
-  "msg": "Friend list successfully retrieved.",
+  "msg": "Friend Profile successfully retrieved.",
   "data": {
-    "friends": [
-      {
-        "user_id": 3,
-        "name": "6666",
-        "avatar": "uploads/avatar/07d4fd03-a4ca-4704-9bcf-1c12ef4095ec.png",
-        "status": true
-      }
-    ]
+    "friend": {
+      "user_id": 123,
+      "name": "FriendName",
+      "avatar": "avatar_url",
+      // other profile fields ...
+    }
   }
 }
 ```
 
-#### ▶ Not Found (HTTP 404)
+* **401 Unauthorized**
+
+```json
+{
+  "msg": "Unauthorized"
+}
+```
+
+* **404 Not Found**
 
 ```json
 {
@@ -189,7 +166,23 @@ Provides functionality to follow users, retrieve friend lists, view friend profi
 }
 ```
 
-#### ▶ Server Error (HTTP 500)
+* **409 Conflict**
+
+```json
+{
+  "msg": "Invalid friend ID."
+}
+```
+
+or
+
+```json
+{
+  "msg": "You are not following this user."
+}
+```
+
+* **500 Internal Server Error**
 
 ```json
 {
@@ -199,30 +192,19 @@ Provides functionality to follow users, retrieve friend lists, view friend profi
 
 ---
 
-## 📌 `/api/users/me/friends/:id` \[DELETE]
+## 📌 `DELETE /api/users/me/friends/:id`
 
-**❌ Unfollow a user by their ID**
-
----
+**Description**:
+Unfollow (remove) a friend by their user ID.
 
 ### ✅ Request
 
-* **Method**: `DELETE`
-* **Authentication**: ✅ Required
-
----
-
-### 📥 Expected Path Params
-
-| Param | Type   | Required | Description                  |
-| ----- | ------ | -------- | ---------------------------- |
-| `id`  | string | ✅        | Friend’s user ID to unfollow |
-
----
+* **Authentication required**
+* URL parameter: `id` (friend's user ID)
 
 ### ✅ Response
 
-#### ▶ Success (HTTP 200)
+* **200 OK**
 
 ```json
 {
@@ -231,7 +213,15 @@ Provides functionality to follow users, retrieve friend lists, view friend profi
 }
 ```
 
-#### ▶ Conflict – Invalid ID (HTTP 409)
+* **401 Unauthorized**
+
+```json
+{
+  "msg": "Unauthorized"
+}
+```
+
+* **409 Conflict**
 
 ```json
 {
@@ -239,7 +229,7 @@ Provides functionality to follow users, retrieve friend lists, view friend profi
 }
 ```
 
-#### ▶ Conflict – Not Following (HTTP 409)
+or
 
 ```json
 {
@@ -247,7 +237,7 @@ Provides functionality to follow users, retrieve friend lists, view friend profi
 }
 ```
 
-#### ▶ Server Error (HTTP 500)
+* **500 Internal Server Error**
 
 ```json
 {
@@ -257,9 +247,12 @@ Provides functionality to follow users, retrieve friend lists, view friend profi
 
 ---
 
-### 🧩 Additional Notes
+## 🔧 Internal Components Summary
 
-* Validates that the user is currently following the target before deletion.
-* Prevents self-unfollow scenarios.
+| Component                | Purpose                                                 |
+| ------------------------ | ------------------------------------------------------- |
+| `userProfilesRepository` | Retrieves user profiles and statistics                  |
+| `friendsRepository`      | Manages friend relationships (follow/unfollow, queries) |
+| `authenticate`           | Middleware to verify user authentication                |
 
 ---

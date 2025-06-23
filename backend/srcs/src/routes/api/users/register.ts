@@ -8,6 +8,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 		passwordManager, 
 		registerFormData, saveFile, isValidRegisterFormData,
 	} = fastify
+
 	fastify.post(
 		'/register',
 		{

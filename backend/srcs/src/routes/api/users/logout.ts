@@ -4,7 +4,7 @@ import { UserData } from '../../../schemas/auth.js';
 
 const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 	const { userProfilesRepository, userTokensRepository, tmpTokenRepository,
-		googleOAuth2Manager, authenticate } = fastify;
+		googleOAuth2Manager, authenticate, passwordManager } = fastify;
 
 	fastify.post(
 		'/logout',
@@ -16,6 +16,13 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				}
 			},
 			schema: {
+				security: [{ bearerAuth: [] }],
+				headers: Type.Object({
+					authorization: Type.String(),
+					// cookies: Type.String({
+					// 	description: 'refresh_token=abc123;'
+					// }),
+				}),
 				response: {
 					200: Type.Object({
 						success: Type.Literal(true),
@@ -34,21 +41,30 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 		},
 		async function (request, reply) {
 			try {
-				if (request.cookies.refresh_token) {
-					const { user_id } = request.user as UserData;
-					console.log("user_id: ", user_id);
-					const userToken = await userTokensRepository.getRowByColumnValue("user_id", user_id);
-					if (userToken && userToken.google_refresh_token) {
-						await googleOAuth2Manager.revokeGoogleToken(userToken.google_refresh_token);
+				const { user_id } = request.user as UserData;
+				const userToken = await userTokensRepository.getRowByColumnValue("user_id", user_id);
+				console.log(userToken.server_refresh_token);
+				console.log(request.cookies);
+				const refreshToken = request.cookies.refresh_token;
+				if (refreshToken) {
+					const isMatch = await passwordManager.comparePassword(refreshToken, userToken.server_refresh_token);
+					if (isMatch) {
+						console.log("user_id: ", user_id);
+						if (userToken && userToken.google_refresh_token) {
+							await googleOAuth2Manager.revokeGoogleToken(userToken.google_refresh_token);
+						}
+						await userTokensRepository.deleteRowByColumnValue("user_id", user_id);
+						await tmpTokenRepository.deleteRowByColumnValue("user_id", user_id);
+						reply.clearCookie(this.config.COOKIE_NAME, { path: '/' });
+						await userProfilesRepository.updateRowByColumn("user_id", user_id, "status", false);
+						return reply.send({ 
+							success: true,
+							msg: "Successfully logged out." 
+						});
 					}
-					await userTokensRepository.deleteRowByColumnValue("user_id", user_id);
-					await tmpTokenRepository.deleteRowByColumnValue("user_id", user_id);
-					await userProfilesRepository.updateRowByColumn("user_id", user_id, "status", false);
-					reply.clearCookie(this.config.COOKIE_NAME, { path: '/' });
 				}
-				return reply.send({ 
-					success: true,
-					msg: "Successfully logged out." 
+				return reply.status(404).send({ 
+					msg: "user not found" 
 				});
 			} catch (err) {
 				fastify.log.error(err);

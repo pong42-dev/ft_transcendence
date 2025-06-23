@@ -24,6 +24,7 @@ async function login(
 		})
 	} else {
 		const refreshTokenCookie = await this.tokenManager.generateRefreshToken(userData)
+		console.log('refreshTokenCookie:', refreshTokenCookie);
 		reply.setCookie(
 			refreshTokenCookie.name,
 			refreshTokenCookie.value,

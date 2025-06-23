@@ -19,6 +19,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				}
 			},
 			schema: {
+				security: [{ bearerAuth: [] }],
 				response: {
 					200: Type.Object({
 						success: Type.Boolean(),

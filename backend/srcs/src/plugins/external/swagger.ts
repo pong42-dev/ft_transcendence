@@ -4,7 +4,7 @@ import fastifySwagger from '@fastify/swagger'
 
 export default fp(async function (fastify) {
   /**
-   * A Fastify plugin for serving Swagger (OpenAPI v2) or OpenAPI v3 schemas
+   * A Fastify plugin for serving Swagger (OpenAPI v3)
    *
    * @see {@link https://github.com/fastify/fastify-swagger}
    */
@@ -15,7 +15,21 @@ export default fp(async function (fastify) {
         title: 'Fastify demo API',
         description: 'The official Fastify demo API',
         version: '0.0.0'
-      }
+      },
+      components: {
+        securitySchemes: {
+          bearerAuth: {
+            type: 'http',
+            scheme: 'bearer',
+            bearerFormat: 'JWT'
+          }
+        }
+      },
+      // security: [
+      //   {
+      //     bearerAuth: []
+      //   }
+      // ]
     }
   })
 
@@ -25,7 +39,10 @@ export default fp(async function (fastify) {
    * @see {@link https://github.com/fastify/fastify-swagger-ui}
    */
   await fastify.register(fastifySwaggerUi, {
-    routePrefix: '/api/docs'
+    routePrefix: '/api/docs',
+    uiConfig: {
+      // docExpansion: 'full',
+      // deepLinking: false
+    }
   })
-
 })

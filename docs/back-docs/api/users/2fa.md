@@ -1,4 +1,6 @@
 
+---
+
 # 🔐 2FA API Summary (Fastify Plugin)
 
 This plugin provides Two-Factor Authentication (2FA) functionality for users, including:
@@ -35,19 +37,16 @@ Initializes 2FA setup by generating a QR code, a secret, and a temporary token f
     }
   }
   ```
-
 * **401 Unauthorized**
 
   ```json
   { "msg": "Unauthorized" }
   ```
-
 * **404 Not Found**
 
   ```json
   { "msg": "User not found." }
   ```
-
 * **500 Internal Server Error**
 
   ```json
@@ -59,7 +58,62 @@ Initializes 2FA setup by generating a QR code, a secret, and a temporary token f
 ## 📌 `POST /2fa/enable`
 
 **Description**:
-Validates the provided OTP code and enables 2FA for the user.
+Validates the OTP code and enables 2FA for the authenticated user.
+
+### ✅ Request
+
+```json
+{
+  "token": "123456",
+  "tmpToken": "temp-token"
+}
+```
+
+* **Authentication required**
+* **OTP + temporary token required**
+
+### ✅ Response
+
+* **200 OK**
+
+  ```json
+  {
+    "success": true,
+    "msg": "2FA has been enabled successfully."
+  }
+  ```
+* **401 Unauthorized**
+
+  ```json
+  { "msg": "Unauthorized" }
+  ```
+* **404 Not Found**
+
+  ```json
+  { "msg": "User not found." }
+  ```
+* **409 Conflict**
+
+  ```json
+  { "msg": "This account already has 2FA enabled. Please disable it before setting up again." }
+  ```
+* **500 Internal Server Error**
+
+  ```json
+  { "msg": "An internal server error occurred during 2FA setup." }
+  ```
+
+### 🧩 Notes
+
+* Uses `verify2FAToken` pre-handler to validate both the OTP and the temporary token.
+* Updates the database to set `is_enabled = true`.
+
+---
+
+## 📌 `POST /2fa`
+
+**Description**:
+Verifies the OTP and temporary token during login and issues an access token.
 
 ### ✅ Request
 
@@ -77,80 +131,27 @@ Validates the provided OTP code and enables 2FA for the user.
   ```json
   {
     "success": true,
-    "msg": "2FA has been enabled successfully."
-  }
-  ```
-
-* **404 Not Found**
-
-  ```json
-  { "msg": "User not found." }
-  ```
-
-* **409 Conflict**
-
-  ```json
-  { "msg": "2FA already enabled." }
-  ```
-
-* **500 Internal Server Error**
-
-  ```json
-  { "msg": "An internal server error occurred." }
-  ```
-
-### 🧩 Notes
-
-* Uses `verify2FAToken` pre-handler to validate both the OTP and the temporary token.
-
----
-
-## 📌 `POST /2fa`
-
-**Description**:
-Verifies the OTP + temporary token during login and issues an access token.
-
-### ✅ Request
-
-```json
-{
-  "tmpToken": "temp-token",
-  "token": "123456"
-}
-```
-
-### ✅ Response
-
-* **200 OK**
-
-  ```json
-  {
-    "success": true,
     "msg": "Successfully logged in.",
     "data": {
       "token": "<access-token>"
     }
   }
   ```
-
 * **401 Unauthorized**
 
   ```json
   { "msg": "Unauthorized" }
   ```
-
 * **404 Not Found**
 
   ```json
   { "msg": "User not found." }
   ```
-
 * **409 Conflict**
 
   ```json
   { "msg": "2FA not enabled." }
   ```
-
 * **500 Internal Server Error**
 
   ```json
@@ -159,14 +160,15 @@ Verifies the OTP + temporary token during login and issues an access token.
 
 ### 🧩 Notes
 
-* Internally calls `loginManager.login()` to issue JWT access token after successful 2FA verification.
+* Uses `verify2FAToken` pre-handler.
+* Issues new JWT access token using `loginManager.login()`.
 
 ---
 
 ## 📌 `POST /2fa/disable`
 
 **Description**:
-Disables 2FA for the currently authenticated user. Requires a real-time OTP (no tmpToken allowed).
+Disables 2FA for the authenticated user using a real-time OTP (no temporary token allowed).
 
 ### ✅ Request
 
@@ -175,6 +177,9 @@ Disables 2FA for the currently authenticated user. Requires a real-time OTP (no 
   "token": "123456"
 }
 ```
+
+* **Authentication required**
+* **OTP only required (no tmpToken)**
 
 ### ✅ Response
 
@@ -186,40 +191,44 @@ Disables 2FA for the currently authenticated user. Requires a real-time OTP (no 
     "msg": "2FA has been disabled successfully."
   }
   ```
+* **401 Unauthorized**
 
+  ```json
+  { "msg": "Unauthorized" }
+  ```
+* **404 Not Found**
+
+  ```json
+  { "msg": "User not found." }
+  ```
 * **409 Conflict**
 
   ```json
-  {
-    "msg": "This account already has 2FA disabled. Please enable it before setting up again."
-  }
+  { "msg": "This account already has 2FA disabled. Please enable it before setting up again." }
   ```
-
 * **500 Internal Server Error**
 
   ```json
-  {
-    "msg": "An internal server error occurred during 2FA setup."
-  }
+  { "msg": "An internal server error occurred during 2FA setup." }
   ```
 
 ### 🧩 Notes
 
-* Uses `verify2FATokenWithoutTmpToken` middleware for OTP validation.
-* Deletes the 2FA secret entry from the database.
+* Uses `verify2FATokenWithoutTmpToken` pre-handler.
+* Deletes user’s 2FA data from DB (disabling 2FA).
 
 ---
 
 ## 🔧 Internal Components Summary
 
-| Component                                   | Purpose                                        |
-| ------------------------------------------- | ---------------------------------------------- |
-| `authenticate`                              | Validates that the user is logged in           |
-| `verify2FAToken`                            | Validates OTP + temporary token                |
-| `verify2FATokenWithoutTmpToken`             | Validates OTP only (no temporary token)        |
-| `twoFAManager.init2FA()`                    | Generates QR code, secret, and temporary token |
-| `loginManager.login()`                      | Issues access token                            |
-| `user2FARepository`                         | Access to 2FA table                            |
-| `usersRepository`, `userProfilesRepository` | Access to user data                            |
+| Component                       | Purpose                                        |
+| ------------------------------- | ---------------------------------------------- |
+| `authenticate`                  | Validates that the user is logged in           |
+| `verify2FAToken`                | Validates OTP + temporary token                |
+| `verify2FATokenWithoutTmpToken` | Validates OTP only (no temporary token)        |
+| `twoFAManager.init2FA()`        | Generates QR code, secret, and temporary token |
+| `loginManager.login()`          | Issues access token after login                |
+| `user2FARepository`             | Access to 2FA-related DB operations            |
 
 ---
+

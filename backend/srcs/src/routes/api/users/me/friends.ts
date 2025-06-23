@@ -11,6 +11,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 		'/friends',
 		{
 			schema: {
+				security: [{ bearerAuth: [] }],
 				response: {
 					200: Type.Object({
 						success: Type.Literal(true),
@@ -36,7 +37,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				const friendList = await friendsRepository.getRowsByColumnValue("user_id", userId);
 				const friendsProfile = [];
 				for (const friendRow of friendList) {
-					const friendId = friendRow.user_id;
+					const friendId = friendRow.friend_id;
 					const friendProfile = await userProfilesRepository.getRowByColumnValue("user_id", friendId);
 					if (friendProfile) {
 						friendsProfile.push(friendProfile);
@@ -61,6 +62,10 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 		'/friends',
 		{
 			schema: {
+				security: [{ bearerAuth: [] }],
+				body: Type.Object({
+					friend_name: Type.String()
+				}),
 				response: {
 					200: Type.Object({
 						success: Type.Literal(true),
@@ -83,16 +88,14 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 		async (request, reply): Promise<void> => {
 			try {
 				const { user_id: userId } = request.user as UserData;
-				const { friend_name: friendName } = request.body as typeof IdSchema;
+				const { friend_name: friendName } = request.body;
 				const row = await userProfilesRepository.getRowByColumnValue("name", friendName);
 				const friendId = row?.user_id;
 				if (!friendId)
 					return reply.status(409).send({ msg: 'User does not exist.' });
-
 				const isFollowing = await friendsRepository.isFollowing(Number(userId), Number(friendId));
 				if (isFollowing)
 					return reply.status(409).send({ msg: 'You are already following this user.' });
-
 				await friendsRepository.insertRow(userId, friendId, 'following');
 				return reply.send({ 
 					success: true,
@@ -110,6 +113,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 		'/friends/:id',
 		{
 			schema: {
+				security: [{ bearerAuth: [] }],
 				params: Type.Object({ id: IdSchema }),
 				response: {
 					200: Type.Object({
@@ -125,6 +129,9 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 					404: Type.Object({
 						msg: Type.String()
 					}),
+					409: Type.Object({
+						msg: Type.String()
+					}),
 					500: Type.Object({
 						msg: Type.String()
 					})
@@ -136,9 +143,15 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 		async (request, reply): Promise<void> => {
 			try {
 				const userId = request.user.user_id;
-				const profile = await userProfilesRepository.getUserProfileWithStats(userId);
+				const friendId = request.params.id;
+				if (!friendId || userId === friendId)
+					return reply.status(409).send({ msg: 'Invalid friend ID.' });
+				const isFollowing = await friendsRepository.isFollowing(Number(userId), Number(friendId));
+				if (!isFollowing)
+					return reply.status(409).send({ msg: 'You are not following this user.' });
+				const profile = await userProfilesRepository.getUserProfileWithStats(friendId);
 				if (!profile) {
-					return reply.status(404).send({ msg: 'User not found.' });
+					return reply.status(404).send({ msg: 'user not found.' });
 				}
 				// return profile;
 				reply.send({
@@ -160,6 +173,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 		'/friends/:id',
 		{
 			schema: {
+				security: [{ bearerAuth: [] }],
 				params: Type.Object({ id: IdSchema }),
 				response: {
 					200: Type.Object({
@@ -184,14 +198,11 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 			try {
 				const { user_id: userId } = request.user as UserData;
 				const friendId = request.params.id;
-
-				if (!friendId || userId !== friendId)
+				if (!friendId || userId === friendId)
 					return reply.status(409).send({ msg: 'Invalid friend ID.' });
-
 				const isFollowing = await friendsRepository.isFollowing(Number(userId), Number(friendId));
 				if (!isFollowing)
 					return reply.status(409).send({ msg: 'You are not following this user.' });
-
 				await friendsRepository.deleteFriendship(userId, friendId);
 				return reply.send({ 
 					success: true,

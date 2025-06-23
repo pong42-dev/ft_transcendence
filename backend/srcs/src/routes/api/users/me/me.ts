@@ -2,8 +2,7 @@ import { FastifyPluginAsyncTypebox, Type } from '@fastify/type-provider-typebox'
 import { UserProfileResponseSchema } from '../../../../schemas/users.js'
 
 const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
-	const { authenticate } = fastify
-
+	const { usersRepository, userProfilesRepository, authenticate } = fastify
 	fastify.get(
 		'/',
 		{
@@ -32,8 +31,42 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 		}, 
 		async (request, reply) : Promise<void> => {
 			try {
-				const profile = request.user;
-				reply.send({
+				const userId = request.user.user_id;
+				const profile = await userProfilesRepository.getUserProfileWithStats(userId);
+				if (!profile) {
+					return reply.status(404).send({ msg: 'User not found.' });
+				}
+				/*
+					<유저 정보>
+					- users
+					email: 
+
+					- user profiles 
+					name:
+					avatar:
+					
+					<game stats>
+					- game 
+					games:
+					wins:
+					win Rate:
+
+					<match history game>
+					- game
+					종료시간: 
+					유저: 
+					게스트:
+					승자: 
+
+					<match history tourn>
+					- tourn
+					종료시간:
+					유저:
+					게스트1-3:
+					win/lose: 
+
+				*/
+				reply.status(200).send({
 					success: true,
 					msg: 'User Profile successfully retrieved.',
 					data: {
