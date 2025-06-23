@@ -91,6 +91,25 @@ Please login to continue.`;
     this.outputContent = '';
   }
 
+  public updateWelcomeMessage(isLoggedIn: boolean, username?: string): void {
+    const welcomeMessage = isLoggedIn && username 
+      ? `PONG-CLI v1.0.0 (c) 2025 PongDevs
+Type "help" for available commands.
+Welcome back, ${username}!`
+      : `PONG-CLI v1.0.0 (c) 2025 PongDevs
+Type "help" for available commands.
+Please login to continue.`;
+    
+    this.initialMessage = welcomeMessage;
+    
+    // 현재 터미널이 초기 상태라면 메시지 업데이트
+    if (this.outputContent === this.initialMessage || this.outputContent.includes('Please login to continue') || this.outputContent.includes('Welcome back')) {
+      this.outputElement.innerHTML = welcomeMessage;
+      this.outputContent = welcomeMessage;
+      this.scrollToBottom();
+    }
+  }
+
   public reset(): void {
     this.clearOutput();
     this.commandHistory = [];

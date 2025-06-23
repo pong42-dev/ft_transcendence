@@ -1,5 +1,5 @@
 import { BaseApiService, ApiError } from './BaseApiService';
-import { TokenManager } from '../core/TokenManager';
+import { TokenManager, TwoFAStateManager } from '../core/TokenManager';
 import { ErrorLevel } from '../../utils/ErrorHandler';
 import * as Types from '../../types/types';
 
@@ -17,6 +17,7 @@ export class AuthApiService extends BaseApiService {
       data: {
         accessToken?: string;
         token?: string; // temporary token for 2FA
+        access_token?: string; // alternative token field name
       };
     }>('/api/users/login/local', {
       email, 
@@ -33,31 +34,55 @@ export class AuthApiService extends BaseApiService {
       };
     }
     
-    // 일반 로그인 성공 (2FA 없음)
-    if (response.data.accessToken) {
-      // Access Token은 메모리에 저장, Refresh Token은 서버가 HttpOnly 쿠키로 설정
-      TokenManager.setTokens(response.data.accessToken, 'cookie-managed');
-      console.info('[Auth] Login successful - tokens managed securely');
+    // 일반 로그인 성공 (2FA 없음) - 다양한 토큰 필드명 지원
+    const accessToken = response.data.accessToken || response.data.token || response.data.access_token;
+    if (accessToken) {
+      // Access Token을 TokenManager에 저장, Refresh Token은 서버가 HttpOnly 쿠키로 설정
+      TokenManager.setTokens(accessToken, 'cookie-managed');
       
-      // 로그인 후 사용자 정보 가져오기 (캐시된 메서드 사용)
+      // 토큰 설정 확인
+      console.info('[Auth] Login successful - tokens managed securely', {
+        tokenLength: accessToken.length,
+        tokenManagerHasToken: !!TokenManager.getAccessToken(),
+        apiClientHasToken: !!this.getToken()
+      });
+      
+      // 로그인 후 사용자 정보 가져오기 (2FA 없이 로그인했으므로 2FA 비활성화 상태)
       return await this._fetchUserProfile(false);
     }
     
+    // 디버깅을 위한 로그
+    console.error('[Auth] Login response structure:', JSON.stringify(response, null, 2));
     throw new ApiError(401, 'Login failed', { message: 'Invalid response from server' });
   }
 
   // 2FA 로그인 완료 - tmpToken과 2FA 코드로 로그인 마무리
   async completeTwoFALogin(tmpToken: string, twoFACode: string): Promise<Types.User> {
+    console.log('[Auth] Completing 2FA login:', { 
+      hasTmpToken: !!tmpToken, 
+      tmpTokenLength: tmpToken?.length,
+      hasCode: !!twoFACode, 
+      codeLength: twoFACode?.length 
+    });
+    
     const response = await this.verifyTwoFA({
       tmpToken,
       token: twoFACode
     });
     
-    // Access Token 저장
-    TokenManager.setTokens(response.token, 'cookie-managed');
-    console.info('[Auth] 2FA Login successful - tokens managed securely');
+    console.log('[Auth] 2FA login verification successful, setting tokens...');
     
-    // 사용자 정보 가져오기 (캐시된 메서드 사용)
+    // Access Token을 TokenManager에 저장
+    TokenManager.setTokens(response.token, 'cookie-managed');
+    
+    // 토큰 설정 확인
+    console.info('[Auth] 2FA Login successful - tokens managed securely', {
+      tokenLength: response.token.length,
+      tokenManagerHasToken: !!TokenManager.getAccessToken(),
+      apiClientHasToken: !!this.getToken()
+    });
+    
+    // 사용자 정보 가져오기 (2FA 완료 상태)
     return await this._fetchUserProfile(true);
   }
 
@@ -79,12 +104,18 @@ export class AuthApiService extends BaseApiService {
     }
     
     // BaseApiService의 post 메소드 사용 (mock 지원)
-    await this.post<{
+    const registerResponse = await this.post<{
+      success: boolean;
       msg: string;
     }>('/api/users/register', formData, {
       credentials: 'include',
       isFormData: true
     });
+    
+    // 회원가입 실패 시 에러 던지기 (success 필드가 없으면 msg로 판단)
+    if (registerResponse.success === false) {
+      throw new ApiError(400, 'Registration failed', { message: registerResponse.msg });
+    }
     
     console.info('[Auth] Registration successful, attempting auto-login');
     
@@ -101,41 +132,80 @@ export class AuthApiService extends BaseApiService {
 
   // 로그아웃 - /api/users/logout
   async logout(): Promise<void> {
-    try {
-      // 서버에 로그아웃 요청 (Refresh Token 쿠키 정리)
-      await this.post('/api/users/logout', {}, {
-        credentials: 'include'
-      });
-      console.info('[Auth] Server logout successful');
-    } catch (error) {
-      this.errorHandler.handleError(
-        error as Error,
-        'AuthApiService.logout',
-        ErrorLevel.WARNING,
-        {
-          component: 'AuthApiService',
-          action: 'serverLogoutFailed'
-        }
-      );
-      // 서버 로그아웃 실패해도 클라이언트 토큰은 정리
+    // 토큰이 있는지 먼저 확인
+    const hasToken = TokenManager.getAccessToken();
+    
+    if (hasToken) {
+      // 토큰이 있으면 서버에 로그아웃 요청 (Authorization 헤더 자동 포함됨)
+      try {
+        // 백엔드 스키마에 맞춰 cookies 헤더 포함 (CORS 수정됨)
+        await this.post('/api/users/logout', {}, {
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            // 백엔드에서 요구하는 cookies 헤더
+            'cookies': document.cookie || 'refresh_token=placeholder;'
+          }
+        });
+        console.info('[Auth] Server logout successful');
+      } catch (error) {
+        // 서버 로그아웃 실패는 경고로만 처리
+        console.warn('[Auth] Server logout failed:', error);
+        
+        this.errorHandler.handleError(
+          error as Error,
+          'AuthApiService.logout',
+          ErrorLevel.INFO,
+          {
+            component: 'AuthApiService',
+            action: 'serverLogoutFailed',
+            additionalData: { note: 'Server cleanup failed, proceeding with client logout' }
+          }
+        );
+      }
+    } else {
+      console.info('[Auth] No token available, skipping server logout');
     }
     
-    // 클라이언트 토큰 정리 (Access Token 메모리에서 제거)
+    // 서버 요청 결과와 관계없이 클라이언트 토큰은 항상 정리
     TokenManager.clearTokens();
-    console.info('[Auth] Client tokens cleared');
+    TwoFAStateManager.clearTwoFAState();
+    console.info('[Auth] Client tokens and 2FA state cleared');
   }
 
   // Google OAuth 로그인 - /api/users/login/google
-  async loginWithGoogle(): Promise<void> {
-    // 백엔드 OAuth 엔드포인트로 리다이렉트
-    // 백엔드에서 Google OAuth URL 생성 및 리다이렉트 처리
-    window.location.href = '/api/users/login/google';
+  async loginWithGoogle(): Promise<never> {
+    // Mock 환경에서는 직접 API 호출로 사용자 반환
+    if (this.shouldUseMockData()) {
+      const user = await this.get<Types.User>('/api/users/login/google');
+      // Mock에서는 Promise를 reject하지 않고 전역 상태를 업데이트
+      setTimeout(() => {
+        const event = new CustomEvent('mockOAuthSuccess', { detail: user });
+        window.dispatchEvent(event);
+      }, 100);
+      throw new Error('Mock OAuth redirect');
+    }
+    
+    // 실제 환경에서는 전체 페이지 리다이렉트
+    window.location.href = 'http://localhost:3000/api/users/login/google';
+    
+    // 리다이렉트가 완료될 때까지 대기하는 Promise (실제로는 페이지가 바뀜)
+    return new Promise(() => {
+      // 이 Promise는 resolve되지 않음 (페이지 리다이렉트)
+    });
   }
 
   // OAuth 콜백 후 사용자 정보 확인 - Google OAuth 완료 후 호출
   async handleOAuthCallback(): Promise<Types.User | null> {
     try {
-      // OAuth 완료 후 사용자 정보 가져오기 (캐시된 메서드 사용)
+      // OAuth 완료 후 토큰 갱신부터 시도 (새로운 refresh token 쿠키가 설정되었을 수 있음)
+      const newToken = await TokenManager.refreshToken();
+      if (newToken) {
+        // TokenManager가 이미 새 토큰을 저장했으므로 추가 작업 불필요
+        console.info('[Auth] OAuth callback - token refreshed and synchronized');
+      }
+      
+      // OAuth 완료 후 사용자 정보 가져오기 (OAuth 로그인은 일반적으로 2FA 우회하므로 기본값 사용)
       return await this._fetchUserProfile(false);
     } catch (error) {
       this.errorHandler.handleError(
@@ -159,7 +229,31 @@ export class AuthApiService extends BaseApiService {
 
   // 토큰 검증 및 사용자 정보 조회 - /api/users/me
   async verifyToken(): Promise<Types.User> {
+    // 현재 토큰 상태 디버깅
+    const currentToken = this.getToken();
+    console.log('[Auth] Token verification state:', {
+      hasToken: !!currentToken,
+      tokenLength: currentToken?.length
+    });
+    
+    // 토큰이 없으면 에러
+    if (!currentToken) {
+      throw new ApiError(401, 'Authentication required', { message: 'No access token available for verification' });
+    }
+    
+    // 캐시된 2FA 상태가 있으면 그것을 사용 (새로고침 시 상태 유지)
+    const cachedState = TwoFAStateManager.getTwoFAState();
+    if (cachedState !== null) {
+      console.log('[Auth] Using cached 2FA state for token verification:', cachedState);
+      return await this._fetchUserProfile(cachedState);
+    }
+    // 캐시가 없으면 기본값 사용
     return await this._fetchUserProfile(false);
+  }
+
+  // 토큰 검증 및 사용자 정보 조회 (2FA 상태 확인 건너뛰기) - 토큰 갱신 후 사용
+  async verifyTokenWithoutTwoFACheck(): Promise<Types.User> {
+    return await this._fetchUserProfileWithoutTwoFACheck();
   }
 
   // 토큰 갱신 - /api/users/refresh-token
@@ -230,6 +324,26 @@ export class AuthApiService extends BaseApiService {
 
   // 2FA 설정 초기화 - /api/users/auth/2fa/enable/init
   async initTwoFA(): Promise<Types.TwoFAInitResponse> {
+    // 토큰이 있는지 확인
+    const token = this.getToken();
+    const tokenManagerToken = TokenManager.getAccessToken();
+    
+    console.log('[Auth] 2FA initialization - detailed token check:', {
+      hasToken: !!token,
+      hasTokenManagerToken: !!tokenManagerToken,
+      tokenLength: token?.length,
+      tokenManagerTokenLength: tokenManagerToken?.length,
+      tokensMatch: token === tokenManagerToken,
+      hasRefreshToken: TokenManager.hasRefreshToken()
+    });
+    
+    if (!token) {
+      console.error('[Auth] No access token available for 2FA initialization');
+      throw new ApiError(401, 'Authentication required', { message: 'No access token available for 2FA initialization' });
+    }
+    
+    console.log('[Auth] Initializing 2FA with token present:', !!token);
+    
     const response = await this.post<{
       success: boolean;
       msg: string;
@@ -247,16 +361,45 @@ export class AuthApiService extends BaseApiService {
 
   // 2FA 활성화 - /api/users/auth/2fa/enable
   async enableTwoFA(request: Types.TwoFAEnableRequest): Promise<void> {
+    // 토큰이 있는지 확인
+    const token = this.getToken();
+    if (!token) {
+      throw new ApiError(401, 'Authentication required', { message: 'No access token available for 2FA activation' });
+    }
+    
+    console.log('[Auth] Enabling 2FA with token present:', !!token);
+    
     await this.post<{
       success: boolean;
       msg: string;
     }>('/api/users/auth/2fa/enable', request, {
       credentials: 'include'
     });
+    
+    // 2FA 활성화 성공 후 캐시 상태 업데이트
+    TwoFAStateManager.setTwoFAState(true);
+    console.log('[Auth] 2FA enabled successfully, cache updated');
   }
 
   // 2FA 로그인 검증 - /api/users/auth/2fa
   async verifyTwoFA(request: Types.TwoFAVerifyRequest): Promise<{ token: string }> {
+    console.log('[Auth] Verifying 2FA:', { 
+      hasToken: !!request.token, 
+      tokenLength: request.token?.length,
+      hasTmpToken: !!request.tmpToken,
+      tmpTokenLength: request.tmpToken?.length 
+    });
+    
+    // 2FA 검증 시 tmpToken을 Authorization 헤더에 포함
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json'
+    };
+    
+    if (request.tmpToken) {
+      headers.Authorization = `Bearer ${request.tmpToken}`;
+      console.log('[Auth] Adding tmpToken to Authorization header for 2FA verification');
+    }
+    
     const response = await this.post<{
       success: boolean;
       msg: string;
@@ -264,26 +407,85 @@ export class AuthApiService extends BaseApiService {
         token: string;
       };
     }>('/api/users/auth/2fa', request, {
-      credentials: 'include'
+      credentials: 'include',
+      headers
     });
+    
+    console.log('[Auth] 2FA verification response:', { 
+      success: response.success, 
+      hasToken: !!response.data?.token 
+    });
+    
+    // 2FA 검증 실패 시 에러 던지기
+    if (!response.success) {
+      throw new ApiError(409, '2FA verification failed', { message: response.msg });
+    }
     
     return response.data;
   }
 
   // 2FA 비활성화 - /api/users/auth/2fa/disable
   async disableTwoFA(request: Types.TwoFADisableRequest): Promise<void> {
+    // 토큰이 있는지 확인
+    const token = this.getToken();
+    if (!token) {
+      throw new ApiError(401, 'Authentication required', { message: 'No access token available for 2FA deactivation' });
+    }
+    
+    console.log('[Auth] Disabling 2FA with token present:', !!token);
+    
     await this.post<{
       success: boolean;
       msg: string;
     }>('/api/users/auth/2fa/disable', request, {
       credentials: 'include'
     });
+    
+    // 2FA 비활성화 성공 후 캐시 상태 업데이트
+    TwoFAStateManager.setTwoFAState(false);
+    console.log('[Auth] 2FA disabled successfully, cache updated');
+  }
+
+  // 2FA 상태 확인 - 서버에서 정확한 상태 조회
+  async getTwoFAStatus(): Promise<boolean> {
+    try {
+      // 캐시된 상태가 있고 최근 것이면 사용
+      const cachedState = TwoFAStateManager.getTwoFAState();
+      if (cachedState !== null) {
+        console.log('[Auth] Using cached 2FA status:', cachedState);
+        return cachedState;
+      }
+      
+      // 캐시가 없으면 서버에서 사용자 정보를 가져와서 2FA 상태 확인
+      const userProfileResponse = await this.get<{
+        success: boolean;
+        msg: string;
+        data: {
+          me: {
+            name: string;
+            avatar: string | null;
+            twoFactorEnabled?: boolean;
+          };
+        };
+      }>('/api/users/me');
+      
+      const twoFactorEnabled = userProfileResponse.data.me.twoFactorEnabled || false;
+      console.log('[Auth] 2FA status retrieved from server:', twoFactorEnabled);
+      
+      // 서버에서 가져온 상태를 캐시에 저장
+      TwoFAStateManager.setTwoFAState(twoFactorEnabled);
+      
+      return twoFactorEnabled;
+    } catch (error) {
+      console.warn('[Auth] Failed to get 2FA status from server, using default (false):', error);
+      return false;
+    }
   }
 
   // ===== PRIVATE HELPER METHODS =====
 
   // 사용자 프로필 정보를 가져오는 공통 메서드 (API 호출 중복 제거)
-  private async _fetchUserProfile(twoFactorEnabled: boolean): Promise<Types.User> {
+  private async _fetchUserProfile(fallbackTwoFactorEnabled: boolean = false): Promise<Types.User> {
     const userProfileResponse = await this.get<{
       success: boolean;
       msg: string;
@@ -291,9 +493,39 @@ export class AuthApiService extends BaseApiService {
         me: {
           name: string;
           avatar: string | null;
+          twoFactorEnabled?: boolean; // 서버에서 2FA 상태 제공 시
         };
       };
     }>('/api/users/me');
+    
+    // 2FA 상태 결정 로직 개선: 서버 제공 → 캐시 → 서버 재조회 → fallback 순서
+    let twoFactorEnabled: boolean;
+    
+    if (userProfileResponse.data.me.twoFactorEnabled !== undefined) {
+      // 서버에서 명시적으로 2FA 상태를 제공한 경우
+      twoFactorEnabled = userProfileResponse.data.me.twoFactorEnabled;
+      console.log('[Auth] Using server-provided 2FA status:', twoFactorEnabled);
+      
+      // 서버에서 제공한 상태를 캐시에 저장
+      TwoFAStateManager.setTwoFAState(twoFactorEnabled);
+    } else {
+      // 서버에서 2FA 상태를 제공하지 않는 경우: 캐시 → 서버 재조회 → fallback 순서
+      const cachedState = TwoFAStateManager.getTwoFAState();
+      if (cachedState !== null) {
+        twoFactorEnabled = cachedState;
+        console.log('[Auth] Using cached 2FA status (priority over fallback):', twoFactorEnabled);
+      } else {
+        // 캐시도 없으면 별도로 2FA 상태 조회
+        console.log('[Auth] No 2FA info in profile, fetching from server...');
+        try {
+          twoFactorEnabled = await this.getTwoFAStatus();
+          console.log('[Auth] 2FA status fetched separately:', twoFactorEnabled);
+        } catch (error) {
+          console.warn('[Auth] Failed to fetch 2FA status, using fallback:', fallbackTwoFactorEnabled);
+          twoFactorEnabled = fallbackTwoFactorEnabled;
+        }
+      }
+    }
     
     // User 객체로 변환
     const user: Types.User = {
@@ -307,6 +539,80 @@ export class AuthApiService extends BaseApiService {
       friends: [],
       matchHistory: []
     };
+    
+    console.log('[Auth] User profile loaded:', { 
+      username: user.username, 
+      twoFactorEnabled: user.twoFactorEnabled 
+    });
+    
+    // 2FA 상태를 캐시에 저장 (최종 결정된 상태를 항상 저장)
+    TwoFAStateManager.setTwoFAState(user.twoFactorEnabled);
+    
+    return user;
+  }
+
+  // 사용자 프로필 정보를 가져오는 공통 메서드 (2FA 상태 확인 없이)
+  private async _fetchUserProfileWithoutTwoFACheck(): Promise<Types.User> {
+    const userProfileResponse = await this.get<{
+      success: boolean;
+      msg: string;
+      data: {
+        me: {
+          name: string;
+          avatar: string | null;
+          twoFactorEnabled?: boolean; // 서버에서 2FA 상태 제공 시
+        };
+      };
+    }>('/api/users/me');
+    
+    // 2FA 상태 결정 로직 개선: 캐시를 우선 사용
+    let twoFactorEnabled: boolean;
+    
+    if (userProfileResponse.data.me.twoFactorEnabled !== undefined) {
+      // 서버에서 명시적으로 2FA 상태를 제공한 경우
+      twoFactorEnabled = userProfileResponse.data.me.twoFactorEnabled;
+      console.log('[Auth] Using server-provided 2FA status (without check):', twoFactorEnabled);
+    } else {
+      // 서버에서 2FA 상태를 제공하지 않는 경우 캐시에서 가져오기
+      const cachedState = TwoFAStateManager.getTwoFAState();
+      if (cachedState !== null) {
+        twoFactorEnabled = cachedState;
+        console.log('[Auth] Using cached 2FA status (without check):', twoFactorEnabled);
+      } else {
+        // 캐시도 없으면 기본값 사용하되 경고 로그 출력
+        console.warn('[Auth] ⚠️ No cached 2FA status found, using default (false) - this may cause 2FA state loss');
+        twoFactorEnabled = false;
+      }
+    }
+    
+    // User 객체로 변환
+    const user: Types.User = {
+      id: '0', // API에서 제공하지 않으므로 기본값
+      username: userProfileResponse.data.me.name,
+      nickname: userProfileResponse.data.me.name,
+      avatarUrl: userProfileResponse.data.me.avatar || undefined,
+      twoFactorEnabled,
+      gamesPlayed: 0,
+      gamesWon: 0,
+      friends: [],
+      matchHistory: []
+    };
+    
+    console.log('[Auth] User profile loaded (without 2FA check):', { 
+      username: user.username, 
+      twoFactorEnabled: user.twoFactorEnabled 
+    });
+    
+    // 2FA 상태를 캐시에 저장 (캐시에서 가져온 값이라도 다시 저장하여 만료시간 갱신)
+    if (userProfileResponse.data.me.twoFactorEnabled !== undefined) {
+      // 서버에서 명시적으로 제공한 경우
+      TwoFAStateManager.setTwoFAState(user.twoFactorEnabled);
+      console.log('[Auth] 2FA status cached from server response:', user.twoFactorEnabled);
+    } else if (twoFactorEnabled !== false) {
+      // 캐시에서 가져온 상태가 기본값이 아닌 경우 다시 저장 (만료시간 갱신)
+      TwoFAStateManager.setTwoFAState(user.twoFactorEnabled);
+      console.log('[Auth] 2FA status re-cached to extend expiry:', user.twoFactorEnabled);
+    }
     
     return user;
   }

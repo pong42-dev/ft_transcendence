@@ -225,15 +225,21 @@ export class LoginModal extends BaseModal {
     }
   }
 
-  private async handleGoogleLogin(): Promise<void> {
-    try {
-      this.setLoading(true);
-      await this.apiClient.auth.loginWithGoogle();
-      // Note: This will redirect the page in real environment
-      // In mock environment, the redirect is handled in the auth service
-    } catch (error) {
-      this.handleError(error, 'LoginModal.handleGoogleLogin', 'Google login failed. Please try again.');
-      this.setLoading(false);
+  private handleGoogleLogin(): void {
+    this.setLoading(true);
+    
+    // Mock 환경에서는 이벤트 리스너 등록
+    if (this.apiClient.shouldUseMockData()) {
+      const handleMockSuccess = (event: CustomEvent) => {
+        window.removeEventListener('mockOAuthSuccess', handleMockSuccess as EventListener);
+        this.close();
+        this.onLoginSuccess(event.detail);
+      };
+      window.addEventListener('mockOAuthSuccess', handleMockSuccess as EventListener);
     }
+    
+    // Google OAuth 시작 (페이지 리다이렉트 또는 Mock 이벤트)
+    this.apiClient.auth.loginWithGoogle();
+    // 리다이렉트가 발생하므로 이후 코드는 실행되지 않음
   }
 }

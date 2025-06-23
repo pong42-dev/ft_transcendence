@@ -1,5 +1,4 @@
 import { BaseApiService } from './BaseApiService';
-import { ErrorLevel } from '../../utils/ErrorHandler';
 import * as Types from '../../types/types';
 
 export class UserApiService extends BaseApiService {
@@ -61,5 +60,6 @@ export class UserApiService extends BaseApiService {
     // 업데이트 후 최신 프로필 조회
     return await this.getProfile();
   }
+
 
 }

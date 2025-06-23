@@ -2,24 +2,23 @@ import { ApiClient } from '../services/ApiClient.js';
 import { User } from '../types/types.js';
 import { validateEmail, validatePassword, validateNickname } from '../utils/validators.js';
 import { BaseModal } from './BaseModal.js';
+import { FileModal } from './FileModal.js';
 
 export class RegisterModal extends BaseModal {
   private apiClient: ApiClient;
   private onRegisterSuccess: (user: User) => void;
   private onSwitchToLogin: () => void;
-  private onGoogleRegisterSuccess: (user: User) => void;
+  private selectedAvatarFile: File | null = null;
 
   constructor(
     apiClient: ApiClient,
     onRegisterSuccess: (user: User) => void,
-    onSwitchToLogin: () => void,
-    onGoogleRegisterSuccess: (user: User) => void
+    onSwitchToLogin: () => void
   ) {
     super();
     this.apiClient = apiClient;
     this.onRegisterSuccess = onRegisterSuccess;
     this.onSwitchToLogin = onSwitchToLogin;
-    this.onGoogleRegisterSuccess = onGoogleRegisterSuccess;
   }
 
   protected onShow(): void {
@@ -96,6 +95,42 @@ export class RegisterModal extends BaseModal {
           <div class="text-xs text-terminal-green mt-1 hidden" id="nickname-success">✓ Username is available</div>
         </div>
         
+        <div>
+          <label class="block text-sm font-medium mb-2 text-terminal-green">Profile Avatar (Optional)</label>
+          <div class="flex items-center space-x-4">
+            <div 
+              id="avatar-preview" 
+              class="w-16 h-16 rounded-full border-2 border-terminal-gray border-dashed flex items-center justify-center cursor-pointer hover:border-terminal-green transition-colors bg-terminal-black overflow-hidden"
+            >
+              <div id="avatar-placeholder" class="text-terminal-gray text-center">
+                <svg class="w-6 h-6 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                </svg>
+              </div>
+              <img id="avatar-image" class="w-full h-full object-cover hidden" alt="Avatar preview" />
+            </div>
+            <div class="flex-1">
+              <button 
+                id="upload-avatar-btn" 
+                type="button"
+                class="text-terminal-green text-sm hover:underline focus:outline-none"
+              >
+                Choose Image
+              </button>
+              <button 
+                id="remove-avatar-btn" 
+                type="button"
+                class="text-terminal-red text-sm hover:underline focus:outline-none ml-3 hidden"
+              >
+                Remove
+              </button>
+              <div class="text-xs text-terminal-gray mt-1">
+                PNG, JPG up to 5MB (Optional)
+              </div>
+            </div>
+          </div>
+        </div>
+        
         <div id="general-error" class="text-terminal-red text-sm text-center hidden"></div>
         
         <button 
@@ -152,6 +187,9 @@ export class RegisterModal extends BaseModal {
     const googleRegisterBtn = this.contentElement.querySelector('#google-register-btn') as HTMLButtonElement;
     const switchToLoginBtn = this.contentElement.querySelector('#switch-to-login-btn') as HTMLButtonElement;
     const closeBtn = this.contentElement.querySelector('#close-btn') as HTMLButtonElement;
+    const uploadAvatarBtn = this.contentElement.querySelector('#upload-avatar-btn') as HTMLButtonElement;
+    const removeAvatarBtn = this.contentElement.querySelector('#remove-avatar-btn') as HTMLButtonElement;
+    const avatarPreview = this.contentElement.querySelector('#avatar-preview') as HTMLElement;
 
     // Close button
     closeBtn.addEventListener('click', () => this.close());
@@ -165,6 +203,11 @@ export class RegisterModal extends BaseModal {
     emailInput.addEventListener('input', () => this.hideFieldError('email'));
     passwordInput.addEventListener('input', () => this.hideFieldError('password'));
     nicknameInput.addEventListener('input', () => this.hideFieldError('nickname'));
+
+    // Avatar upload
+    uploadAvatarBtn.addEventListener('click', () => this.openAvatarModal());
+    avatarPreview.addEventListener('click', () => this.openAvatarModal());
+    removeAvatarBtn.addEventListener('click', () => this.removeAvatar());
 
     // Form submission
     form.addEventListener('submit', (e) => this.handleRegister(e));
@@ -283,7 +326,7 @@ export class RegisterModal extends BaseModal {
     try {
       this.setLoading(true);
       
-      const user = await this.apiClient.auth.register(email, password, nickname);
+      const user = await this.apiClient.auth.register(email, password, nickname, this.selectedAvatarFile || undefined);
       
       this.close();
       this.onRegisterSuccess(user);
@@ -294,39 +337,63 @@ export class RegisterModal extends BaseModal {
     }
   }
 
-  private async handleGoogleRegister(): Promise<void> {
-    try {
-      this.setLoading(true);
-      
-      // Mock 환경에서는 즉시 Google 프로필 모달로 이동
-      if (this.apiClient.shouldUseMockData()) {
+  private handleGoogleRegister(): void {
+    this.setLoading(true);
+    
+    // Mock 환경에서는 이벤트 리스너 등록
+    if (this.apiClient.shouldUseMockData()) {
+      const handleMockSuccess = (event: CustomEvent) => {
+        window.removeEventListener('mockOAuthSuccess', handleMockSuccess as EventListener);
         this.close();
-        // Import and show GoogleProfileModal
-        const { GoogleProfileModal } = await import('./GoogleProfileModal.js');
-        
-        // Mock Google profile data
-        const mockGoogleProfile = {
-          email: 'user@gmail.com',
-          name: 'Google User',
-          picture: 'https://lh3.googleusercontent.com/a/default-user',
-          id: 'google_123456789'
-        };
-        
-        const googleModal = new GoogleProfileModal(
-          this.apiClient,
-          mockGoogleProfile,
-          (user: User) => this.onGoogleRegisterSuccess(user),
-          () => this.show() // Return to register modal on cancel
-        );
-        
-        googleModal.show();
-      } else {
-        // Real environment - redirect to Google OAuth
-        await this.apiClient.auth.loginWithGoogle();
-      }
-    } catch (error) {
-      this.handleError(error, 'RegisterModal.handleGoogleRegister', 'Google registration failed. Please try again.');
-      this.setLoading(false);
+        this.onRegisterSuccess(event.detail);
+      };
+      window.addEventListener('mockOAuthSuccess', handleMockSuccess as EventListener);
     }
+    
+    // Google OAuth 시작 (페이지 리다이렉트 또는 Mock 이벤트)
+    this.apiClient.auth.loginWithGoogle();
+    // 리다이렉트가 발생하므로 이후 코드는 실행되지 않음
+  }
+
+  private openAvatarModal(): void {
+    const fileModal = new FileModal((file: File) => {
+      this.selectedAvatarFile = file;
+      this.showAvatarPreview(file);
+    });
+    fileModal.show();
+  }
+
+  private showAvatarPreview(file: File): void {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const imageUrl = e.target?.result as string;
+      const placeholder = this.contentElement.querySelector('#avatar-placeholder') as HTMLElement;
+      const image = this.contentElement.querySelector('#avatar-image') as HTMLImageElement;
+      const removeBtn = this.contentElement.querySelector('#remove-avatar-btn') as HTMLButtonElement;
+      const preview = this.contentElement.querySelector('#avatar-preview') as HTMLElement;
+
+      placeholder.classList.add('hidden');
+      image.src = imageUrl;
+      image.classList.remove('hidden');
+      removeBtn.classList.remove('hidden');
+      preview.classList.remove('border-dashed');
+      preview.classList.add('border-solid');
+    };
+    reader.readAsDataURL(file);
+  }
+
+  private removeAvatar(): void {
+    const placeholder = this.contentElement.querySelector('#avatar-placeholder') as HTMLElement;
+    const image = this.contentElement.querySelector('#avatar-image') as HTMLImageElement;
+    const removeBtn = this.contentElement.querySelector('#remove-avatar-btn') as HTMLButtonElement;
+    const preview = this.contentElement.querySelector('#avatar-preview') as HTMLElement;
+
+    placeholder.classList.remove('hidden');
+    image.classList.add('hidden');
+    removeBtn.classList.add('hidden');
+    preview.classList.add('border-dashed');
+    preview.classList.remove('border-solid');
+
+    this.selectedAvatarFile = null;
   }
 }

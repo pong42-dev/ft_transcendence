@@ -97,6 +97,13 @@ export class ErrorHandler {
   private handleApiError(apiError: ApiError, context: string): void {
     const { status, data } = apiError;
     
+    // Log API error with context for debugging
+    console.error(`[API ERROR][${context}]`, {
+      status,
+      message: data?.message || apiError.message,
+      timestamp: new Date().toISOString()
+    });
+    
     // Don't show notifications for certain status codes
     const silentStatuses = [401, 403]; // These are handled by interceptors
     

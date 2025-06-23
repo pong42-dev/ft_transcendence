@@ -11,47 +11,11 @@ let mockTmpTokens = new Set<string>();
 
 // Mock Google OAuth 상태 저장
 let mockGoogleOAuthCompleted = false;
-let mockGoogleUser = {
-  name: 'google_user',
-  avatar: 'https://lh3.googleusercontent.com/a/default-user',
-  email: 'user@gmail.com'
-};
-
-// Mock Google OAuth 신규 가입 감지 (처음 OAuth 시)
 let mockIsNewGoogleUser = true;
-
-// Google 프로필 모달 표시 함수
-const showGoogleProfileModal = () => {
-  // Dynamic import to avoid circular dependencies
-  import('../../components/GoogleProfileModal.js').then(({ GoogleProfileModal }) => {
-    // Mock Google 프로필 데이터
-    const mockGoogleProfile = {
-      email: 'user@gmail.com',
-      name: 'Google User',
-      picture: 'https://lh3.googleusercontent.com/a/default-user',
-      id: 'google_123456789'
-    };
-
-    // API Client는 window에서 가져오기 (전역 접근)
-    const apiClient = (window as any).globalApiClient;
-    
-    if (apiClient) {
-      const googleModal = new GoogleProfileModal(
-        apiClient,
-        mockGoogleProfile,
-        (user: any) => {
-          // 성공 시 처리
-          console.log('Google profile setup completed:', user);
-        },
-        () => {
-          // 취소 시 처리
-          console.log('Google profile setup cancelled');
-        }
-      );
-      
-      googleModal.show();
-    }
-  });
+let mockGoogleUser = {
+  name: 'gogglechu_master',
+  avatar: 'https://digi-api.com/images/digimon/w/Gabumon.png',
+  email: 'gogglechu@digiworld.com'
 };
 
 // Mock QR Code 생성 함수
@@ -174,8 +138,7 @@ export const getAuthApiServiceMockResponse = async <T>(
       data: {
         me: {
           name: userData.name,
-          avatar: userData.avatar,
-          twoFactorEnabled: mock2FAEnabled
+          avatar: userData.avatar
         }
       }
     } as T;
@@ -320,27 +283,43 @@ export const getAuthApiServiceMockResponse = async <T>(
     } as T;
   }
   
+  // 2FA 상태 조회 Mock - /api/users/auth/2fa/status
+  if (endpoint.includes('/api/users/auth/2fa/status') && method === 'GET') {
+    return {
+      success: true,
+      msg: '2FA status retrieved successfully.',
+      data: {
+        enabled: mock2FAEnabled
+      }
+    } as T;
+  }
+  
   // ===== Google OAuth Mock Endpoints =====
   
   // Google OAuth 시작 Mock - /api/users/login/google
   if (endpoint.includes('/api/users/login/google') && method === 'GET') {
-    // Mock: OAuth 완료 상태로 설정하고 바로 성공 응답
+    // Mock: Google OAuth를 시뮬레이션하기 위해 Mock 사용자 반환
     mockGoogleOAuthCompleted = true;
     
-    // 신규 사용자인 경우 프로필 설정이 필요함을 표시
-    if (mockIsNewGoogleUser) {
-      mockIsNewGoogleUser = false; // 한 번만 신규 사용자로 처리
-      
-      // 신규 사용자는 Google 프로필 모달을 표시해야 함
-      setTimeout(() => {
-        showGoogleProfileModal();
-      }, 100);
-    }
+    // Mock Google 사용자 데이터 - User 타입에 맞게 수정
+    const mockUser = {
+      id: 'google_mock_123',
+      username: 'gogglechu_master',
+      nickname: 'Gogglechu Master',
+      avatarUrl: 'https://digi-api.com/images/digimon/w/Gabumon.png',
+      twoFactorEnabled: false,
+      gamesPlayed: 42,
+      gamesWon: 28,
+      friends: [],
+      matchHistory: []
+    };
     
-    return {
-      success: true,
-      msg: 'Redirecting to Google OAuth...'
-    } as T;
+    // Mock 토큰 설정 (동적 import 사용)
+    import('../../services/core/TokenManager.js').then(({ TokenManager }) => {
+      TokenManager.setTokens('mock_google_access_token', 'cookie-managed');
+    });
+    
+    return mockUser as T;
   }
   
   // Google OAuth 콜백 Mock - /api/users/login/google/callback

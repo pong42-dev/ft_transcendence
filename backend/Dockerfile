@@ -9,6 +9,7 @@ RUN npm install
 
 # 전체 코드 복사
 COPY ./srcs .
+COPY ./.env ./
 
 RUN npm run db:reset
 

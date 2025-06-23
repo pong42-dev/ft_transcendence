@@ -22,7 +22,17 @@ export class ApiError extends Error {
   }
 
   static fromResponse(response: Response, data: ApiErrorResponse): ApiError {
-    const error = new ApiError(response.status, response.statusText, data);
+    // 백엔드에서 제공하는 메시지 사용 (msg 필드 우선)
+    let message = response.statusText;
+    if (data && typeof data === 'object') {
+      if ('msg' in data && typeof data.msg === 'string' && data.msg) {
+        message = data.msg;
+      } else if ('message' in data && typeof data.message === 'string' && data.message) {
+        message = data.message;
+      }
+    }
+    
+    const error = new ApiError(response.status, message, data);
     return error;
   }
 }
@@ -46,6 +56,7 @@ export abstract class BaseApiService {
   // 재시도 설정
   private readonly maxRetries = 3;
   private readonly retryDelay = 1000;
+  private readonly maxTokenRefreshRetries = 1; // 토큰 새로고침 재시도 횟수
   
   // 정적 인스턴스 추적 (전역 정리를 위함)
   private static instances = new Set<BaseApiService>();
@@ -116,26 +127,26 @@ export abstract class BaseApiService {
     }
   }
 
-  // 토큰 설정
+  // 토큰 가져오기 (TokenManager를 유일한 소스로 사용)
+  public getToken(): string | null {
+    return TokenManager.getAccessToken();
+  }
+
+  // 인증된 사용자인지 확인
+  public isAuthenticated(): boolean {
+    return !!this.getToken();
+  }
+
+  // 레거시 호환성을 위한 메소드들 (실제로는 TokenManager에 위임)
   public setToken(token: string | null): void {
     if (token) {
-      TokenManager.setTokens(token);
+      TokenManager.setTokens(token, 'cookie-managed');
     } else {
       TokenManager.clearTokens();
     }
   }
 
-  // 토큰 가져오기 (메모리에서 가져옴)
-  public getToken(): string | null {
-    return TokenManager.getAccessToken();
-  }
-
-  // 인증된 사용자인지 확인 (메모리 기반)
-  public isAuthenticated(): boolean {
-    return TokenManager.isAuthenticated();
-  }
-
-  // 토큰 제거
+  // 토큰 제거 (TokenManager에 위임)
   public clearToken(): void {
     TokenManager.clearTokens();
   }
@@ -149,7 +160,8 @@ export abstract class BaseApiService {
   protected async request<T>(
     endpoint: string,
     options: RequestInit = {},
-    cacheConfig?: CacheConfig
+    cacheConfig?: CacheConfig,
+    tokenRefreshAttempts: number = 0
   ): Promise<T> {
     // 정리된 서비스에서 요청 방지
     if (this.isDisposed) {
@@ -236,15 +248,16 @@ export abstract class BaseApiService {
       log.api.request(requestMethod, url, options.body);
       
       // 기본 헤더 설정
-      let defaultHeaders: Record<string, string> = {
-        'Content-Type': 'application/json',
-      };
-
-      // 인증 토큰이 있으면 추가 (항상 최신 토큰 사용)
-      const currentToken = this.getToken();
-      if (currentToken) {
-        defaultHeaders.Authorization = `Bearer ${currentToken}`;
+      let defaultHeaders: Record<string, string> = {};
+      
+      // FormData가 아닌 경우만 Content-Type 설정
+      const isFormData = options.body instanceof FormData;
+      if (!isFormData) {
+        defaultHeaders['Content-Type'] = 'application/json';
       }
+
+      // ✅ Authorization 헤더는 이제 Interceptor에서 처리됨
+      // (TokenManager를 통해 중앙 집중식으로 관리)
 
       // 요청 옵션 구성
       let requestOptions: RequestInit = {
@@ -255,7 +268,7 @@ export abstract class BaseApiService {
         },
       };
 
-      // 요청 인터셉터 적용 (최적화된 파이프라인)
+      // 요청 인터셉터 적용 (인증 헤더 포함)
       requestOptions = await this.executeRequestInterceptors(requestOptions, endpoint);
 
       try {
@@ -268,8 +281,18 @@ export abstract class BaseApiService {
           const errorData = await response.json().catch(() => ({})) as ApiErrorResponse;
           const apiError = ApiError.fromResponse(response, errorData);
           
-          // 401 Unauthorized - 토큰 만료 또는 인증 실패
-          if (response.status === 401) {
+          // 401 Unauthorized - 토큰 새로고침 시도
+          if (response.status === 401 && tokenRefreshAttempts < this.maxTokenRefreshRetries) {
+            const refreshed = await this.attemptTokenRefresh(endpoint);
+            if (refreshed) {
+              // 토큰 새로고침 성공 시 원래 요청 재시도
+              console.info('[BaseApiService] Token refreshed, retrying original request');
+              return this.request<T>(endpoint, options, cacheConfig, tokenRefreshAttempts + 1);
+            } else {
+              this.handleUnauthorized();
+            }
+          } else if (response.status === 401) {
+            // 토큰 새로고침 재시도 횟수 초과
             this.handleUnauthorized();
           }
           
@@ -289,12 +312,48 @@ export abstract class BaseApiService {
 
         return responseData;
       } catch (error) {
+        // Interceptor에서 토큰 새로고침이 필요하다고 표시한 경우
+        if ((error as any)?.isTokenRefreshRequired && tokenRefreshAttempts < this.maxTokenRefreshRetries) {
+          console.log('[BaseApiService] Interceptor detected 401, attempting token refresh...');
+          const refreshed = await this.attemptTokenRefresh(endpoint);
+          if (refreshed) {
+            console.info('[BaseApiService] Token refreshed by interceptor signal, retrying original request');
+            return this.request<T>(endpoint, options, cacheConfig, tokenRefreshAttempts + 1);
+          } else {
+            this.handleUnauthorized();
+          }
+        }
+        
         // 응답 에러 인터셉터 적용 (최적화된 파이프라인)
         await this.executeResponseErrorInterceptors(error as Error);
         
         throw error;
       }
     });
+  }
+
+  // 토큰 새로고침 시도 (TokenManager에 위임, 중복 로직 제거)
+  private async attemptTokenRefresh(endpoint: string): Promise<boolean> {
+    // 로그인/회원가입/2FA 검증 요청에서는 토큰 새로고침 시도하지 않음
+    const isAuthRequest = endpoint.includes('/login') || endpoint.includes('/register') || endpoint.includes('/refresh-token') || endpoint.includes('/auth/2fa');
+    if (isAuthRequest) {
+      return false;
+    }
+
+    try {
+      const newToken = await TokenManager.refreshToken();
+      if (newToken) {
+        // TokenManager가 이미 새 토큰을 저장했으므로 추가 작업 불필요
+        console.info('🔄 Token refreshed successfully in BaseApiService');
+        return true;
+      } else {
+        console.warn('Token refresh failed');
+        return false;
+      }
+    } catch (error) {
+      console.error('Token refresh error:', error);
+      return false;
+    }
   }
 
   // 인증 실패 처리
@@ -330,7 +389,7 @@ export abstract class BaseApiService {
       ...options,
     };
 
-    if (data) {
+    if (data !== undefined && data !== null) {
       const isFormData = options && 'isFormData' in options && options.isFormData;
       if (isFormData) {
         requestOptions.body = data;
@@ -340,6 +399,9 @@ export abstract class BaseApiService {
       } else {
         requestOptions.body = JSON.stringify(data);
       }
+    } else {
+      // data가 없는 경우 빈 JSON 객체로 설정 (백엔드 호환성)
+      requestOptions.body = JSON.stringify({});
     }
 
     return this.request<T>(endpoint, requestOptions);
@@ -505,7 +567,12 @@ export abstract class BaseApiService {
         return this.retry(fn, attempts - 1);
       }
       
-      // 최종 실패 시 에러 로깅
+      // 4xx 클라이언트 에러는 정상적인 응답이므로 에러 로깅하지 않고 바로 던지기
+      if (error instanceof ApiError && error.status >= 400 && error.status < 500) {
+        throw error;
+      }
+      
+      // 5xx 서버 에러나 네트워크 에러의 최종 실패만 로깅
       this.errorHandler.handleError(
         error as Error,
         'BaseApiService.retryFailed',

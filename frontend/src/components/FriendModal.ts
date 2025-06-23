@@ -1,11 +1,11 @@
 import { ApiClient, ApiError } from '../services/ApiClient.js';
-import { Friend, User } from '../types/types.js';
+import { Friend } from '../types/types.js';
 import { BaseModal } from './BaseModal.js';
 
 export class FriendModal extends BaseModal {
   private apiClient: ApiClient;
   private friends: Array<Friend & { user_id: number }> = [];
-  private currentView: 'list' | 'add' | 'profile' = 'list';
+  private currentView: 'list' | 'add' | 'profile' = 'list'; // Used in render methods
   private selectedFriendId: number | null = null;
 
   constructor(apiClient: ApiClient) {
@@ -141,7 +141,7 @@ export class FriendModal extends BaseModal {
           <div class="flex items-center mb-4">
             ${profile.avatarUrl ? 
               `<img src="${profile.avatarUrl}" alt="Avatar" class="w-16 h-16 rounded-full mr-4 border border-terminal-gray">` :
-              `<div class="w-16 h-16 rounded-full mr-4 border border-terminal-gray bg-terminal-gray bg-opacity-20 flex items-center justify-center text-terminal-gray text-2xl">${profile.nickname.charAt(0).toUpperCase()}</div>`
+              `<div class="w-16 h-16 rounded-full mr-4 border border-terminal-gray bg-terminal-gray bg-opacity-20 flex items-center justify-center text-terminal-gray text-2xl">${(profile.nickname || profile.username).charAt(0).toUpperCase()}</div>`
             }
             <div>
               <h4 class="text-lg font-bold text-terminal-green">${profile.nickname || profile.username}</h4>
@@ -219,6 +219,7 @@ export class FriendModal extends BaseModal {
     switch (status.toLowerCase()) {
       case 'online':
         return 'bg-terminal-green';
+      case 'ingame':
       case 'in-game':
         return 'bg-terminal-yellow';
       case 'offline':
@@ -270,17 +271,54 @@ export class FriendModal extends BaseModal {
         usernameInput.value = '';
         await this.loadFriends();
       } catch (error) {
-        this.handleError(error, 'FriendModal.addFriend');
-        
-        if (error instanceof ApiError && error.status === 409) {
-          resultDiv.className = 'mb-4 p-3 rounded bg-terminal-yellow bg-opacity-20 border border-terminal-yellow text-terminal-yellow';
-          resultDiv.textContent = `Already following ${username}.`;
-        } else if (error instanceof ApiError && error.status === 404) {
-          resultDiv.className = 'mb-4 p-3 rounded bg-terminal-red bg-opacity-20 border border-terminal-red text-terminal-red';
-          resultDiv.textContent = `User ${username} not found.`;
+        // 클라이언트 에러(4xx)는 정상적인 응답이므로 디버그 레벨로 로깅
+        if (error instanceof Error && 'status' in error) {
+          const status = (error as any).status;
+          if (status >= 400 && status < 500) {
+            console.debug('[FriendModal] Client error (expected):', error.message);
+          } else {
+            console.error('[FriendModal] Add friend error:', error);
+          }
         } else {
+          console.error('[FriendModal] Add friend error:', error);
+        }
+        
+        let errorMessage = `Failed to follow ${username}.`;
+        let isConflict = false;
+        
+        if (error instanceof Error) {
+          // 상세 에러 메시지 추출
+          errorMessage = error.message;
+          
+          // 상태 코드 확인
+          if ('status' in error) {
+            const status = (error as any).status;
+            isConflict = status === 409;
+          }
+          
+          // ApiError 타입 확인 (기존 코드와의 호환성)
+          if (error instanceof ApiError) {
+            isConflict = error.status === 409;
+            errorMessage = error.message;
+          }
+        }
+        
+        // 409 Conflict 에러의 경우 구체적인 메시지 표시
+        if (isConflict) {
+          if (errorMessage.includes('already following') || errorMessage.includes('You are already following')) {
+            resultDiv.className = 'mb-4 p-3 rounded bg-terminal-yellow bg-opacity-20 border border-terminal-yellow text-terminal-yellow';
+            resultDiv.textContent = `Already following ${username}.`;
+          } else if (errorMessage.includes('does not exist') || errorMessage.includes('User does not exist')) {
+            resultDiv.className = 'mb-4 p-3 rounded bg-terminal-red bg-opacity-20 border border-terminal-red text-terminal-red';
+            resultDiv.textContent = `User ${username} not found.`;
+          } else {
+            resultDiv.className = 'mb-4 p-3 rounded bg-terminal-red bg-opacity-20 border border-terminal-red text-terminal-red';
+            resultDiv.textContent = errorMessage;
+          }
+        } else {
+          // 일반 에러
           resultDiv.className = 'mb-4 p-3 rounded bg-terminal-red bg-opacity-20 border border-terminal-red text-terminal-red';
-          resultDiv.textContent = `Failed to follow ${username}.`;
+          resultDiv.textContent = errorMessage;
         }
       }
     };
@@ -309,9 +347,37 @@ export class FriendModal extends BaseModal {
         await this.loadFriends();
         this.renderListView();
       } catch (error) {
+        // 클라이언트 에러(4xx)는 정상적인 응답이므로 디버그 레벨로 로깅
+        if (error instanceof Error && 'status' in error) {
+          const status = (error as any).status;
+          if (status >= 400 && status < 500) {
+            console.debug('[FriendModal] Client error (expected):', error.message);
+          } else {
+            console.error('[FriendModal] Remove friend error:', error);
+          }
+        } else {
+          console.error('[FriendModal] Remove friend error:', error);
+        }
+        
         const errorDiv = document.createElement('div');
         errorDiv.className = 'mt-2 p-2 rounded bg-terminal-red bg-opacity-20 border border-terminal-red text-terminal-red text-sm';
-        errorDiv.textContent = 'Failed to unfollow friend.';
+        
+        if (error instanceof ApiError) {
+          if (error.status === 409) {
+            if (error.message?.includes('not following') || error.message?.includes('You are not following')) {
+              errorDiv.textContent = 'You are not following this user.';
+            } else if (error.message?.includes('Invalid friend ID')) {
+              errorDiv.textContent = 'Invalid friend ID.';
+            } else {
+              errorDiv.textContent = error.message || 'Failed to unfollow friend.';
+            }
+          } else {
+            errorDiv.textContent = error.message || 'Failed to unfollow friend.';
+          }
+        } else {
+          errorDiv.textContent = 'Failed to unfollow friend.';
+        }
+        
         unfollowBtn.parentNode?.insertBefore(errorDiv, unfollowBtn);
       }
     });

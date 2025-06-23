@@ -6,18 +6,18 @@ export class TwoFAModal extends BaseModal {
   private apiClient: ApiClient;
   private currentStep: 'setup' | 'verify' | 'disable' = 'setup';
   private twoFAData: TwoFAInitResponse | null = null;
-  private onComplete: () => void;
+  private onComplete: (code?: string) => void;
   private onCancel: () => void;
 
   constructor(
     apiClient: ApiClient, 
-    mode: 'enable' | 'disable' = 'enable',
-    onComplete: () => void = () => {},
+    mode: 'enable' | 'disable' | 'login' = 'enable',
+    onComplete: (code?: string) => void = () => {},
     onCancel: () => void = () => {}
   ) {
     super();
     this.apiClient = apiClient;
-    this.currentStep = mode === 'enable' ? 'setup' : 'disable';
+    this.currentStep = mode === 'enable' ? 'setup' : mode === 'disable' ? 'disable' : 'verify';
     this.onComplete = onComplete;
     this.onCancel = onCancel;
   }
@@ -47,7 +47,13 @@ export class TwoFAModal extends BaseModal {
     try {
       this.twoFAData = await this.apiClient.auth.initTwoFA();
     } catch (error) {
-      this.handleError(error, 'TwoFAModal.initializeTwoFA', 'Failed to initialize 2FA setup. Please try again.');
+      // 409 Conflict: 2FA가 이미 활성화된 경우
+      if (error instanceof Error && error.message.includes('409')) {
+        this.handleError(error, 'TwoFAModal.initializeTwoFA', 
+          '2FA is already enabled on your account. Please refresh the page to see the current status.');
+      } else {
+        this.handleError(error, 'TwoFAModal.initializeTwoFA', 'Failed to initialize 2FA setup. Please try again.');
+      }
     }
   }
 
@@ -299,8 +305,9 @@ export class TwoFAModal extends BaseModal {
         return;
       }
 
-      // This method should be called from outside with the tmpToken
-      this.onComplete();
+      // For login mode, pass the code back to the caller
+      // For other modes, call the completion callback
+      this.onComplete(code);
     };
 
     verifyBtn?.addEventListener('click', handleVerify);

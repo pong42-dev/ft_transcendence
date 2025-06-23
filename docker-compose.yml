@@ -4,37 +4,41 @@ services:
     build: ./backend
     image: fastify
     ports:
-      - "3000:3000"
+      - "${BACKEND_PORT}:3000"
     volumes:
       - fastify_data:/app/database
     env_file:
-      - .env
+      - ./backend/.env
     networks:
       - ft_transcendence
     restart: always
     init: true
     tty: true
 
-  # frontend:
-  #   container_name: nginx
-  #   build: ./frontend
-  #   ports:
-  #     - "443:80"
-  #   depends_on:
-  #     - backend
-  #   networks:
-  #     - ft_transcendence
-  #   env_file:
-  #     - .env
-  #   restart: always
-  #   init: true
+  frontend:
+    container_name: vite-dev
+    build: ./frontend
+    image: frontend-dev
+    ports:
+      - "${FRONTEND_PORT}:5173"
+    depends_on:
+      - backend
+    networks:
+      - ft_transcendence
+    env_file:
+      - ./frontend/.env
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    restart: always
+    init: true
 
 volumes:
   fastify_data:
     name: fastify_data
     driver: local
     driver_opts:
-      device: /Users/${LOGIN}/app/dev/tmp
+      device: ${DATA_PATH}
       o: bind
       type: none
 

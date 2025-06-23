@@ -36,15 +36,54 @@ export const createInterceptors = (options?: {
   // 🔐 인증 인터셉터
   const authInterceptor: RequestInterceptor = {
     onRequest: async (config, endpoint) => {
-      const publicEndpoints = ['/auth/login', '/auth/register', '/health'];
-      const isPublicEndpoint = publicEndpoints.some(ep => endpoint.includes(ep));
+      console.log('[Interceptor] Processing request to:', endpoint);
       
-      if (!isPublicEndpoint) {
+      const publicEndpoints = [
+        '/auth/login', 
+        '/auth/register', 
+        '/users/check-email',
+        '/users/check-name',
+        '/users/login/local',
+        '/users/login/google',
+        '/users/register',
+        '/users/refresh-token' // refresh 요청은 쿠키 기반이므로 토큰 불필요
+      ];
+      const isPublicEndpoint = publicEndpoints.some(ep => endpoint.includes(ep));
+      // 2FA 검증 엔드포인트만 tmpToken 사용 (정확한 매칭)
+      const is2FAVerifyEndpoint = endpoint.endsWith('/users/auth/2fa');
+      
+      console.log('[Interceptor] Auth check for endpoint:', {
+        endpoint,
+        isPublicEndpoint,
+        is2FAVerifyEndpoint,
+        needsAuth: !isPublicEndpoint && !is2FAVerifyEndpoint
+      });
+      
+      if (!isPublicEndpoint && !is2FAVerifyEndpoint) {
         const token = TokenManager.getAccessToken();
-        if (!token && !endpoint.includes('/auth/refresh')) {
+        console.log('[Interceptor] Token state:', {
+          hasToken: !!token,
+          tokenLength: token?.length,
+          tokenPreview: token ? `${token.substring(0, 20)}...` : 'none'
+        });
+        
+        if (!token) {
+          console.error('[Interceptor] ❌ No access token available for endpoint:', endpoint);
           throw new Error('Authentication required - no access token');
         }
+        
+        // Authorization 헤더 설정
+        const headers = config.headers || {};
+        if (typeof headers === 'object' && !Array.isArray(headers)) {
+          (headers as Record<string, string>).Authorization = `Bearer ${token}`;
+          config.headers = headers;
+          console.log('[Interceptor] ✅ Authorization header added for endpoint:', endpoint);
+        }
+      } else {
+        console.log('[Interceptor] ⏭️ Skipping auth for public/2FA endpoint:', endpoint);
       }
+      
+      // 2FA 검증 엔드포인트는 tmpToken을 사용하고, enable/disable은 일반 토큰을 사용
       
       return config;
     }
@@ -55,6 +94,11 @@ export const createInterceptors = (options?: {
     onResponse: async (response, data) => {
       const url = response.url;
       
+      // 변환이 필요한 데이터인지 먼저 확인
+      if (!data || typeof data !== 'object') {
+        return data;
+      }
+      
       // 간단한 패턴 매칭으로 변환 로직 결정
       try {
         if (URL_PATTERNS.AUTH.test(url) && data.user) {
@@ -63,7 +107,10 @@ export const createInterceptors = (options?: {
         }
         
         if (URL_PATTERNS.USER_PROFILE.test(url) || URL_PATTERNS.USER_SINGLE.test(url)) {
-          return transformUser(data);
+          // 사용자 데이터가 있는 경우만 변환
+          if (data.data && data.data.me) {
+            return data; // 이미 올바른 구조이므로 변환하지 않음
+          }
         }
         
         if (URL_PATTERNS.USER_SEARCH.test(url) && Array.isArray(data)) {
@@ -86,7 +133,7 @@ export const createInterceptors = (options?: {
           {
             component: 'Interceptors',
             action: 'dataTransformationFailed',
-            additionalData: { url }
+            additionalData: { url, dataType: typeof data }
           }
         );
       }
@@ -95,47 +142,22 @@ export const createInterceptors = (options?: {
     }
   };
 
-  // 🔄 토큰 갱신 인터셉터
+  // 🔄 토큰 새로고침 인터셉터 (401 에러 처리) - Interceptor에서는 감지만
   const tokenRefreshInterceptor: ResponseInterceptor = {
-    onResponseError: async (error) => {
-      if (error instanceof ApiError && error.status === 401) {
-        try {
-          const response = await fetch('/auth/refresh', {
-            method: 'POST',
-            credentials: 'include'
-          });
-          
-          if (response.ok) {
-            const { accessToken } = await response.json();
-            TokenManager.updateAccessToken(accessToken);
-            console.info('🔄 Token refreshed successfully');
-          } else {
-            TokenManager.clearTokens();
-            ErrorHandler.getInstance().handleError(
-              new Error('Token refresh failed - clearing tokens'),
-              'Interceptors.tokenRefreshInterceptor',
-              ErrorLevel.WARNING,
-              {
-                component: 'Interceptors',
-                action: 'tokenRefreshFailed'
-              }
-            );
-          }
-        } catch (refreshError) {
-          TokenManager.clearTokens();
-          ErrorHandler.getInstance().handleError(
-            refreshError as Error,
-            'Interceptors.tokenRefreshInterceptor',
-            ErrorLevel.ERROR,
-            {
-              component: 'Interceptors',
-              action: 'tokenRefreshError'
-            }
-          );
-        }
+    onResponse: async (response, data) => {
+      // 401 Unauthorized 응답이고 refresh token 엔드포인트가 아닌 경우
+      if (response.status === 401 && !response.url.includes('/refresh-token')) {
+        console.log('🔄 401 detected, token refresh needed - will be handled by BaseApiService');
+        
+        // 401 에러를 특별한 에러로 마킹하여 BaseApiService에서 처리하도록 함
+        const error = new Error('TOKEN_REFRESH_REQUIRED');
+        (error as any).isTokenRefreshRequired = true;
+        (error as any).originalResponse = response;
+        (error as any).originalData = data;
+        throw error;
       }
       
-      return error;
+      return data;
     }
   };
 

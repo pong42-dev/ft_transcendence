@@ -22,13 +22,11 @@ const getBooleanEnvVar = (key: string, fallback: boolean = false): boolean => {
 };
 
 const getConfigByEnv = (env: string): Config => {
-  const envPrefix = env.toUpperCase();
-  
   return {
-    apiUrl: getEnvVar(`${envPrefix}_API_URL`) || getEnvVar('API_URL', 'http://localhost:3000/api'),
-    wsUrl: getEnvVar(`${envPrefix}_WS_URL`) || getEnvVar('WS_URL', 'ws://localhost:3000'),
-    useMockData: getBooleanEnvVar(`${envPrefix}_USE_MOCK_DATA`, env === 'development') || getBooleanEnvVar('USE_MOCK_DATA', env === 'development'),
-    enableLogging: getBooleanEnvVar(`${envPrefix}_ENABLE_LOGGING`, env === 'development') || getBooleanEnvVar('ENABLE_LOGGING', env === 'development'),
+    apiUrl: getEnvVar('API_URL', 'http://localhost:3000'),
+    wsUrl: getEnvVar('WS_URL', 'ws://localhost:3000'),
+    useMockData: getBooleanEnvVar('USE_MOCK_DATA', false),
+    enableLogging: getBooleanEnvVar('ENABLE_LOGGING', env === 'development'),
   };
 };
 
@@ -39,7 +37,22 @@ export const getConfig = (): Config => {
   // Vite 제거 후 (Node.js 환경)
   // const env = process.env.NODE_ENV || 'development';
   
-  return getConfigByEnv(env);
+  const config = getConfigByEnv(env);
+  
+  // 디버깅을 위한 환경 변수 로깅 (항상 표시)
+  console.group('🔧 Environment Configuration Debug');
+  console.log('Environment:', env);
+  console.log('Final Config:', config);
+  console.log('All import.meta.env:', import.meta.env);
+  console.log('Specific checks:');
+  console.log('  import.meta.env.VITE_API_URL:', import.meta.env.VITE_API_URL);
+  console.log('  import.meta.env.VITE_USE_MOCK_DATA:', import.meta.env.VITE_USE_MOCK_DATA);
+  console.log('  import.meta.env.VITE_MODE:', import.meta.env.VITE_MODE);
+  console.log('  getEnvVar(API_URL):', getEnvVar('API_URL'));
+  console.log('  getBooleanEnvVar(USE_MOCK_DATA):', getBooleanEnvVar('USE_MOCK_DATA'));
+  console.groupEnd();
+  
+  return config;
 };
 
 export const isDevelopment = (): boolean => {
