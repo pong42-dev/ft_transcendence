@@ -1,7 +1,7 @@
 import { GameConfig } from './GameConfig.js';
 
 /**
- * Game Logic Module
+ * Game Engine Module
  * 
  * 게임 물리 엔진 및 핵심 로직을 담당하는 모듈
  * 원본 PongGame.ts의 공/패들 움직임, 충돌 감지, 점수 계산 로직을 분리
@@ -9,7 +9,7 @@ import { GameConfig } from './GameConfig.js';
  * @role 게임 물리 및 핵심 로직
  * @extracted_from PongGame.ts (기존 로직 그대로 유지)
  */
-export class GameLogic {
+export class GameEngine {
   private config: GameConfig;
   
   // Game state
