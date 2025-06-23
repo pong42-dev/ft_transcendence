@@ -19,9 +19,9 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				security: [{ bearerAuth: [] }],
 				headers: Type.Object({
 					authorization: Type.String(),
-					// cookies: Type.String({
-					// 	description: 'refresh_token=abc123;'
-					// }),
+					cookies: Type.String({
+						description: 'refresh_token=abc123;'
+					}),
 				}),
 				response: {
 					200: Type.Object({
