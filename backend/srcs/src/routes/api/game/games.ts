@@ -1,0 +1,1 @@
+// games/ts for the game routes
