@@ -55,7 +55,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 						}
 						await userTokensRepository.deleteRowByColumnValue("user_id", user_id);
 						await tmpTokenRepository.deleteRowByColumnValue("user_id", user_id);
-						reply.clearCookie(this.config.COOKIE_NAME, { path: '/' });
+						reply.clearCookie('refresh_token', { path: '/' });
 						await userProfilesRepository.updateRowByColumn("user_id", user_id, "status", false);
 						return reply.send({ 
 							success: true,
