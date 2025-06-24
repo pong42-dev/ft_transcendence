@@ -11,11 +11,13 @@ import { Player, GameMode, GameStatus } from '../schemas/games.js';
  * - 게임 세션 생성/삭제/조회
  * - 게임 ID 관리
  * - 토너먼트 시스템 연동 인터페이스 제공
+ * - WebSocket 브로드캐스트 연동
  */
 export class GameManager {
   private sessions: { [key: string]: GameSession } = {};
   private gameIdCounter: number = 1;
   private static instance: GameManager;
+  private webSocketHandler?: any; // GameWebSocketHandler 타입 (순환 참조 방지)
 
   constructor() {}
 
@@ -24,6 +26,13 @@ export class GameManager {
       GameManager.instance = new GameManager();
     }
     return GameManager.instance;
+  }
+
+  /**
+   * WebSocket 핸들러 등록
+   */
+  public setWebSocketHandler(handler: any): void {
+    this.webSocketHandler = handler;
   }
 
   /**
@@ -148,8 +157,12 @@ export class GameManager {
    */
   private handleGameStateUpdate(gameId: string, gameState: any): void {
     // WebSocket을 통해 클라이언트들에게 게임 상태 브로드캐스트
-    // 현재는 로깅만 수행
-    console.log(`Game state updated: ${gameId}`, gameState);
+    if (this.webSocketHandler) {
+      this.webSocketHandler.broadcastGameState(gameId, gameState);
+    }
+    
+    // 로깅
+    console.log(`Game state updated: ${gameId}`);
   }
 
   /**
@@ -160,6 +173,11 @@ export class GameManager {
    */
   private handleGameEnd(gameId: string, winner: string, gameResult: any): void {
     console.log(`Game ended: ${gameId}, Winner: ${winner}`, gameResult);
+    
+    // WebSocket을 통해 게임 종료 브로드캐스트
+    if (this.webSocketHandler) {
+      this.webSocketHandler.broadcastGameEnd(gameId, gameResult);
+    }
     
     // 게임 결과 저장 로직 (추후 구현)
     // 토너먼트 시스템에 결과 전달 (추후 구현)
