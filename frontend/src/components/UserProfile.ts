@@ -6,19 +6,17 @@ export class UserProfile {
   private profileElement: HTMLElement;
   private isCurrentUser: boolean;
   private apiClient: ApiClient;
+  private onUserStateChange?: (updatedUser: User) => void;
 
-  constructor(user: User, isCurrentUser: boolean = false, apiClient?: ApiClient) {
+  constructor(user: User, isCurrentUser: boolean = false, apiClient?: ApiClient, onUserStateChange?: (updatedUser: User) => void) {
     this.user = user;
     this.profileElement = document.createElement('div');
     this.isCurrentUser = isCurrentUser;
     this.apiClient = apiClient || new ApiClient();
+    this.onUserStateChange = onUserStateChange;
   }
 
   public render(): HTMLElement {
-    // 현재 사용자인 경우 캐시된 2FA 상태와 동기화 (동기적으로 처리)
-    if (this.isCurrentUser) {
-      this.syncTwoFAStateWithCacheSync();
-    }
     
     this.profileElement.className = 'w-full h-full bg-terminal-black text-terminal-green overflow-y-auto scrollbar-hide';
 
@@ -358,59 +356,10 @@ export class UserProfile {
     });
   }
 
-  private syncTwoFAStateWithCacheSync(): void {
-    try {
-      // 동기적으로 캐시된 2FA 상태 확인 (localStorage는 동기적)
-      const cached = localStorage.getItem('twofa_state');
-      if (cached) {
-        const data = JSON.parse(cached);
-        const cachedTwoFAState = typeof data === 'boolean' ? data : data.enabled;
-        
-        if (typeof cachedTwoFAState === 'boolean' && cachedTwoFAState !== this.user.twoFactorEnabled) {
-          console.log('[UserProfile] Syncing 2FA state with cache:', {
-            before: this.user.twoFactorEnabled,
-            after: cachedTwoFAState
-          });
-          this.user.twoFactorEnabled = cachedTwoFAState;
-        }
-      }
-    } catch (error) {
-      console.warn('[UserProfile] Failed to sync 2FA state with cache:', error);
-    }
-  }
 
-  private async syncTwoFAStateWithCache(): Promise<void> {
-    try {
-      const { TwoFAStateManager } = await import('../services/core/TokenManager.js');
-      const cachedTwoFAState = TwoFAStateManager.getTwoFAState();
-      
-      if (cachedTwoFAState !== null && cachedTwoFAState !== this.user.twoFactorEnabled) {
-        console.log('[UserProfile] Syncing 2FA state with cache:', {
-          before: this.user.twoFactorEnabled,
-          after: cachedTwoFAState
-        });
-        this.user.twoFactorEnabled = cachedTwoFAState;
-      }
-    } catch (error) {
-      console.warn('[UserProfile] Failed to sync 2FA state with cache:', error);
-    }
-  }
 
   private async handleTwoFAToggle(): Promise<void> {
     const { TwoFAModal } = await import('./TwoFAModal.js');
-    const { TwoFAStateManager } = await import('../services/core/TokenManager.js');
-    
-    // 캐시된 2FA 상태를 확인하여 사용자 객체와 동기화
-    const cachedTwoFAState = TwoFAStateManager.getTwoFAState();
-    if (cachedTwoFAState !== null && cachedTwoFAState !== this.user.twoFactorEnabled) {
-      console.warn('[UserProfile] 2FA state mismatch detected, syncing with cache:', {
-        userObject: this.user.twoFactorEnabled,
-        cached: cachedTwoFAState
-      });
-      this.user.twoFactorEnabled = cachedTwoFAState;
-      this.render(); // UI 다시 렌더링
-      return; // 토글 중단하고 올바른 상태로 표시
-    }
     
     if (this.user.twoFactorEnabled) {
       // Disable 2FA
@@ -418,11 +367,13 @@ export class UserProfile {
         this.apiClient,
         'disable',
         async () => {
-          // Update user state, cache, and re-render
+          // Update user state and re-render
           this.user.twoFactorEnabled = false;
-          const { TwoFAStateManager } = await import('../services/core/TokenManager.js');
-          TwoFAStateManager.setTwoFAState(false);
           this.render();
+          // Notify parent component of state change
+          if (this.onUserStateChange) {
+            this.onUserStateChange({ ...this.user });
+          }
         },
         () => {
           // Cancel - no action needed
@@ -435,11 +386,13 @@ export class UserProfile {
         this.apiClient,
         'enable',
         async () => {
-          // Update user state, cache, and re-render
+          // Update user state and re-render
           this.user.twoFactorEnabled = true;
-          const { TwoFAStateManager } = await import('../services/core/TokenManager.js');
-          TwoFAStateManager.setTwoFAState(true);
           this.render();
+          // Notify parent component of state change
+          if (this.onUserStateChange) {
+            this.onUserStateChange({ ...this.user });
+          }
         },
         () => {
           // Cancel - no action needed

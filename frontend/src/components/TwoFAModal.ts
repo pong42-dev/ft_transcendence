@@ -276,7 +276,20 @@ export class TwoFAModal extends BaseModal {
         
         this.showSuccess();
       } catch (error) {
-        this.handleError(error, 'TwoFAModal.enableTwoFA', 'Failed to enable 2FA. Please check your code and try again.');
+        // 더 구체적인 에러 메시지 처리
+        let errorMessage = 'Failed to enable 2FA. Please check your code and try again.';
+        
+        if (error instanceof Error) {
+          if (error.message.includes('Invalid tmp token') || error.message.includes('tmp token')) {
+            errorMessage = 'Setup session expired. Please restart 2FA setup process.';
+          } else if (error.message.includes('409') || error.message.includes('already enabled')) {
+            errorMessage = '2FA is already enabled. Please disable it first before setting up again.';
+          } else if (error.message.includes('Invalid code') || error.message.includes('code')) {
+            errorMessage = 'Invalid verification code. Please check your authenticator app and try again.';
+          }
+        }
+        
+        this.handleError(error, 'TwoFAModal.enableTwoFA', errorMessage);
       } finally {
         this.setButtonLoading('verify-btn', false);
       }

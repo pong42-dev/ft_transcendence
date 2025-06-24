@@ -5,7 +5,7 @@ import { UserProfile } from './UserProfile.js';
 import { Router } from '../utils/Router.js';
 import {
   AppState,
-  // User,
+  User,
   // Friend,
   Player
 } from '../types/types.js';
@@ -15,7 +15,7 @@ import { GameEndModal } from './GameEndModal.js';
 import { FriendModal } from './FriendModal.js';
 import { TwoFAModal } from './TwoFAModal.js';
 import { ErrorHandler, ErrorLevel } from '../utils/ErrorHandler.js';
-import { TokenManager, TwoFAStateManager } from '../services/core/TokenManager.js';
+import { TokenManager } from '../services/core/TokenManager.js';
 
 export class App {
   // UI Elements References
@@ -78,20 +78,22 @@ export class App {
       // 토큰이 있으면 일단 인증된 상태로 설정 (백그라운드에서 검증 예정)
       this.state.isLoggedIn = true;
       
-      // 캐시된 사용자 정보도 복원 시도
+      // 기본 사용자 정보만 복원 (2FA 상태는 API에서만 가져옴)
       const cachedUser = this.restoreCachedUserState();
       if (cachedUser) {
-        this.state.currentUser = cachedUser;
-        console.log('👤 Cached user state restored:', cachedUser.username, '2FA:', cachedUser.twoFactorEnabled);
+        // 2FA 상태를 제외한 기본 정보만 사용
+        this.state.currentUser = {
+          ...cachedUser,
+          twoFactorEnabled: false // 기본값, API 검증 후 실제 값으로 업데이트
+        };
+        console.log('👤 Cached user state restored (excluding 2FA):', cachedUser.username);
         
-        // 2FA 상태와 사용자 캐시 간 일관성 확인 및 동기화
-        TwoFAStateManager.validateWithUserCache();
       } else {
         console.log('⚠️ No cached user state found, will fetch from server');
       }
       
-      // UI 즉시 업데이트 (로딩 상태 최소화)
-      this.render();
+      // API 검증 완료 전까지는 UI 렌더링 지연 (2FA 상태 안정성 우선)
+      // this.render(); // 주석 처리: checkAuthState 완료 후 렌더링
     } else {
       console.log('❌ No session token found, remaining in logged out state');
     }
@@ -182,33 +184,19 @@ export class App {
               twoFactorEnabled: verifiedUser.twoFactorEnabled
             });
             
-            // API에서 반환된 사용자 정보가 캐시된 정보와 다르면 불일치 해결
-            if (verifiedUser.twoFactorEnabled !== this.state.currentUser.twoFactorEnabled) {
-              console.warn('⚠️ 2FA state mismatch detected!', {
-                cached: this.state.currentUser.twoFactorEnabled,
-                fromAPI: verifiedUser.twoFactorEnabled
-              });
-              
-              // 원칙: 사용자가 마지막으로 설정한 상태(캐시)를 우선함
-              const finalTwoFAState = this.state.currentUser.twoFactorEnabled;
-              
-              // 사용자 정보 업데이트 (2FA 상태는 캐시 값 유지)
-              this.state.currentUser = { 
-                ...verifiedUser, 
-                twoFactorEnabled: finalTwoFAState 
-              };
-              
-              // 양쪽 캐시 모두 업데이트
-              this.cacheUserState(this.state.currentUser);
-              TwoFAStateManager.setTwoFAState(finalTwoFAState);
-              
-              console.log('🔄 2FA state corrected to cached value:', finalTwoFAState);
-            } else {
-              // 일치하는 경우도 캐시 만료시간 갱신
-              TwoFAStateManager.refreshTwoFAStateExpiry();
-            }
+            // 항상 백엔드 API 응답을 사용 (2FA 상태는 캐시하지 않음)
+            this.state.currentUser = verifiedUser;
+            
+            // 2FA 상태를 제외한 사용자 정보만 캐시
+            const userToCache = { ...verifiedUser };
+            delete (userToCache as any).twoFactorEnabled; // 2FA 상태는 캐시하지 않음
+            this.cacheUserState(userToCache);
+            
+            console.log('✅ User state updated from API, 2FA:', verifiedUser.twoFactorEnabled);
             
             console.log('✅ Session token verified, maintaining current state');
+            // API 검증 완료 후 UI 렌더링
+            this.render();
             return;
           } catch (verifyError) {
             console.warn('⚠️ Session token verification failed, will try refresh:', verifyError);
@@ -309,7 +297,6 @@ export class App {
             // 기존 2FA 상태를 유지
             const preservedTwoFAState = this.state.currentUser.twoFactorEnabled;
             this.state.currentUser = { ...user, twoFactorEnabled: preservedTwoFAState };
-            TwoFAStateManager.setTwoFAState(preservedTwoFAState);
             
             console.log('🔄 Preserved existing 2FA state after token refresh:', preservedTwoFAState);
           } else {
@@ -492,7 +479,19 @@ export class App {
       return;
     }
     this.state.isInGame = false; // Explicitly set game state to false
-    this.userProfile = new UserProfile(this.state.currentUser!, true);
+    this.userProfile = new UserProfile(
+      this.state.currentUser!, 
+      true, 
+      this.apiClient,
+      (updatedUser: User) => {
+        // Update global state when user profile changes
+        this.state.currentUser = updatedUser;
+        // Update cached user data (excluding 2FA state)
+        const userToCache = { ...updatedUser };
+        delete (userToCache as any).twoFactorEnabled; // 2FA 상태는 캐시하지 않음
+        this.cacheUserState(userToCache);
+      }
+    );
     this.updateMainContent();
   }
 
@@ -1051,13 +1050,7 @@ export class App {
       };
       localStorage.setItem('user_state_cache', JSON.stringify(cacheData));
       
-      // 2FA 상태도 별도 캐시에 동기화
-      if (typeof user.twoFactorEnabled === 'boolean') {
-        TwoFAStateManager.setTwoFAState(user.twoFactorEnabled);
-        console.log('💾 User state cached successfully:', user.username, '2FA:', user.twoFactorEnabled);
-      } else {
-        console.log('💾 User state cached successfully:', user.username, '(no 2FA info)');
-      }
+      console.log('💾 User state cached successfully:', user.username, '2FA:', user.twoFactorEnabled);
     } catch (error) {
       console.warn('❌ Failed to cache user state:', error);
     }
@@ -1085,18 +1078,6 @@ export class App {
         return null;
       }
       
-      // 2FA 상태를 별도 캐시와 동기화
-      if (user && typeof user.twoFactorEnabled === 'boolean') {
-        const cachedTwoFA = TwoFAStateManager.getTwoFAState();
-        if (cachedTwoFA !== null && cachedTwoFA !== user.twoFactorEnabled) {
-          console.warn('⚠️ 2FA state mismatch between user cache and 2FA cache, using user cache');
-          TwoFAStateManager.setTwoFAState(user.twoFactorEnabled);
-        } else if (cachedTwoFA === null) {
-          // 2FA 캐시가 없으면 사용자 캐시 값으로 설정
-          TwoFAStateManager.setTwoFAState(user.twoFactorEnabled);
-          console.log('🔄 Initialized 2FA cache from user cache:', user.twoFactorEnabled);
-        }
-      }
       
       console.log('📱 Restored cached user state:', user.username, '2FA:', user.twoFactorEnabled);
       return user;

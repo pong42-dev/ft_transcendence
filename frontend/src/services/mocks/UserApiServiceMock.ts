@@ -20,9 +20,11 @@ export const getUserApiServiceMockResponse = async <T>(
       success: true,
       msg: 'User Profile successfully retrieved.',
       data: {
-        me: {
+        userInfo: {
           name: 'agumon_trainer',
-          avatar: 'https://digi-api.com/images/digimon/w/Agumon.png'
+          avatar: 'https://digi-api.com/images/digimon/w/Agumon.png',
+          twoFA: false,
+          email: 'agumon@digiworld.com'
         }
       }
     } as T;

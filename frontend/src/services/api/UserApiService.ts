@@ -8,24 +8,42 @@ export class UserApiService extends BaseApiService {
 
   // 현재 사용자 프로필 조회 - /api/users/me
   async getProfile(): Promise<Types.User> {
-    const response = await this.get<{
-      success: boolean;
-      msg: string;
-      data: {
-        me: {
-          name: string;
-          avatar: string | null;
-        };
+    const response = await this.get<any>('/api/users/me');
+    
+    // 응답 구조 검증 및 호환성 처리
+    let userData: { name: string; avatar: string | null; twoFA?: boolean; email?: string };
+    
+    if (response.data?.userInfo) {
+      // 새로운 API 구조: data.userInfo
+      userData = response.data.userInfo;
+    } else if (response.data?.me) {
+      // 이전 API 구조: data.me (호환성)
+      const meData = response.data.me;
+      userData = {
+        name: meData.name,
+        avatar: meData.avatar,
+        twoFA: meData.twoFactorEnabled,
+        email: meData.email
       };
-    }>('/api/users/me');
+      console.warn('[UserApi] Using legacy API structure (data.me)');
+    } else {
+      console.error('[UserApi] Invalid API response structure:', response);
+      throw new Error('Invalid API response structure: missing userInfo or me');
+    }
+    
+    // 필수 필드 검증
+    if (!userData.name) {
+      console.error('[UserApi] Missing required field: name');
+      throw new Error('Invalid user data: missing name field');
+    }
     
     // User 객체로 변환
     const user: Types.User = {
       id: '0', // API에서 제공하지 않으므로 기본값
-      username: response.data.me.name,
-      nickname: response.data.me.name,
-      avatarUrl: response.data.me.avatar || undefined,
-      twoFactorEnabled: false,
+      username: userData.name,
+      nickname: userData.name,
+      avatarUrl: userData.avatar || undefined,
+      twoFactorEnabled: userData.twoFA ?? false,
       gamesPlayed: 0,
       gamesWon: 0,
       friends: [],

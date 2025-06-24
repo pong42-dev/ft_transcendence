@@ -129,16 +129,19 @@ export const getAuthApiServiceMockResponse = async <T>(
     // Google OAuth 사용자인지 확인
     const userData = mockGoogleOAuthCompleted ? mockGoogleUser : {
       name: 'agumon_trainer',
-      avatar: 'https://digi-api.com/images/digimon/w/Agumon.png'
+      avatar: 'https://digi-api.com/images/digimon/w/Agumon.png',
+      email: 'agumon@digiworld.com'
     };
     
     return {
       success: true,
       msg: 'User Profile successfully retrieved.',
       data: {
-        me: {
+        userInfo: {
           name: userData.name,
-          avatar: userData.avatar
+          avatar: userData.avatar,
+          twoFA: mock2FAEnabled,
+          email: userData.email
         }
       }
     } as T;

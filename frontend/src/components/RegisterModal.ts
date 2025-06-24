@@ -328,6 +328,11 @@ export class RegisterModal extends BaseModal {
       
       const user = await this.apiClient.auth.register(email, password, nickname, this.selectedAvatarFile || undefined);
       
+      // 사용자 객체 검증
+      if (!user || !user.username) {
+        throw new Error('Invalid user object returned from registration');
+      }
+      
       this.close();
       this.onRegisterSuccess(user);
     } catch (error) {

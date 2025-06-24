@@ -1,5 +1,5 @@
 import { BaseApiService, ApiError } from './BaseApiService';
-import { TokenManager, TwoFAStateManager } from '../core/TokenManager';
+import { TokenManager } from '../core/TokenManager';
 import { ErrorLevel } from '../../utils/ErrorHandler';
 import * as Types from '../../types/types';
 
@@ -169,8 +169,7 @@ export class AuthApiService extends BaseApiService {
     
     // 서버 요청 결과와 관계없이 클라이언트 토큰은 항상 정리
     TokenManager.clearTokens();
-    TwoFAStateManager.clearTwoFAState();
-    console.info('[Auth] Client tokens and 2FA state cleared');
+    console.info('[Auth] Client tokens cleared');
   }
 
   // Google OAuth 로그인 - /api/users/login/google
@@ -241,13 +240,7 @@ export class AuthApiService extends BaseApiService {
       throw new ApiError(401, 'Authentication required', { message: 'No access token available for verification' });
     }
     
-    // 캐시된 2FA 상태가 있으면 그것을 사용 (새로고침 시 상태 유지)
-    const cachedState = TwoFAStateManager.getTwoFAState();
-    if (cachedState !== null) {
-      console.log('[Auth] Using cached 2FA state for token verification:', cachedState);
-      return await this._fetchUserProfile(cachedState);
-    }
-    // 캐시가 없으면 기본값 사용
+    // 기본값 사용
     return await this._fetchUserProfile(false);
   }
 
@@ -376,9 +369,7 @@ export class AuthApiService extends BaseApiService {
       credentials: 'include'
     });
     
-    // 2FA 활성화 성공 후 캐시 상태 업데이트
-    TwoFAStateManager.setTwoFAState(true);
-    console.log('[Auth] 2FA enabled successfully, cache updated');
+    console.log('[Auth] 2FA enabled successfully');
   }
 
   // 2FA 로그인 검증 - /api/users/auth/2fa
@@ -441,98 +432,62 @@ export class AuthApiService extends BaseApiService {
       credentials: 'include'
     });
     
-    // 2FA 비활성화 성공 후 캐시 상태 업데이트
-    TwoFAStateManager.setTwoFAState(false);
-    console.log('[Auth] 2FA disabled successfully, cache updated');
+    console.log('[Auth] 2FA disabled successfully');
   }
 
-  // 2FA 상태 확인 - 서버에서 정확한 상태 조회
-  async getTwoFAStatus(): Promise<boolean> {
-    try {
-      // 캐시된 상태가 있고 최근 것이면 사용
-      const cachedState = TwoFAStateManager.getTwoFAState();
-      if (cachedState !== null) {
-        console.log('[Auth] Using cached 2FA status:', cachedState);
-        return cachedState;
-      }
-      
-      // 캐시가 없으면 서버에서 사용자 정보를 가져와서 2FA 상태 확인
-      const userProfileResponse = await this.get<{
-        success: boolean;
-        msg: string;
-        data: {
-          me: {
-            name: string;
-            avatar: string | null;
-            twoFactorEnabled?: boolean;
-          };
-        };
-      }>('/api/users/me');
-      
-      const twoFactorEnabled = userProfileResponse.data.me.twoFactorEnabled || false;
-      console.log('[Auth] 2FA status retrieved from server:', twoFactorEnabled);
-      
-      // 서버에서 가져온 상태를 캐시에 저장
-      TwoFAStateManager.setTwoFAState(twoFactorEnabled);
-      
-      return twoFactorEnabled;
-    } catch (error) {
-      console.warn('[Auth] Failed to get 2FA status from server, using default (false):', error);
-      return false;
-    }
-  }
 
   // ===== PRIVATE HELPER METHODS =====
 
   // 사용자 프로필 정보를 가져오는 공통 메서드 (API 호출 중복 제거)
   private async _fetchUserProfile(fallbackTwoFactorEnabled: boolean = false): Promise<Types.User> {
-    const userProfileResponse = await this.get<{
-      success: boolean;
-      msg: string;
-      data: {
-        me: {
-          name: string;
-          avatar: string | null;
-          twoFactorEnabled?: boolean; // 서버에서 2FA 상태 제공 시
-        };
-      };
-    }>('/api/users/me');
+    const userProfileResponse = await this.get<any>('/api/users/me');
     
-    // 2FA 상태 결정 로직 개선: 서버 제공 → 캐시 → 서버 재조회 → fallback 순서
+    // 응답 구조 검증 및 호환성 처리
+    let userData: { name: string; avatar: string | null; twoFA?: boolean; email?: string };
+    
+    if (userProfileResponse.data?.userInfo) {
+      // 새로운 API 구조: data.userInfo
+      userData = userProfileResponse.data.userInfo;
+    } else if (userProfileResponse.data?.me) {
+      // 이전 API 구조: data.me (호환성)
+      const meData = userProfileResponse.data.me;
+      userData = {
+        name: meData.name,
+        avatar: meData.avatar,
+        twoFA: meData.twoFactorEnabled,
+        email: meData.email
+      };
+      console.warn('[Auth] Using legacy API structure (data.me)');
+    } else {
+      console.error('[Auth] Invalid API response structure:', userProfileResponse);
+      throw new Error('Invalid API response structure: missing userInfo or me');
+    }
+    
+    // 필수 필드 검증
+    if (!userData.name) {
+      console.error('[Auth] Missing required field: name');
+      throw new Error('Invalid user data: missing name field');
+    }
+    
+    // 2FA 상태 결정 로직: 서버 제공 → fallback
     let twoFactorEnabled: boolean;
     
-    if (userProfileResponse.data.me.twoFactorEnabled !== undefined) {
+    if (userData.twoFA !== undefined) {
       // 서버에서 명시적으로 2FA 상태를 제공한 경우
-      twoFactorEnabled = userProfileResponse.data.me.twoFactorEnabled;
+      twoFactorEnabled = userData.twoFA;
       console.log('[Auth] Using server-provided 2FA status:', twoFactorEnabled);
-      
-      // 서버에서 제공한 상태를 캐시에 저장
-      TwoFAStateManager.setTwoFAState(twoFactorEnabled);
     } else {
-      // 서버에서 2FA 상태를 제공하지 않는 경우: 캐시 → 서버 재조회 → fallback 순서
-      const cachedState = TwoFAStateManager.getTwoFAState();
-      if (cachedState !== null) {
-        twoFactorEnabled = cachedState;
-        console.log('[Auth] Using cached 2FA status (priority over fallback):', twoFactorEnabled);
-      } else {
-        // 캐시도 없으면 별도로 2FA 상태 조회
-        console.log('[Auth] No 2FA info in profile, fetching from server...');
-        try {
-          twoFactorEnabled = await this.getTwoFAStatus();
-          console.log('[Auth] 2FA status fetched separately:', twoFactorEnabled);
-        } catch (error) {
-          console.warn('[Auth] Failed to fetch 2FA status, using fallback:', fallbackTwoFactorEnabled);
-          twoFactorEnabled = fallbackTwoFactorEnabled;
-        }
-      }
+      // 서버에서 2FA 상태를 제공하지 않는 경우 fallback 사용
+      console.warn('[Auth] No 2FA info in profile, using fallback:', fallbackTwoFactorEnabled);
+      twoFactorEnabled = fallbackTwoFactorEnabled;
     }
     
     // User 객체로 변환
     const user: Types.User = {
       id: '0', // API에서 제공하지 않으므로 기본값
-      username: userProfileResponse.data.me.name,
-      nickname: userProfileResponse.data.me.name,
-      avatarUrl: userProfileResponse.data.me.avatar || undefined,
+      username: userData.name,
+      nickname: userData.name,
+      avatarUrl: userData.avatar || undefined,
       twoFactorEnabled,
       gamesPlayed: 0,
       gamesWon: 0,
@@ -545,52 +500,51 @@ export class AuthApiService extends BaseApiService {
       twoFactorEnabled: user.twoFactorEnabled 
     });
     
-    // 2FA 상태를 캐시에 저장 (최종 결정된 상태를 항상 저장)
-    TwoFAStateManager.setTwoFAState(user.twoFactorEnabled);
     
     return user;
   }
 
   // 사용자 프로필 정보를 가져오는 공통 메서드 (2FA 상태 확인 없이)
   private async _fetchUserProfileWithoutTwoFACheck(): Promise<Types.User> {
-    const userProfileResponse = await this.get<{
-      success: boolean;
-      msg: string;
-      data: {
-        me: {
-          name: string;
-          avatar: string | null;
-          twoFactorEnabled?: boolean; // 서버에서 2FA 상태 제공 시
-        };
+    const userProfileResponse = await this.get<any>('/api/users/me');
+    
+    // 응답 구조 검증 및 호환성 처리
+    let userData: { name: string; avatar: string | null; twoFA?: boolean; email?: string };
+    
+    if (userProfileResponse.data?.userInfo) {
+      // 새로운 API 구조: data.userInfo
+      userData = userProfileResponse.data.userInfo;
+    } else if (userProfileResponse.data?.me) {
+      // 이전 API 구조: data.me (호환성)
+      const meData = userProfileResponse.data.me;
+      userData = {
+        name: meData.name,
+        avatar: meData.avatar,
+        twoFA: meData.twoFactorEnabled,
+        email: meData.email
       };
-    }>('/api/users/me');
-    
-    // 2FA 상태 결정 로직 개선: 캐시를 우선 사용
-    let twoFactorEnabled: boolean;
-    
-    if (userProfileResponse.data.me.twoFactorEnabled !== undefined) {
-      // 서버에서 명시적으로 2FA 상태를 제공한 경우
-      twoFactorEnabled = userProfileResponse.data.me.twoFactorEnabled;
-      console.log('[Auth] Using server-provided 2FA status (without check):', twoFactorEnabled);
+      console.warn('[Auth] Using legacy API structure (data.me)');
     } else {
-      // 서버에서 2FA 상태를 제공하지 않는 경우 캐시에서 가져오기
-      const cachedState = TwoFAStateManager.getTwoFAState();
-      if (cachedState !== null) {
-        twoFactorEnabled = cachedState;
-        console.log('[Auth] Using cached 2FA status (without check):', twoFactorEnabled);
-      } else {
-        // 캐시도 없으면 기본값 사용하되 경고 로그 출력
-        console.warn('[Auth] ⚠️ No cached 2FA status found, using default (false) - this may cause 2FA state loss');
-        twoFactorEnabled = false;
-      }
+      console.error('[Auth] Invalid API response structure:', userProfileResponse);
+      throw new Error('Invalid API response structure: missing userInfo or me');
     }
+    
+    // 필수 필드 검증
+    if (!userData.name) {
+      console.error('[Auth] Missing required field: name');
+      throw new Error('Invalid user data: missing name field');
+    }
+    
+    // 서버에서 제공된 2FA 상태 사용, 없으면 기본값(false) 사용
+    const twoFactorEnabled = userData.twoFA ?? false;
+    console.log('[Auth] Using 2FA status (without check):', twoFactorEnabled);
     
     // User 객체로 변환
     const user: Types.User = {
       id: '0', // API에서 제공하지 않으므로 기본값
-      username: userProfileResponse.data.me.name,
-      nickname: userProfileResponse.data.me.name,
-      avatarUrl: userProfileResponse.data.me.avatar || undefined,
+      username: userData.name,
+      nickname: userData.name,
+      avatarUrl: userData.avatar || undefined,
       twoFactorEnabled,
       gamesPlayed: 0,
       gamesWon: 0,
@@ -602,17 +556,6 @@ export class AuthApiService extends BaseApiService {
       username: user.username, 
       twoFactorEnabled: user.twoFactorEnabled 
     });
-    
-    // 2FA 상태를 캐시에 저장 (캐시에서 가져온 값이라도 다시 저장하여 만료시간 갱신)
-    if (userProfileResponse.data.me.twoFactorEnabled !== undefined) {
-      // 서버에서 명시적으로 제공한 경우
-      TwoFAStateManager.setTwoFAState(user.twoFactorEnabled);
-      console.log('[Auth] 2FA status cached from server response:', user.twoFactorEnabled);
-    } else if (twoFactorEnabled !== false) {
-      // 캐시에서 가져온 상태가 기본값이 아닌 경우 다시 저장 (만료시간 갱신)
-      TwoFAStateManager.setTwoFAState(user.twoFactorEnabled);
-      console.log('[Auth] 2FA status re-cached to extend expiry:', user.twoFactorEnabled);
-    }
     
     return user;
   }

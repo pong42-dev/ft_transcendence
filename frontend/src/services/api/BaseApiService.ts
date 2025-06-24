@@ -334,8 +334,14 @@ export abstract class BaseApiService {
 
   // 토큰 새로고침 시도 (TokenManager에 위임, 중복 로직 제거)
   private async attemptTokenRefresh(endpoint: string): Promise<boolean> {
-    // 로그인/회원가입/2FA 검증 요청에서는 토큰 새로고침 시도하지 않음
-    const isAuthRequest = endpoint.includes('/login') || endpoint.includes('/register') || endpoint.includes('/refresh-token') || endpoint.includes('/auth/2fa');
+    // 로그인/회원가입/2FA 관련 요청에서는 토큰 새로고침 시도하지 않음
+    const isAuthRequest = endpoint.includes('/login') || 
+                         endpoint.includes('/register') || 
+                         endpoint.includes('/refresh-token') || 
+                         endpoint.includes('/auth/2fa') ||
+                         endpoint.includes('/2fa/init') ||
+                         endpoint.includes('/2fa/enable') ||
+                         endpoint.includes('/2fa/disable');
     if (isAuthRequest) {
       return false;
     }
