@@ -1,5 +1,6 @@
 import { GameConfig } from './GameConfig.js';
 import { GameEngine } from './GameEngine.js';
+import { Player, GameState, PlayerInput, GameMode, GameStatus, GameResult } from '../schemas/games.js';
 
 /**
  * GameSession - Server-side Game Session Management
@@ -13,31 +14,6 @@ import { GameEngine } from './GameEngine.js';
  * @based_on PongGameModular.ts
  */
 
-// 임시 타입 정의 (나중에 schemas/games.ts에서 import)
-interface Player {
-  id: string;
-  type: 'user' | 'guest';
-  user_id?: number;
-  guest_name?: string;
-  name: string;
-}
-
-interface GameState {
-  game_id: string;
-  ball: { x: number; y: number };
-  paddles: { left: { y: number }; right: { y: number } };
-  score: { left: number; right: number };
-  round: number;
-  status: 'playing' | 'round_end' | 'game_end';
-  timestamp: number;
-}
-
-interface PlayerInput {
-  player_id: string;
-  action: 'UP' | 'DOWN' | 'NONE';
-  timestamp: number;
-}
-
 export class GameSession {
   private config: GameConfig;
   private gameEngine: GameEngine;
@@ -49,8 +25,10 @@ export class GameSession {
   
   // Game state
   private gameStarted: boolean = false;
-  private gameMode: 'regular' | 'tournament' | 'demo' = 'regular';
+  private gameMode: GameMode = '1v1';
+  private gameStatus: GameStatus = 'waiting';
   private isMultiplayer: boolean = true;
+  private gameStartTime: number = 0;
   
   // Dynamic canvas size (like frontend)
   private canvasWidth: number;
@@ -166,24 +144,25 @@ export class GameSession {
     };
   }
 
-  public getGameResult() {
+  public getGameResult(): GameResult {
     const roundWins = this.gameEngine.getRoundWins();
     const winner: 'left' | 'right' = roundWins.left > roundWins.right ? 'left' : 'right';
-    const playersArray = Array.from(this.players.values());
+    const winnerPlayer = this.getPlayerBySide(winner);
     
     return {
-      winner,
-      leftPlayer: {
-        ...playersArray[0],
-        score: roundWins.left
-      },
-      rightPlayer: {
-        ...playersArray[1],
-        score: roundWins.right
-      },
-      totalRounds: roundWins.left + roundWins.right,
-      gameMode: this.gameMode
+      game_id: this.gameId,
+      winner: winnerPlayer ? winnerPlayer.id : 'unknown',
+      final_score: { left: roundWins.left, right: roundWins.right },
+      duration: this.gameStartTime > 0 ? Date.now() - this.gameStartTime : 0,
+      end_reason: 'normal'
     };
+  }
+
+  // 헬퍼 메서드: 왼쪽/오른쪽으로 플레이어 찾기
+  private getPlayerBySide(side: 'left' | 'right'): Player | null {
+    const playersArray = Array.from(this.players.values());
+    if (playersArray.length < 2) return null;
+    return side === 'left' ? playersArray[0] : playersArray[1];
   }
 
   // =================================================================
@@ -202,6 +181,8 @@ export class GameSession {
 
   private startGame(): void {
     this.gameStarted = true;
+    this.gameStatus = 'playing';
+    this.gameStartTime = Date.now();
     
     // 60fps 게임 루프 시작
     this.gameLoop = setInterval(() => {
@@ -294,11 +275,31 @@ export class GameSession {
     return this.gameStarted;
   }
 
+  public getGameStatus(): GameStatus {
+    return this.gameStatus;
+  }
+
+  public getGameMode(): GameMode {
+    return this.gameMode;
+  }
+
+  public setGameMode(mode: GameMode): void {
+    this.gameMode = mode;
+  }
+
   public getPlayerCount(): number {
     return this.players.size;
   }
 
   public getCanvasSize(): { width: number; height: number } {
     return { width: this.canvasWidth, height: this.canvasHeight };
+  }
+
+  public getGameDuration(): number {
+    return this.gameStartTime > 0 ? Date.now() - this.gameStartTime : 0;
+  }
+
+  public hasPlayer(playerId: string): boolean {
+    return this.players.has(playerId);
   }
 }
