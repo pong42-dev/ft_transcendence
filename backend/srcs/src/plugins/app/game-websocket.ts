@@ -27,5 +27,5 @@ export default fp(async (fastify: FastifyInstance) => {
   console.log('✅ Game WebSocket plugin registered')
 }, {
   name: 'game-websocket',
-  dependencies: ['websocket'] // @fastify/websocket 플러그인에 의존
+  dependencies: ['@fastify/websocket'] // @fastify/websocket 플러그인에 의존
 })
