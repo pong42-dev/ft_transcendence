@@ -37,45 +37,45 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				- tourn: tourn endedAt, guest1,2,3 name, winner name, rank(1,2,3)
 				*/
 
-				const userId = request.user.user_id;
-				const userRow = await usersRepository.getRowByColumnValue('id', userId);
-				const profileRow = await userProfilesRepository.getRowByColumnValue('user_id', userId);
-				if (!profileRow) {
-					return reply.status(404).send({ msg: 'User not found.' });
-				}
-				const twoFARow = await user2FARepository.getRowByColumnValue('user_id', userId);
-				let is_enabled = false;
-				if (twoFARow && twoFARow.is_enabled) {
-					is_enabled = true;
-				}
-				const userInfo = {
-					avatar : profileRow.avatar, 
-					twoFA: is_enabled,
-					name: profileRow.name,
-					email: userRow.email // email도 보내줘야 하나? 
-				}
+				// const userId = request.user.user_id;
+				// const userRow = await usersRepository.getRowByColumnValue('id', userId);
+				// const profileRow = await userProfilesRepository.getRowByColumnValue('user_id', userId);
+				// if (!profileRow) {
+				// 	return reply.status(404).send({ msg: 'User not found.' });
+				// }
+				// const twoFARow = await user2FARepository.getRowByColumnValue('user_id', userId);
+				// let is_enabled = false;
+				// if (twoFARow && twoFARow.is_enabled) {
+				// 	is_enabled = true;
+				// }
+				// const userInfo = {
+				// 	avatar : profileRow.avatar, 
+				// 	twoFA: is_enabled,
+				// 	name: profileRow.name,
+				// 	email: userRow.email // email도 보내줘야 하나? 
+				// }
 
-				const games = await gamesRepository.getGameStats(userId);
-				const wins = await gamesRepository.getTotalWins(userId);
-				const winRate = games > 0 ? wins / games : 0;
+				// const games = await gamesRepository.getGameStats(userId);
+				// const wins = await gamesRepository.getTotalWins(userId);
+				// const winRate = games > 0 ? wins / games : 0;
 
-				const gameStats = {
-					games: games,
-					wins: wins,
-					winRate: winRate
-				};
+				// const gameStats = {
+				// 	games: games,
+				// 	wins: wins,
+				// 	winRate: winRate
+				// };
 
-				const oneOnOneHistory = await gamesRepository.get1v1MatchHistory(userId, profileRow.name);
-				const tournHistory = await gamesRepository.getTournMatchHistory(userId, profileRow.name);
+				// const oneOnOneHistory = await gamesRepository.get1v1MatchHistory(userId, profileRow.name);
+				// const tournHistory = await gamesRepository.getTournMatchHistory(userId, profileRow.name);
 
 				reply.status(200).send({
 					success: true,
 					msg: 'User Profile successfully retrieved.',
 					data: {
-						userInfo: userInfo, 
-						gameStats: gameStats,
-						oneOnOneHistory: oneOnOneHistory,
-						tournHistory: tournHistory
+						// userInfo: userInfo, 
+						// gameStats: gameStats,
+						// oneOnOneHistory: oneOnOneHistory,
+						// tournHistory: tournHistory
 					}
 				});
 

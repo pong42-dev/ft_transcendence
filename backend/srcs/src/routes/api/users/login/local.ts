@@ -41,6 +41,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 		},
 		async function (request, reply): Promise<void> {
 			try {
+				console.log(request.body);
 				const { email, password } = request.body as Credentials;
 				const user = await usersRepository.getRowByColumnValue('email', email);
 				if (!user || user.provider != 'local') {
