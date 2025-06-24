@@ -59,7 +59,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 						msg: 'This name is already registered.' 
 					});
 				}
-				const dirPath = config.UPLOAD_DIRNAME + '/' + config.UPLOAD_AVATAR_DIRNAME || 'uploads/avatars';
+				const dirPath = config.UPLOAD_DIRNAME + '/' + config.UPLOAD_AVATAR_DIRNAME || 'uploads/users/avatar';
 				const avatarPath = await saveFile(formData.files.avatar.file, dirPath);
 				const hashedPassword = await passwordManager.hashPassword(password);
 				const user_id = await usersRepository.insertRow(email, hashedPassword, 'local', '');

@@ -49,7 +49,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 						msg: validFormDataMsg 
 					});
 				}
-				const dirPath = config.UPLOAD_DIRNAME + '/' + config.UPLOAD_AVATAR_DIRNAME || 'uploads/avatars';
+				const dirPath = config.UPLOAD_DIRNAME + '/' + config.UPLOAD_AVATAR_DIRNAME || 'uploads/users/avatar';
 				const newAvatarPath = await saveFile(formData.files.avatar.file, dirPath);
 				console.log('formData:', formData);
 				const { user_id } = request.user as UserData;

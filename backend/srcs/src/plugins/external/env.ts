@@ -66,7 +66,7 @@ const schema = {
 			type: 'string',
 			minLength: 1,
 			pattern: '^(?!.*\\.{2}).*$',
-			default: 'uploads'
+			default: 'uploads/users/avatar'
 		},
 		UPLOAD_AVATAR_DIRNAME: {
 			type: 'string',

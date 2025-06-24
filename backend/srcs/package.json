@@ -23,7 +23,7 @@
     "build": "tsc && mkdir -p dist/assets dist/views && cp -R src/assets/* dist/assets/ && cp -R src/views/* dist/views/ && tsx scripts/fix-ejs.ts",
     "test": "echo \"Error: no test specified\" && exit 1",
     "db:create": "tsx --env-file=.env ./scripts/create-database.ts",
-    "db:drop": "rm -rf ./uploads && tsx --env-file=.env ./scripts/drop-database.ts",
+    "db:drop": "rm -rf ./uploads/users/avatar/* && tsx --env-file=.env ./scripts/drop-database.ts",
     "db:migrate": "tsx --env-file=.env ./scripts/migrate.ts",
     "db:seed": "tsx --env-file=.env ./scripts/seed-database.ts",
     "db:reset": "npm run db:drop && npm run db:create && npm run db:migrate && npm run db:seed"
