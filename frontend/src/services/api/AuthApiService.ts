@@ -117,17 +117,20 @@ export class AuthApiService extends BaseApiService {
       throw new ApiError(400, 'Registration failed', { message: registerResponse.msg });
     }
     
-    console.info('[Auth] Registration successful, attempting auto-login');
+    console.info('[Auth] Registration successful - no auto-login');
     
-    // 회원가입 성공 후 자동 로그인
-    const loginResult = await this.login(email, password);
-    
-    // 2FA가 필요한 경우는 에러로 처리 (회원가입 직후에는 2FA가 활성화되지 않음)
-    if ('requires2FA' in loginResult) {
-      throw new ApiError(500, 'Unexpected 2FA requirement after registration', { message: 'Registration succeeded but login requires 2FA' });
-    }
-    
-    return loginResult;
+    // 회원가입 성공 후 기본 사용자 객체 반환 (토큰 없이)
+    return {
+      id: '0',
+      username: nickname,
+      nickname: nickname,
+      avatarUrl: undefined,
+      twoFactorEnabled: false,
+      gamesPlayed: 0,
+      gamesWon: 0,
+      friends: [],
+      matchHistory: []
+    };
   }
 
   // 로그아웃 - /api/users/logout

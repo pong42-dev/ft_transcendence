@@ -479,19 +479,7 @@ export class App {
       return;
     }
     this.state.isInGame = false; // Explicitly set game state to false
-    this.userProfile = new UserProfile(
-      this.state.currentUser!, 
-      true, 
-      this.apiClient,
-      (updatedUser: User) => {
-        // Update global state when user profile changes
-        this.state.currentUser = updatedUser;
-        // Update cached user data (excluding 2FA state)
-        const userToCache = { ...updatedUser };
-        delete (userToCache as any).twoFactorEnabled; // 2FA 상태는 캐시하지 않음
-        this.cacheUserState(userToCache);
-      }
-    );
+    this.userProfile = new UserProfile(this.state.currentUser!, true);
     this.updateMainContent();
   }
 
@@ -619,7 +607,7 @@ export class App {
       } else if (this.userProfile) {
         mainContent.appendChild(this.userProfile.render());
       } else {
-        this.userProfile = new UserProfile(this.state.currentUser, true, this.apiClient);
+        this.userProfile = new UserProfile(this.state.currentUser, true);
         mainContent.appendChild(this.userProfile.render());
       }
     } else {
@@ -703,9 +691,6 @@ export class App {
           this.mainTerminal.appendOutput('Please logout first to register a new account.');
         }
         break;
-      case 'google':
-        await this.handleGoogleLoginCommand();
-        break;
       case 'logout':
         await this.handleLogoutCommand();
         break;
@@ -720,6 +705,12 @@ export class App {
         break;
       case 'clear':
         this.handleClearCommand();
+        break;
+      case '2fa':
+        await this.handle2FACommand(args);
+        break;
+      case 'set':
+        await this.handleSetCommand(args);
         break;
       default:
         this.mainTerminal.appendOutput(`Unknown command: ${commandName}. Type "help" for available commands.`);
@@ -737,65 +728,19 @@ export class App {
         '  play     - Start a game of Pong\n' +
         '  logout   - Log out of current session\n' +
         '  friend   - Manage friends list\n' +
+        '  2fa      - Manage two-factor authentication (2fa enable|disable|status)\n' +
+        '  set      - Update profile settings (set avatar|name)\n' +
         '  clear    - Clear the terminal screen'
       : baseHelp + 'Available commands:\n' +
         '  help     - Display this help message\n' +
         '  login    - Open login modal\n' +
         '  register - Open registration modal\n' +
-        '  google   - Login with Google OAuth\n' +
         '  clear    - Clear the terminal screen';
     
     this.mainTerminal.appendOutput(helpText);
   }
 
 
-  private async handleGoogleLoginCommand(): Promise<void> {
-    if (this.state.isLoggedIn) {
-      this.mainTerminal.appendOutput('You are already logged in.');
-      return;
-    }
-
-    try {
-      this.mainTerminal.appendOutput('Redirecting to Google for authentication...');
-      
-      // Mock 환경에서는 즉시 로그인 처리
-      if (this.apiClient.shouldUseMockData()) {
-        // Mock OAuth 시뮬레이션
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        this.mainTerminal.appendOutput('Mock Google authentication completed.');
-        
-        // OAuth 콜백 처리
-        const user = await this.apiClient.auth.handleOAuthCallback();
-        if (user) {
-          this.state.isLoggedIn = true;
-          this.state.currentUser = user;
-          this.mainTerminal.reset();
-          this.mainTerminal.appendOutput(`Welcome, ${user.username}!`);
-          this.mainTerminal.appendOutput('Type "help" to see available commands.');
-          this.router.navigate('/profile');
-        } else {
-          this.mainTerminal.appendOutput('Google authentication failed.');
-        }
-      } else {
-        // 실제 환경에서는 리다이렉트 (페이지가 이동됨)
-        await this.apiClient.auth.loginWithGoogle();
-      }
-    } catch (error) {
-      this.errorHandler.handleError(
-        error as Error,
-        'App.handleGoogleLoginCommand',
-        ErrorLevel.ERROR,
-        {
-          component: 'App',
-          action: 'googleLoginFailed'
-        }
-      );
-      const message = error instanceof ApiError
-        ? `Google login failed: ${error.data?.message || 'Authentication error'}`
-        : 'Google login failed. Please check your connection.';
-      this.mainTerminal.appendOutput(message);
-    }
-  }
 
   private async handle2FALogin(tmpToken: string): Promise<void> {
     this.mainTerminal.appendOutput('Two-factor authentication required. Please enter your verification code.');
@@ -1018,14 +963,9 @@ export class App {
     const registerModal = new RegisterModal(
       this.apiClient,
       (user: Types.User) => {
-        // Register success (both local and Google)
-        this.state.isLoggedIn = true;
-        this.state.currentUser = user;
-        this.mainTerminal.reset();
-        this.mainTerminal.appendOutput(`Welcome, ${user.username}!`);
-        this.mainTerminal.appendOutput('Your account has been created successfully.');
-        this.mainTerminal.appendOutput('Type "help" to see available commands.');
-        this.router.navigate('/profile');
+        // Register success - show success message only (no auto-login)
+        this.mainTerminal.appendOutput(`Account created successfully for ${user.username}!`);
+        this.mainTerminal.appendOutput('Please use the "login" command to sign in to your new account.');
       },
       () => {
         // Switch to login
@@ -1096,6 +1036,270 @@ export class App {
       console.log('🗑️ User state cache cleared');
     } catch (error) {
       console.warn('❌ Failed to clear user state cache:', error);
+    }
+  }
+
+  /**
+   * 2FA 관련 명령어 처리
+   */
+  private async handle2FACommand(args: string[]): Promise<void> {
+    if (!this.state.isLoggedIn) {
+      this.mainTerminal.appendOutput('Please login first to manage 2FA settings.');
+      return;
+    }
+
+    const subCommand = args[0]?.toLowerCase();
+
+    switch (subCommand) {
+      case 'enable':
+        await this.handle2FAEnable();
+        break;
+      case 'disable':
+        await this.handle2FADisable();
+        break;
+      case 'status':
+        this.handle2FAStatus();
+        break;
+      default:
+        this.mainTerminal.appendOutput('Usage: 2fa <enable|disable|status>');
+        this.mainTerminal.appendOutput('  2fa enable  - Enable two-factor authentication');
+        this.mainTerminal.appendOutput('  2fa disable - Disable two-factor authentication');
+        this.mainTerminal.appendOutput('  2fa status  - Check current 2FA status');
+    }
+  }
+
+  /**
+   * 2FA 활성화 처리
+   */
+  private async handle2FAEnable(): Promise<void> {
+    if (this.state.currentUser?.twoFactorEnabled) {
+      this.mainTerminal.appendOutput('2FA is already enabled. Use "2fa disable" to disable it first.');
+      return;
+    }
+
+    this.mainTerminal.appendOutput('Starting 2FA setup process...');
+    
+    try {
+      const { TwoFAModal } = await import('./TwoFAModal.js');
+      const twoFAModal = new TwoFAModal(
+        this.apiClient,
+        'enable',
+        async () => {
+          // Success callback
+          if (this.state.currentUser) {
+            this.state.currentUser.twoFactorEnabled = true;
+            // Update cached user data (excluding 2FA state as per our earlier fix)
+            const userToCache = { ...this.state.currentUser };
+            delete (userToCache as any).twoFactorEnabled;
+            this.cacheUserState(userToCache);
+          }
+          this.mainTerminal.appendOutput('✅ 2FA has been successfully enabled.');
+        },
+        () => {
+          // Cancel callback
+          this.mainTerminal.appendOutput('2FA setup cancelled.');
+        }
+      );
+      await twoFAModal.show();
+    } catch (error) {
+      this.mainTerminal.appendOutput('❌ Failed to start 2FA setup. Please try again.');
+      console.error('2FA enable error:', error);
+    }
+  }
+
+  /**
+   * 2FA 비활성화 처리
+   */
+  private async handle2FADisable(): Promise<void> {
+    if (!this.state.currentUser?.twoFactorEnabled) {
+      this.mainTerminal.appendOutput('2FA is already disabled.');
+      return;
+    }
+
+    this.mainTerminal.appendOutput('Starting 2FA disable process...');
+    
+    try {
+      const { TwoFAModal } = await import('./TwoFAModal.js');
+      const twoFAModal = new TwoFAModal(
+        this.apiClient,
+        'disable',
+        async () => {
+          // Success callback
+          if (this.state.currentUser) {
+            this.state.currentUser.twoFactorEnabled = false;
+            // Update cached user data (excluding 2FA state as per our earlier fix)
+            const userToCache = { ...this.state.currentUser };
+            delete (userToCache as any).twoFactorEnabled;
+            this.cacheUserState(userToCache);
+          }
+          this.mainTerminal.appendOutput('✅ 2FA has been successfully disabled.');
+        },
+        () => {
+          // Cancel callback
+          this.mainTerminal.appendOutput('2FA disable cancelled.');
+        }
+      );
+      await twoFAModal.show();
+    } catch (error) {
+      this.mainTerminal.appendOutput('❌ Failed to disable 2FA. Please try again.');
+      console.error('2FA disable error:', error);
+    }
+  }
+
+  /**
+   * 2FA 상태 확인
+   */
+  private handle2FAStatus(): void {
+    if (!this.state.currentUser) {
+      this.mainTerminal.appendOutput('Unable to check 2FA status - user data not available.');
+      return;
+    }
+
+    const status = this.state.currentUser.twoFactorEnabled ? 'Enabled' : 'Disabled';
+    const statusIcon = this.state.currentUser.twoFactorEnabled ? '🔒' : '🔓';
+    
+    this.mainTerminal.appendOutput(`${statusIcon} Two-Factor Authentication: ${status}`);
+    
+    if (this.state.currentUser.twoFactorEnabled) {
+      this.mainTerminal.appendOutput('Your account is protected with 2FA.');
+    } else {
+      this.mainTerminal.appendOutput('Consider enabling 2FA for better security. Use "2fa enable" to set it up.');
+    }
+  }
+
+  /**
+   * set 명령어 처리 (profile settings)
+   */
+  private async handleSetCommand(args: string[]): Promise<void> {
+    if (!this.state.isLoggedIn) {
+      this.mainTerminal.appendOutput('Please login first to update profile settings.');
+      return;
+    }
+
+    const subCommand = args[0]?.toLowerCase();
+
+    switch (subCommand) {
+      case 'avatar':
+        await this.handleSetAvatar();
+        break;
+      case 'name':
+        await this.handleSetName(args.slice(1));
+        break;
+      default:
+        this.mainTerminal.appendOutput('Usage: set <avatar|name> [value]');
+        this.mainTerminal.appendOutput('  set avatar     - Upload new avatar image');
+        this.mainTerminal.appendOutput('  set name <new> - Change display name');
+    }
+  }
+
+  /**
+   * 아바타 업데이트 처리
+   */
+  private async handleSetAvatar(): Promise<void> {
+    this.mainTerminal.appendOutput('Opening file selector for avatar upload...');
+    
+    try {
+      const { FileModal } = await import('./FileModal.js');
+      const fileModal = new FileModal(async (file: File) => {
+        try {
+          this.mainTerminal.appendOutput(`Uploading avatar: ${file.name} (${(file.size / 1024).toFixed(1)}KB)...`);
+          
+          // Call API to update avatar
+          const updatedUser = await this.apiClient.user.uploadAvatar(file);
+          
+          // Update current user state
+          if (this.state.currentUser) {
+            this.state.currentUser.avatarUrl = updatedUser.avatarUrl;
+            this.state.currentUser.nickname = updatedUser.nickname;
+            
+            // Update cached user data (excluding 2FA state)
+            const userToCache = { ...this.state.currentUser };
+            delete (userToCache as any).twoFactorEnabled;
+            this.cacheUserState(userToCache);
+          }
+          
+          this.mainTerminal.appendOutput('✅ Avatar updated successfully!');
+          
+          // Re-render profile if currently viewing
+          if (this.userProfile) {
+            this.userProfile = new UserProfile(this.state.currentUser!, true);
+            this.updateMainContent();
+          }
+          
+        } catch (error) {
+          this.mainTerminal.appendOutput('❌ Failed to update avatar. Please try again.');
+          console.error('Avatar update error:', error);
+        }
+      });
+      
+      fileModal.show();
+    } catch (error) {
+      this.mainTerminal.appendOutput('❌ Failed to open file selector. Please try again.');
+      console.error('FileModal error:', error);
+    }
+  }
+
+  /**
+   * 이름 업데이트 처리
+   */
+  private async handleSetName(args: string[]): Promise<void> {
+    const newName = args.join(' ').trim();
+    
+    if (!newName) {
+      this.mainTerminal.appendOutput('Usage: set name <new_name>');
+      this.mainTerminal.appendOutput('Example: set name John or set name "John Doe"');
+      return;
+    }
+    
+    if (newName.length < 2 || newName.length > 20) {
+      this.mainTerminal.appendOutput('Name must be between 2 and 20 characters.');
+      return;
+    }
+    
+    try {
+      this.mainTerminal.appendOutput(`Updating name to: "${newName}"...`);
+      
+      // Call API to update name
+      const updatedUser = await this.apiClient.user.updateName(newName);
+      
+      console.log('Name update response:', updatedUser);
+      
+      // Update current user state
+      if (this.state.currentUser) {
+        this.state.currentUser.nickname = updatedUser.nickname;
+        this.state.currentUser.username = updatedUser.username;
+        
+        // Update cached user data (excluding 2FA state)
+        const userToCache = { ...this.state.currentUser };
+        delete (userToCache as any).twoFactorEnabled;
+        this.cacheUserState(userToCache);
+      }
+      
+      this.mainTerminal.appendOutput(`✅ Name updated successfully to: "${updatedUser.nickname}"`);
+      
+      // Re-render profile if currently viewing
+      if (this.userProfile) {
+        this.userProfile = new UserProfile(this.state.currentUser!, true);
+        this.updateMainContent();
+      }
+      
+    } catch (error) {
+      console.error('Name update error:', error);
+      let errorMessage = '❌ Failed to update name. Please try again.';
+      
+      if (error instanceof Error) {
+        if (error.message.includes('already registered')) {
+          errorMessage = '❌ This name is already taken. Please choose a different name.';
+        } else if (error.message.includes('2 characters')) {
+          errorMessage = '❌ Name must be at least 2 characters long.';
+        } else if (error.message.includes('20 characters')) {
+          errorMessage = '❌ Name must be 20 characters or less.';
+        } else if (error.message.includes('Name update failed')) {
+          errorMessage = `❌ ${error.message}`;
+        }
+      }
+      
+      this.mainTerminal.appendOutput(errorMessage);
     }
   }
 }

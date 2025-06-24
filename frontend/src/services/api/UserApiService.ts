@@ -53,16 +53,6 @@ export class UserApiService extends BaseApiService {
     return user;
   }
 
-  // 닉네임 변경 - /api/users/me/name
-  async updateNickname(nickname: string): Promise<Types.User> {
-    await this.patch<{
-      success: boolean;
-      msg: string;
-    }>('/api/users/me/name', { name: nickname });
-    
-    // 업데이트 후 최신 프로필 조회
-    return await this.getProfile();
-  }
 
   // 아바타 업로드 - /api/users/me/avatar
   async uploadAvatar(file: File): Promise<Types.User> {
@@ -74,6 +64,23 @@ export class UserApiService extends BaseApiService {
       success: boolean;
       msg: string;
     }>('/api/users/me/avatar', formData, true); // isFormData = true
+    
+    // 업데이트 후 최신 프로필 조회
+    return await this.getProfile();
+  }
+
+  // 사용자 이름 업데이트 - /api/users/me/name
+  async updateName(newName: string): Promise<Types.User> {
+    // BaseApiService의 patch 메소드 사용 (mock 지원)
+    const response = await this.patch<{
+      success: boolean;
+      msg: string;
+    }>('/api/users/me/name', { name: newName });
+    
+    // 백엔드에서 success: false를 반환하는 경우 처리
+    if (response && response.success === false) {
+      throw new Error(response.msg || 'Name update failed');
+    }
     
     // 업데이트 후 최신 프로필 조회
     return await this.getProfile();

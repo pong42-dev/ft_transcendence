@@ -1,19 +1,14 @@
 import { User, MatchHistory } from '../types/types.js';
-import { ApiClient } from '../services/ApiClient.js';
 
 export class UserProfile {
   private user: User;
   private profileElement: HTMLElement;
   private isCurrentUser: boolean;
-  private apiClient: ApiClient;
-  private onUserStateChange?: (updatedUser: User) => void;
 
-  constructor(user: User, isCurrentUser: boolean = false, apiClient?: ApiClient, onUserStateChange?: (updatedUser: User) => void) {
+  constructor(user: User, isCurrentUser: boolean = false) {
     this.user = user;
     this.profileElement = document.createElement('div');
     this.isCurrentUser = isCurrentUser;
-    this.apiClient = apiClient || new ApiClient();
-    this.onUserStateChange = onUserStateChange;
   }
 
   public render(): HTMLElement {
@@ -31,10 +26,7 @@ export class UserProfile {
     this.profileElement.innerHTML = '';
     this.profileElement.appendChild(contentWrapper);
     
-    // Add event listeners for current user
-    if (this.isCurrentUser) {
-      this.attachEventListeners();
-    }
+    // Note: 2FA is now managed through terminal commands
     
     return this.profileElement;
   }
@@ -79,7 +71,7 @@ export class UserProfile {
       nameContainer.appendChild(email);
       
       const securityStatus = document.createElement('div');
-      securityStatus.className = 'flex items-center justify-between mt-2';
+      securityStatus.className = 'flex items-center mt-2';
       
       const statusInfo = document.createElement('div');
       statusInfo.className = 'flex items-center text-sm';
@@ -88,17 +80,12 @@ export class UserProfile {
         <div class="ml-2 w-2 h-2 rounded-full ${this.user.twoFactorEnabled ? 'bg-terminal-green' : 'bg-terminal-red'}"></div>
       `;
       
-      const twoFAButton = document.createElement('button');
-      twoFAButton.className = `px-3 py-1 text-xs rounded border transition-all ${
-        this.user.twoFactorEnabled 
-          ? 'border-terminal-red text-terminal-red hover:bg-terminal-red hover:bg-opacity-10' 
-          : 'border-terminal-green text-terminal-green hover:bg-terminal-green hover:bg-opacity-10'
-      }`;
-      twoFAButton.textContent = this.user.twoFactorEnabled ? 'Disable 2FA' : 'Enable 2FA';
-      twoFAButton.id = 'twofa-toggle-btn';
+      const terminalHint = document.createElement('div');
+      terminalHint.className = 'text-xs text-terminal-gray opacity-70 ml-4';
+      terminalHint.textContent = 'Use "2fa enable/disable" in terminal';
       
       securityStatus.appendChild(statusInfo);
-      securityStatus.appendChild(twoFAButton);
+      securityStatus.appendChild(terminalHint);
       userDetails.appendChild(securityStatus);
     }
     
@@ -348,57 +335,4 @@ export class UserProfile {
     return item;
   }
 
-  private attachEventListeners(): void {
-    const twoFAButton = this.profileElement.querySelector('#twofa-toggle-btn');
-    
-    twoFAButton?.addEventListener('click', async () => {
-      await this.handleTwoFAToggle();
-    });
-  }
-
-
-
-  private async handleTwoFAToggle(): Promise<void> {
-    const { TwoFAModal } = await import('./TwoFAModal.js');
-    
-    if (this.user.twoFactorEnabled) {
-      // Disable 2FA
-      const twoFAModal = new TwoFAModal(
-        this.apiClient,
-        'disable',
-        async () => {
-          // Update user state and re-render
-          this.user.twoFactorEnabled = false;
-          this.render();
-          // Notify parent component of state change
-          if (this.onUserStateChange) {
-            this.onUserStateChange({ ...this.user });
-          }
-        },
-        () => {
-          // Cancel - no action needed
-        }
-      );
-      await twoFAModal.show();
-    } else {
-      // Enable 2FA
-      const twoFAModal = new TwoFAModal(
-        this.apiClient,
-        'enable',
-        async () => {
-          // Update user state and re-render
-          this.user.twoFactorEnabled = true;
-          this.render();
-          // Notify parent component of state change
-          if (this.onUserStateChange) {
-            this.onUserStateChange({ ...this.user });
-          }
-        },
-        () => {
-          // Cancel - no action needed
-        }
-      );
-      await twoFAModal.show();
-    }
-  }
 }

@@ -262,6 +262,7 @@ export abstract class BaseApiService {
       // 요청 옵션 구성
       let requestOptions: RequestInit = {
         ...options,
+        credentials: 'include', // 쿠키 포함
         headers: {
           ...defaultHeaders,
           ...options.headers,

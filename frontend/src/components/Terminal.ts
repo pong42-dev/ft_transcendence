@@ -95,7 +95,7 @@ Please login to continue.`;
     const welcomeMessage = isLoggedIn && username 
       ? `PONG-CLI v1.0.0 (c) 2025 PongDevs
 Type "help" for available commands.
-Welcome back, ${username}!`
+Welcome ${username}!`
       : `PONG-CLI v1.0.0 (c) 2025 PongDevs
 Type "help" for available commands.
 Please login to continue.`;
