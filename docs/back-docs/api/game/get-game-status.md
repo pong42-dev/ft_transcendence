@@ -8,7 +8,7 @@
 
 ### ✅ Request
 
-* **No authentication required**
+* **No authentication required** (temporarily disabled for testing)
 * **Method**: `GET`
 * **URL Parameters**:
   * `:id` - Game ID (string, required)
@@ -19,12 +19,12 @@
 
 ### ✅ Response
 
-#### ▶ Success (HTTP 200)
+#### ▶ Success - 1v1 Mode (HTTP 200)
 
 ```json
 {
   "success": true,
-  "msg": "Game status retrieved successfully",
+  "msg": "Game retrieved successfully",
   "data": {
     "gameId": "game_1_1735018415123",
     "status": "playing",
@@ -67,6 +67,34 @@
       "height": 600
     },
     "duration": 45000
+  }
+}
+```
+
+#### ▶ Success - VS AI Mode (HTTP 200)
+
+```json
+{
+  "success": true,
+  "msg": "Game retrieved successfully", 
+  "data": {
+    "gameId": "game_2_1735018500000",
+    "status": "waiting",
+    "gameMode": "vs_ai",
+    "playerCount": 2,
+    "players": [
+      {
+        "id": "ai_player",
+        "name": "AI",
+        "type": "ai"
+      },
+      {
+        "id": "user_123",
+        "name": "Human Player",
+        "type": "user",
+        "user_id": 123
+      }
+    ]
   }
 }
 ```

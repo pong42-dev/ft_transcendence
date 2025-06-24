@@ -5,15 +5,16 @@ import {Static, Type} from "@sinclair/typebox";
 export const PlayerSchema = Type.Object({
   id: Type.String(),
   name: Type.String(),
-  type: Type.Union([Type.Literal('user'), Type.Literal('guest')]),
+  type: Type.Union([Type.Literal('user'), Type.Literal('guest'), Type.Literal('ai')]),
   user_id: Type.Optional(Type.Number()),
   guest_name: Type.Optional(Type.String())
 })
 export type Player = Static<typeof PlayerSchema>;
 
 export const GameModeSchema = Type.Union([
-  Type.Literal('1v1'), 
-  Type.Literal('tournament')
+  Type.Literal('1v1'),        // Local 1v1 (2 players required)
+  Type.Literal('vs_ai'),      // VS AI (1 player + AI)
+  Type.Literal('tournament')  // Tournament (4 players, not implemented yet)
 ])
 export type GameMode = Static<typeof GameModeSchema>
 
@@ -105,13 +106,13 @@ export type GameStatus = Static<typeof GameStatusSchema>
 // 게임 생성 요청 스키마
 export const CreateGameSchema = Type.Object({
   player1: PlayerSchema,
-  player2: PlayerSchema,
+  player2: Type.Optional(PlayerSchema),
   gameMode: Type.Optional(GameModeSchema)
 })
 
 export interface CreateGame {
   player1: Player;
-  player2: Player;
+  player2?: Player;
   gameMode?: GameMode;
 }
 

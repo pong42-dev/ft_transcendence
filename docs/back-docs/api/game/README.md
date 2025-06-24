@@ -41,11 +41,20 @@ This plugin provides game-related functionality including:
 {
   id: string;           // Unique player identifier
   name: string;         // Display name
-  type: 'user' | 'guest';  // Player type
+  type: 'user' | 'guest' | 'ai';  // Player type
   user_id?: number;     // DB user ID (if type === 'user')
   guest_name?: string;  // Guest name (if type === 'guest')
 }
 ```
+
+### GameMode
+```typescript
+type GameMode = '1v1' | 'vs_ai' | 'tournament';
+```
+
+- **1v1**: Local multiplayer mode (requires 2 players)
+- **vs_ai**: AI opponent mode (requires 1 player, AI is added automatically)  
+- **tournament**: Tournament mode (requires 4 players, not implemented yet)
 
 ### GameState
 ```typescript

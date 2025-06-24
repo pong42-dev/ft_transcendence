@@ -1,14 +1,14 @@
 import { FastifyPluginAsyncTypebox, Type } from '@fastify/type-provider-typebox'
 import { GameManager } from '../../../game/GameManager.js'
-import { GameResultSchema } from '../../../schemas/games.js'
+import { GameStateSchema } from '../../../schemas/games.js'
 
 const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
-	const { authenticate } = fastify
+	// const { authenticate } = fastify  // TODO: 테스트 완료 후 활성화
 	const gameManager = GameManager.getInstance()
 
-	// DELETE /api/games/:gameId - 게임 삭제 (세션 정리)
-	fastify.delete(
-		'/games/:gameId',
+	// POST /api/games/:gameId/start - 게임 시작
+	fastify.post(
+		'/:gameId/start',
 		{
 			schema: {
 				params: Type.Object({
@@ -20,8 +20,12 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 						msg: Type.String(),
 						data: Type.Object({
 							gameId: Type.String(),
-							finalResult: Type.Optional(GameResultSchema)
+							status: Type.String(),
+							gameState: GameStateSchema
 						})
+					}),
+					400: Type.Object({
+						msg: Type.String()
 					}),
 					404: Type.Object({
 						msg: Type.String()
@@ -30,9 +34,9 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 						msg: Type.String()
 					})
 				},
-				tags: ["Games"]
-			},
-			preHandler: [authenticate]
+				tags: ["Games"]		},
+		// TODO: 테스트 완료 후 인증 재활성화
+		// preHandler: [authenticate]
 		},
 		async (request, reply) => {
 			try {
@@ -43,27 +47,28 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 					return reply.status(404).send({ msg: 'Game not found' })
 				}
 
-				// 게임 결과 가져오기 (게임이 끝난 경우)
-				let finalResult
-				if (session.isGameStarted()) {
-					try {
-						finalResult = session.getGameResult()
-					} catch {
-						// 게임이 진행 중이거나 결과가 없는 경우
-					}
+				if (session.getPlayerCount() !== 2) {
+					return reply.status(400).send({ msg: 'Game requires exactly 2 players to start' })
 				}
 
-				const success = gameManager.removeGame(gameId)
-				if (!success) {
-					return reply.status(500).send({ msg: 'Failed to delete game' })
+				if (session.isGameStarted()) {
+					return reply.status(400).send({ msg: 'Game already started' })
 				}
+
+				const success = gameManager.startGame(gameId)
+				if (!success) {
+					return reply.status(500).send({ msg: 'Failed to start game' })
+				}
+
+				const gameState = session.getGameState()
 
 				return reply.send({
 					success: true,
-					msg: 'Game deleted successfully',
+					msg: 'Game started successfully',
 					data: {
 						gameId,
-						finalResult
+						status: 'playing',
+						gameState
 					}
 				})
 			} catch (error) {

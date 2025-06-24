@@ -8,7 +8,7 @@
 
 ### ✅ Request
 
-* **No authentication required**
+* **No authentication required** (temporarily disabled for testing)
 * **Method**: `POST`
 * **URL Parameters**:
   * `:id` - Game ID (string, required)
