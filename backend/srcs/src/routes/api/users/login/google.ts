@@ -62,17 +62,13 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 			const userByName = await userProfilesRepository.getRowByColumnValue('name', name);
 			console.log("userByName: ", userByName);
 			if (!userByEmail) {
-				if (userByName)
-					return reply.send({ 
-						success: false,
-						msg: 'This name is already registered.'
-					});
+				const uniqueName = userByName? await userProfilesRepository.generateUniqueUsername(name) : name;
 				const user_id = await usersRepository.insertRow(email, '', 'google', provider_id.toString());
 				const picture_path = await downloadImageFromUrl(
 					avatar,
 					fastify.config.UPLOAD_DIRNAME + "/" + fastify.config.UPLOAD_AVATAR_DIRNAME
 				);
-				await userProfilesRepository.insertRow(user_id, name, picture_path, 'false');
+				await userProfilesRepository.insertRow(user_id, uniqueName, picture_path, 'false');
 				return await loginManager.login(user_id, reply, tokenData.refresh_token);
 			} else {
 				if (userByEmail && userByEmail.provider != 'google')

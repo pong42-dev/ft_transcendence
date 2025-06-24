@@ -126,3 +126,12 @@ export const GoogleTokenResponseSchema = Type.Object({
 
 // TypeScript 타입 추출
 export type GoogleTokenResponse = Static<typeof GoogleTokenResponseSchema>;
+
+export const UserMeSchema = Type.Object({
+	email: StringSchema,
+	name: StringSchema,
+	avatar: StringSchema,
+	twoFA: BooleanSchema, 
+});
+
+export interface UserMe extends Static<typeof UserMeSchema> {}

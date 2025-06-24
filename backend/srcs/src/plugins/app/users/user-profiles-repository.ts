@@ -104,7 +104,29 @@ export function createUserProfilesRepository(fastify: FastifyInstance) {
 				// win: stats?.win || 0,
 				// loss: stats?.loss || 0
 			}
+		}, 
+
+		async generateUniqueUsername(base: string): Promise<string> {
+			// 'john', 'john1', 'john2' 등 이미 사용 중인 이름을 모두 조회
+			const existingUsernames = await knex('user_profiles')
+				.select('name')
+				.where('name', 'like', `${base}%`);
+
+			const taken = new Set(existingUsernames.map(user => user.username));
+
+			// base 이름이 사용되지 않았으면 그대로 사용
+			if (!taken.has(base))
+				return base;
+
+			// 숫자 붙여서 사용 가능한 이름 찾기
+			let counter = 1;
+			while (taken.has(`${base}${counter}`)) {
+				counter++;
+			}
+
+			return `${base}${counter}`;
 		}
+
 	};
 }
 

@@ -1,7 +1,13 @@
 import { FastifyPluginAsyncTypebox, Type } from '@fastify/type-provider-typebox'
+import { UserMeSchema, UserMe } from '../../../../schemas/auth.js'
+
+
 
 const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 	const { usersRepository, userProfilesRepository, user2FARepository, gamesRepository, authenticate } = fastify
+
+
+	
 	fastify.get(
 		'/',
 		{
@@ -11,6 +17,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 						success: Type.Literal(true),
 						msg: Type.String(),
 						data: Type.Object({
+							userInfo: UserMeSchema
 						})
 					}),
 					401: Type.Object({
@@ -50,10 +57,10 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 					is_enabled = true;
 				}
 				const userInfo = {
-					avatar : avatarPath, 
-					twoFA: is_enabled,
+					email: userRow.email,
 					name: profileRow.name,
-					email: userRow.email
+					avatar : avatarPath, 
+					twoFA: is_enabled
 				}
 
 				// const games = await gamesRepository.getGameStats(userId);
