@@ -101,8 +101,8 @@ export class GameEngine {
   }
 
   public updatePaddlePositions(
-    leftInput: 'UP' | 'DOWN' | 'NONE',
-    rightInput: 'UP' | 'DOWN' | 'NONE',
+    leftInput: string,
+    rightInput: string,
     isMultiplayer: boolean
   ): void {
     // Update right paddle (player input) - use dynamic canvas height
@@ -113,17 +113,18 @@ export class GameEngine {
       this.rightPaddleY = Math.min(this.canvasHeight - this.config.paddleHeight, this.rightPaddleY + this.config.paddleSpeed);
     }
 
-    if (isMultiplayer) {
-      // Multiplayer: Update left paddle with player input - use dynamic canvas height
+    // 좌측 패들 처리 (AI 감지 포함)
+    if (leftInput === 'AI_CONTROLLED' || !isMultiplayer) {
+      // AI 모드: 좌측 패들을 AI가 제어
+      this.updateAI();
+    } else {
+      // 멀티플레이어: 좌측 패들을 플레이어가 제어
       if (leftInput === 'UP') {
         this.leftPaddleY = Math.max(0, this.leftPaddleY - this.config.paddleSpeed);
       }
       if (leftInput === 'DOWN') {
         this.leftPaddleY = Math.min(this.canvasHeight - this.config.paddleHeight, this.leftPaddleY + this.config.paddleSpeed);
       }
-    } else {
-      // AI mode: Update left paddle with AI logic
-      this.updateAI();
     }
   }
 

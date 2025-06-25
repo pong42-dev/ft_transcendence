@@ -206,10 +206,34 @@ export class GameSession {
   private updateGame(): void {
     if (!this.gameStarted) return;
     
-    // 플레이어 입력 가져오기
-    const playersArray = Array.from(this.players.keys());
-    const leftInput = this.playerInputs.get(playersArray[0]) || 'NONE';
-    const rightInput = this.playerInputs.get(playersArray[1]) || 'NONE';
+    // 플레이어 입력 처리 (AI 감지 포함)
+    const playersArray = Array.from(this.players.values()); // values()로 변경하여 Player 객체 접근
+    const leftPlayer = playersArray[0];
+    const rightPlayer = playersArray[1];
+    
+    let leftInput = 'NONE';
+    let rightInput = 'NONE';
+    let currentIsMultiplayer = this.isMultiplayer; // 기본값 사용
+    
+    // 좌측 플레이어 입력 처리
+    if (leftPlayer?.type === 'ai') {
+      leftInput = 'AI_CONTROLLED'; // AI 표시를 위한 특별한 값
+      currentIsMultiplayer = false; // AI 모드로 설정
+      console.log(`[GameSession] AI detected on left side: ${leftPlayer.name}`);
+    } else if (leftPlayer) {
+      leftInput = this.playerInputs.get(leftPlayer.id) || 'NONE';
+    }
+    
+    // 우측 플레이어 입력 처리  
+    if (rightPlayer?.type === 'ai') {
+      rightInput = 'AI_CONTROLLED';
+      currentIsMultiplayer = false; // AI 모드로 설정
+      console.log(`[GameSession] AI detected on right side: ${rightPlayer.name}`);
+    } else if (rightPlayer) {
+      rightInput = this.playerInputs.get(rightPlayer.id) || 'NONE';
+    }
+    
+    console.log(`[GameSession] Update - Left: ${leftInput}, Right: ${rightInput}, Multiplayer: ${currentIsMultiplayer}`);
     
     // 동적 캔버스 크기 사용 (Frontend와 동일)
     const goalScorer = this.gameEngine.updateBallPosition(
@@ -222,8 +246,8 @@ export class GameSession {
       return;
     }
     
-    // 패들 위치 업데이트
-    this.gameEngine.updatePaddlePositions(leftInput, rightInput, this.isMultiplayer);
+    // 패들 위치 업데이트 (AI 감지된 isMultiplayer 값 사용)
+    this.gameEngine.updatePaddlePositions(leftInput, rightInput, currentIsMultiplayer);
   }
 
   private handleRoundEnd(winner: 'left' | 'right'): void {
