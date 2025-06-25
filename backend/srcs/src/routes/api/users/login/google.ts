@@ -71,7 +71,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				const userId = await usersRepository.insertRow(email, '', 'google', provider_id.toString());
 				const picturePath = await downloadImageFromUrl(
 					avatar,
-					config.UPLOAD_DIRNAME + '/' + config.UPLOAD_USERS_DIRNAME + '/' + config.UPLOAD_AVATAR_DIRNAME
+					config.PUBLIC_DIRNAME + '/' + config.USERS_DIRNAME + '/' + config.AVATAR_DIRNAME
 				);
 				console.log("picturePath:", picturePath);
 				await userProfilesRepository.insertRow(userId, uniqueName, picturePath, 'false');

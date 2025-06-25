@@ -7,6 +7,9 @@ services:
       - "${BACKEND_PORT}:3000"
     volumes:
       - fastify_data:/app/database
+      - ./backend/srcs/public:/app/public
+
+      
     env_file:
       - ./backend/.env
     networks:

@@ -8,9 +8,10 @@ export interface FastifyInstance {
 		COOKIE_NAME: string;
 		COOKIE_SECURED: boolean;
 		RATE_LIMIT_MAX: number;
-		UPLOAD_DIRNAME: string;
-		UPLOAD_USERS_DIRNAME: string;
-		UPLOAD_AVATAR_DIRNAME: string;
+		ASSETS_DIRNAME: string;
+		PUBLIC_DIRNAME: string;
+		USERS_DIRNAME: string;
+		AVATAR_DIRNAME: string;
 		JWT_SECRET: string;
 		GOOGLE_CLIENT_ID: string;
 		GOOGLE_CLIENT_SECRET: string;
@@ -29,8 +30,10 @@ const schema = {
 		'COOKIE_SECRET',
 		'COOKIE_NAME',
 		'COOKIE_SECURED',
-		'UPLOAD_DIRNAME', 
-		'UPLOAD_AVATAR_DIRNAME', 
+		'ASSETS_DIRNAME', 
+		'PUBLIC_DIRNAME', 
+		'USERS_DIRNAME', 
+		'AVATAR_DIRNAME', 
 		'JWT_SECRET',
 		'GOOGLE_CLIENT_ID',
 		'GOOGLE_CLIENT_SECRET',
@@ -63,17 +66,23 @@ const schema = {
 		},
 
 		// Files
-		UPLOAD_DIRNAME: {
+		ASSETS_DIRNAME: {
+			type: 'string',
+			minLength: 1,
+			pattern: '^(?!.*\\.{2}).*$',
+			default: 'assets'
+		},
+		PUBLIC_DIRNAME: {
 			type: 'string',
 			minLength: 1,
 			pattern: '^(?!.*\\.{2}).*$',
 			default: 'public'
 		},
-		UPLOAD_USERS_DIRNAME: {
+		USERS_DIRNAME: {
 			type: 'string',
 			default: 'users'
 		},
-		UPLOAD_AVATAR_DIRNAME: {
+		AVATAR_DIRNAME: {
 			type: 'string',
 			default: 'avatar'
 		},

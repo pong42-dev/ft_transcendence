@@ -50,7 +50,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				if (!profileRow) {
 					return reply.status(404).send({ msg: 'User not found.' });
 				}
-				const avatarPath = profileRow.avatar ?? 'public/avatar.webp';
+				const avatarPath = profileRow.avatar;
 				// const avatarUrl = `http://localhost:3000/api/users/me/avatar/${userId}`;
 				const avatarUrl = `http://localhost:3000/${avatarPath}`;
 				const twoFARow = await user2FARepository.getRowByColumnValue('user_id', userId);

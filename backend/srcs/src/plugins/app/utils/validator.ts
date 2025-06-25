@@ -64,7 +64,8 @@ function validateRegisterFormData(registerFormData: RegisterFormData): string | 
 		return "Name must be 2–16 characters, using letters, numbers, or Korean characters.";
 	}
 	console.log(registerFormData.files);
-	if (!validateProfileImageFormat(registerFormData.files.avatar.file)) {
+	const avatarFile = registerFormData.files?.avatar?.file;
+	if (avatarFile && !validateProfileImageFormat(avatarFile)) {
 		return "Profile image must be JPEG, PNG, WEBP, or GIF, and <= 5MB.";
 	}
 	return null;
