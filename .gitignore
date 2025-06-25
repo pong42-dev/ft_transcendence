@@ -137,4 +137,4 @@ dist
 
 **/.env
 **/database
-**/uploads
+**/public/users/*
