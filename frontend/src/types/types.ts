@@ -14,6 +14,7 @@ export interface User {
   id: string;
   username: string;
   nickname?: string;
+  email?: string;
   avatarUrl?: string;
   twoFactorEnabled: boolean;
   gamesPlayed: number;

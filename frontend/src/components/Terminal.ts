@@ -120,6 +120,13 @@ Please login to continue.`;
     requestAnimationFrame(() => this.scrollToBottom());
   }
 
+  public focus(): void {
+    // 약간의 지연을 두어 DOM 업데이트 완료 후 포커스
+    setTimeout(() => {
+      this.inputElement.focus();
+    }, 50);
+  }
+
   private handleInputKeydown(event: KeyboardEvent): void {
     if (event.key === 'Enter') {
       const command = this.inputElement.value.trim();

@@ -268,6 +268,13 @@ export class App {
     } finally {
       console.log('🎨 Auth check complete, rendering...', this.state.isLoggedIn);
       this.render();
+      
+      // 인증 확인 완료 후 터미널에 포커스 (로그인 상태이고 게임 중이 아닌 경우)
+      if (this.state.isLoggedIn && !this.state.isInGame) {
+        setTimeout(() => {
+          this.mainTerminal.focus();
+        }, 300);
+      }
     }
   }
 
@@ -556,8 +563,18 @@ export class App {
         <div class="main-content h-[800px] bg-terminal-black border-b border-terminal-gray overflow-hidden"></div>
         
         <!-- Terminal -->
-        <div class="terminal-container flex flex-col h-[240px] min-h-[240px] max-h-[240px]">
-          <!-- Terminal will be inserted here -->
+        <div class="terminal-wrapper flex flex-col h-[240px] min-h-[240px] max-h-[240px]">
+          <!-- Terminal Tab -->
+          <div class="terminal-tab-bar flex bg-terminal-black">
+            <div class="terminal-tab flex items-center px-4 py-2 bg-terminal-black border-t-2 border-l border-r border-terminal-green border-b-0 rounded-t-md relative">
+              <span class="text-terminal-green text-sm font-medium">● PONG-CLI</span>
+            </div>
+            <div class="flex-1 border-b border-terminal-gray"></div>
+          </div>
+          <!-- Terminal Container -->
+          <div class="terminal-container flex-1 flex flex-col border-l border-r border-terminal-gray">
+            <!-- Terminal will be inserted here -->
+          </div>
         </div>
         
         <!-- Status Bar -->
@@ -618,6 +635,13 @@ export class App {
     
     // Update status bar to reflect current state
     this.updateStatusBar();
+    
+    // 로그인 상태일 때 터미널에 자동 포커스 (게임 중이 아닌 경우)
+    if (this.state.isLoggedIn && !this.state.isInGame) {
+      setTimeout(() => {
+        this.mainTerminal.focus();
+      }, 200);
+    }
   }
 
   private updateStatusBar(): void {
@@ -761,16 +785,22 @@ export class App {
           // 2FA 완료 후 상태 업데이트 및 UI 갱신
           this.state.isLoggedIn = true;
           this.state.currentUser = user;
+          this.cacheUserState(user); // 사용자 상태 캐시
           this.mainTerminal.reset();
           this.mainTerminal.updateWelcomeMessage(this.state.isLoggedIn, this.state.currentUser?.username);
           this.mainTerminal.appendOutput(`Welcome back, ${user.username}!`);
           this.mainTerminal.appendOutput('Type "help" to see available commands.');
           
-          // UI 강제 새로고침으로 로그인 상태 반영
+          // UI 강제 새로고침 후 라우팅
           this.render();
-          this.router.navigate('/profile');
+          setTimeout(() => {
+            this.router.navigate('/profile');
+            // 터미널에 포커스 설정
+            this.mainTerminal.focus();
+          }, 100); // 100ms 지연으로 렌더링 완료 보장
           
-          // 모달 닫기
+          // 모달을 성공으로 표시하고 닫기
+          twoFAModal.markAsCompleted();
           twoFAModal.close();
         } catch (error) {
           this.errorHandler.handleError(
@@ -936,13 +966,21 @@ export class App {
     const loginModal = new LoginModal(
       this.apiClient,
       (user: Types.User) => {
-        // Login success
+        // Login success - 상태 업데이트 후 렌더링과 라우팅을 순차적으로 실행
         this.state.isLoggedIn = true;
         this.state.currentUser = user;
+        this.cacheUserState(user); // 사용자 상태 캐시
         this.mainTerminal.reset();
         this.mainTerminal.appendOutput(`Welcome back, ${user.username}!`);
         this.mainTerminal.appendOutput('Type "help" to see available commands.');
-        this.router.navigate('/profile');
+        
+        // 강제 렌더링 후 라우팅
+        this.render();
+        setTimeout(() => {
+          this.router.navigate('/profile');
+          // 터미널에 포커스 설정
+          this.mainTerminal.focus();
+        }, 100); // 100ms 지연으로 렌더링 완료 보장
       },
       () => {
         // Switch to register

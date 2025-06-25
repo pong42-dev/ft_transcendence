@@ -97,10 +97,6 @@ export class AuthApiService extends BaseApiService {
     // 아바타 파일이 있으면 추가, 없으면 기본 빈 파일 생성
     if (avatarFile) {
       formData.append('avatar', avatarFile);
-    } else {
-      // 빈 파일 생성 (백엔드에서 필수로 요구하는 경우)
-      const emptyFile = new File([''], 'default.png', { type: 'image/png' });
-      formData.append('avatar', emptyFile);
     }
     
     // BaseApiService의 post 메소드 사용 (mock 지원)
@@ -384,15 +380,12 @@ export class AuthApiService extends BaseApiService {
       tmpTokenLength: request.tmpToken?.length 
     });
     
-    // 2FA 검증 시 tmpToken을 Authorization 헤더에 포함
+    // 2FA 검증 시 tmpToken은 body에만 포함 (Authorization 헤더 사용 안함)
     const headers: Record<string, string> = {
       'Content-Type': 'application/json'
     };
     
-    if (request.tmpToken) {
-      headers.Authorization = `Bearer ${request.tmpToken}`;
-      console.log('[Auth] Adding tmpToken to Authorization header for 2FA verification');
-    }
+    console.log('[Auth] Sending tmpToken in request body for 2FA verification');
     
     const response = await this.post<{
       success: boolean;
@@ -490,6 +483,7 @@ export class AuthApiService extends BaseApiService {
       id: '0', // API에서 제공하지 않으므로 기본값
       username: userData.name,
       nickname: userData.name,
+      email: userData.email || undefined,
       avatarUrl: userData.avatar || undefined,
       twoFactorEnabled,
       gamesPlayed: 0,
@@ -547,6 +541,7 @@ export class AuthApiService extends BaseApiService {
       id: '0', // API에서 제공하지 않으므로 기본값
       username: userData.name,
       nickname: userData.name,
+      email: userData.email || undefined,
       avatarUrl: userData.avatar || undefined,
       twoFactorEnabled,
       gamesPlayed: 0,

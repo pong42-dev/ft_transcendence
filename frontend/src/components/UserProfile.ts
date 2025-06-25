@@ -66,8 +66,8 @@ export class UserProfile {
     if (this.isCurrentUser) {
       const email = document.createElement('div');
       email.className = 'text-terminal-green opacity-80 truncate text-sm';
-      const [localPart, domain] = this.user.username.split('@');
-      email.textContent = localPart + '@' + domain;
+      // 실제 이메일이 있으면 사용, 없으면 username을 이메일 형식으로 표시
+      email.textContent = this.user.email || this.user.username;
       nameContainer.appendChild(email);
       
       const securityStatus = document.createElement('div');

@@ -8,6 +8,7 @@ export class TwoFAModal extends BaseModal {
   private twoFAData: TwoFAInitResponse | null = null;
   private onComplete: (code?: string) => void;
   private onCancel: () => void;
+  private isCompleted: boolean = false;
 
   constructor(
     apiClient: ApiClient, 
@@ -34,7 +35,10 @@ export class TwoFAModal extends BaseModal {
   }
 
   protected onClose(): void {
-    this.onCancel();
+    // 성공적으로 완료된 경우에는 onCancel 호출하지 않음
+    if (!this.isCompleted) {
+      this.onCancel();
+    }
   }
 
   protected setupModal(): void {
@@ -318,8 +322,8 @@ export class TwoFAModal extends BaseModal {
         return;
       }
 
-      // For login mode, pass the code back to the caller
-      // For other modes, call the completion callback
+      // 성공으로 표시하고 완료 콜백 호출
+      this.isCompleted = true;
       this.onComplete(code);
     };
 
@@ -368,6 +372,10 @@ export class TwoFAModal extends BaseModal {
 
   public setVerifyMode(): void {
     this.currentStep = 'verify';
+  }
+
+  public markAsCompleted(): void {
+    this.isCompleted = true;
   }
 
 
