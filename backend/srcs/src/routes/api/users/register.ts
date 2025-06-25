@@ -64,20 +64,28 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				}
 				const dirPath = config.PUBLIC_DIRNAME + '/' + config.USERS_DIRNAME + '/' + config.AVATAR_DIRNAME;
 				console.log("dirPath:", dirPath);
-				// const avatarPath = await fileManager.saveFile(formData.files.avatar.file, dirPath);
-				const defaultAvatarPath = path.join(config.ASSETS_DIRNAME, './default-avatar.png');
-				let avatarPath: string;
+				let avatarPath: string | undefined;
+				console.log(formData.files.avatar);
 				if (formData.files && formData.files.avatar) {
+					console.log("here1");
 					avatarPath = await fileManager.saveFile(formData.files.avatar.file, dirPath);
 				} else {
-					const defaultBuffer = fs.readFileSync(defaultAvatarPath);
-					// MultipartFile처럼 보이도록 mock 객체 생성
-					const fakeMultipartFile = {
-						filename: 'default-avatar.png',
-						toBuffer: async () => defaultBuffer,
-					};
-					avatarPath = await fileManager.saveFile(fakeMultipartFile as MultipartFile, dirPath);
+					console.log("here2");
+					avatarPath = undefined
 				}
+				// const defaultAvatarPath = path.join(config.ASSETS_DIRNAME, './default-avatar.png');
+				// let avatarPath: string;
+				// if (formData.files && formData.files.avatar) {
+				// 	avatarPath = await fileManager.saveFile(formData.files.avatar.file, dirPath);
+				// } else {
+				// 	const defaultBuffer = fs.readFileSync(defaultAvatarPath);
+				// 	// MultipartFile처럼 보이도록 mock 객체 생성
+				// 	const fakeMultipartFile = {
+				// 		filename: 'default-avatar.png',
+				// 		toBuffer: async () => defaultBuffer,
+				// 	};
+				// 	avatarPath = await fileManager.saveFile(fakeMultipartFile as MultipartFile, dirPath);
+				// }
 				const hashedPassword = await passwordManager.hashPassword(password);
 				const user_id = await usersRepository.insertRow(email, hashedPassword, 'local', '');
 				await userProfilesRepository.insertRow(user_id, name, avatarPath, 'false');

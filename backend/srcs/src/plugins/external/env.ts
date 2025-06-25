@@ -8,7 +8,7 @@ export interface FastifyInstance {
 		COOKIE_NAME: string;
 		COOKIE_SECURED: boolean;
 		RATE_LIMIT_MAX: number;
-		ASSETS_DIRNAME: string;
+		// ASSETS_DIRNAME: string;
 		PUBLIC_DIRNAME: string;
 		USERS_DIRNAME: string;
 		AVATAR_DIRNAME: string;
@@ -30,7 +30,7 @@ const schema = {
 		'COOKIE_SECRET',
 		'COOKIE_NAME',
 		'COOKIE_SECURED',
-		'ASSETS_DIRNAME', 
+		// 'ASSETS_DIRNAME', 
 		'PUBLIC_DIRNAME', 
 		'USERS_DIRNAME', 
 		'AVATAR_DIRNAME', 
@@ -66,12 +66,12 @@ const schema = {
 		},
 
 		// Files
-		ASSETS_DIRNAME: {
-			type: 'string',
-			minLength: 1,
-			pattern: '^(?!.*\\.{2}).*$',
-			default: 'assets'
-		},
+		// ASSETS_DIRNAME: {
+		// 	type: 'string',
+		// 	minLength: 1,
+		// 	pattern: '^(?!.*\\.{2}).*$',
+		// 	default: 'assets'
+		// },
 		PUBLIC_DIRNAME: {
 			type: 'string',
 			minLength: 1,
