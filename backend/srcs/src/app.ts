@@ -1,6 +1,7 @@
 import path from 'path'
 import fastifyAutoload from '@fastify/autoload'
 import { FastifyInstance, FastifyPluginOptions } from 'fastify'
+import fastifyStatic from '@fastify/static';
 
 // import chatWsPlugin from './wss/chat/index.js'
 // import gameWsPlugin from './wss/game/index.js'
@@ -37,6 +38,11 @@ export default async function serviceApp (
     cascadeHooks: true,
     options: { ...opts }
   })
+
+  fastify.register(fastifyStatic, {
+    root: path.join(import.meta.dirname, '../public'),  // 실제 public 폴더 위치
+    prefix: '/public/',                        // URL 접두사 (/public/...)
+  });
 
   // await fastify.register(chatWsPlugin)
   // await fastify.register(gameWsPlugin)

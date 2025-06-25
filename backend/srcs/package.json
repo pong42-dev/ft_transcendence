@@ -10,6 +10,7 @@
     "@types/node": "^22.15.3",
     "@types/node-cron": "^3.0.11",
     "@types/qrcode": "^1.5.5",
+    "@types/serve-static": "^1.15.8",
     "@types/speakeasy": "^2.0.10",
     "@types/ws": "^8.18.1",
     "esbuild": "^0.25.5",
@@ -23,7 +24,7 @@
     "build": "tsc && mkdir -p dist/assets dist/views && cp -R src/assets/* dist/assets/ && cp -R src/views/* dist/views/ && tsx scripts/fix-ejs.ts",
     "test": "echo \"Error: no test specified\" && exit 1",
     "db:create": "tsx --env-file=.env ./scripts/create-database.ts",
-    "db:drop": "rm -rf ./uploads/users/* && tsx --env-file=.env ./scripts/drop-database.ts",
+    "db:drop": "rm -rf ./public/users/* && tsx --env-file=.env ./scripts/drop-database.ts",
     "db:migrate": "tsx --env-file=.env ./scripts/migrate.ts",
     "db:seed": "tsx --env-file=.env ./scripts/seed-database.ts",
     "db:reset": "npm run db:drop && npm run db:create && npm run db:migrate && npm run db:seed"

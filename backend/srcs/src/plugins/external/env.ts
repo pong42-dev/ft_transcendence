@@ -67,7 +67,7 @@ const schema = {
 			type: 'string',
 			minLength: 1,
 			pattern: '^(?!.*\\.{2}).*$',
-			default: 'uploads'
+			default: 'public'
 		},
 		UPLOAD_USERS_DIRNAME: {
 			type: 'string',
