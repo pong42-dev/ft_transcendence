@@ -135,3 +135,10 @@ export const UserMeSchema = Type.Object({
 });
 
 export interface UserMe extends Static<typeof UserMeSchema> {}
+
+export const UserFriendSchema = Type.Object({
+	name: StringSchema,
+	avatar: StringSchema,
+});
+
+export interface UserFriend extends Static<typeof UserFriendSchema> {}

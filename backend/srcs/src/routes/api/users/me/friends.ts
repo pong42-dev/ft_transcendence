@@ -1,7 +1,7 @@
 import { FastifyPluginAsyncTypebox, Type } from '@fastify/type-provider-typebox'
 import { UserProfileResponseSchema } from '../../../../schemas/users.js'
 import { IdSchema } from '../../../../schemas/common.js'
-import { Profiles, UserData } from '../../../../schemas/auth.js'
+import { Profiles, UserData, UserFriendSchema } from '../../../../schemas/auth.js'
 
 const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 	const { userProfilesRepository, friendsRepository, authenticate } = fastify
@@ -120,7 +120,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 						success: Type.Literal(true),
 						msg: Type.String(),
 						data: Type.Object({
-							friend: UserProfileResponseSchema
+							userInfo: UserFriendSchema
 						})
 					}),
 					401: Type.Object({
@@ -149,18 +149,45 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				const isFollowing = await friendsRepository.isFollowing(Number(userId), Number(friendId));
 				if (!isFollowing)
 					return reply.status(409).send({ msg: 'You are not following this user.' });
-				const profile = await userProfilesRepository.getUserProfileWithStats(friendId);
-				if (!profile) {
-					return reply.status(404).send({ msg: 'user not found.' });
+
+				const profileRow = await userProfilesRepository.getRowByColumnValue('user_id', friendId);
+				if (!profileRow) {
+					return reply.status(404).send({ msg: 'User not found.' });
 				}
-				// return profile;
-				reply.send({
+				console.log('profileRow.avatar:', profileRow.avatar);
+				const avatarPath = profileRow.avatar ?? `${config.PUBLIC_DIRNAME}/default-avatar.png`;
+				console.log(avatarPath);
+				// const avatarUrl = `http://localhost:3000/api/users/me/avatar/${userId}`;
+				const avatarUrl = `http://localhost:3000/${avatarPath}`;
+				const userInfo = {
+					name: profileRow.name,
+					avatar : avatarUrl, 
+				}
+				console.log("userInfo", userInfo);
+				// const games = await gamesRepository.getGameStats(userId);
+				// const wins = await gamesRepository.getTotalWins(userId);
+				// const winRate = games > 0 ? wins / games : 0;
+
+				// const gameStats = {
+				// 	games: games,
+				// 	wins: wins,
+				// 	winRate: winRate
+				// };
+
+				// const oneOnOneHistory = await gamesRepository.get1v1MatchHistory(userId, profileRow.name);
+				// const tournHistory = await gamesRepository.getTournMatchHistory(userId, profileRow.name);
+
+				reply.status(200).send({
 					success: true,
-					msg: 'Friend Profile successfully retrieved.',
+					msg: 'User Profile successfully retrieved.',
 					data: {
-						friend: profile
+						userInfo: userInfo,
+						// gameStats: gameStats,
+						// oneOnOneHistory: oneOnOneHistory,
+						// tournHistory: tournHistory
 					}
 				});
+
 			} catch (err) {
 				fastify.log.error(err);
 				return reply.status(500).send({ msg: 'An internal server error occurred while retrieving the user profile.' });

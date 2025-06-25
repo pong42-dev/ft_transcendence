@@ -140,11 +140,9 @@ Retrieve profile and stats of a friend by their user ID.
   "success": true,
   "msg": "Friend Profile successfully retrieved.",
   "data": {
-    "friend": {
-      "user_id": 123,
-      "name": "FriendName",
-      "avatar": "avatar_url",
-      // other profile fields ...
+    "userInfo": {
+      "name": "username",
+      "avatar": "http://localhost:3000/public/2345260e-635c-47e5-9648-2597fb864860.png",
     }
   }
 }

@@ -34,7 +34,7 @@ Endpoints for retrieving and managing user profile information — change nickna
     "userInfo": {
       "email": "user@example.com",
       "name": "username",
-      "avatar": "http://localhost:3000/api/users/me/avatar/2",
+      "avatar": "http://localhost:3000/public/2345260e-635c-47e5-9648-2597fb864860.png",
       "twoFA": true
     }
   }
