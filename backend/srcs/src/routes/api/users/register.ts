@@ -6,7 +6,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 		config, 
 		usersRepository, userProfilesRepository, 
 		passwordManager, 
-		registerFormData, saveFile, isValidRegisterFormData,
+		formDataManager, fileManager, isValidRegisterFormData,
 	} = fastify
 
 	fastify.post(
@@ -36,7 +36,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 		},
 		async (request: FastifyRequest, reply: FastifyReply) => {
 			try {
-				const formData = await registerFormData(request);
+				const formData = await formDataManager.registerFormData(request);
 				const validFormDataMsg = isValidRegisterFormData(formData);
 				if (validFormDataMsg) {
 					return reply.send({ 
@@ -59,8 +59,9 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 						msg: 'This name is already registered.' 
 					});
 				}
-				const dirPath = config.UPLOAD_DIRNAME + '/' + config.UPLOAD_AVATAR_DIRNAME || 'uploads/users/avatar';
-				const avatarPath = await saveFile(formData.files.avatar.file, dirPath);
+				const dirPath = config.UPLOAD_DIRNAME + '/' + config.UPLOAD_USERS_DIRNAME + '/' + config.UPLOAD_AVATAR_DIRNAME;
+				console.log("dirPath:", dirPath);
+				const avatarPath = await fileManager.saveFile(formData.files.avatar.file, dirPath);
 				const hashedPassword = await passwordManager.hashPassword(password);
 				const user_id = await usersRepository.insertRow(email, hashedPassword, 'local', '');
 				await userProfilesRepository.insertRow(user_id, name, avatarPath, 'false');

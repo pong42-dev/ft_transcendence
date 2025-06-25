@@ -111,18 +111,23 @@ export function createUserProfilesRepository(fastify: FastifyInstance) {
 			const existingUsernames = await knex('user_profiles')
 				.select('name')
 				.where('name', 'like', `${base}%`);
-
-			const taken = new Set(existingUsernames.map(user => user.username));
-
+			console.log('generateUniqueUsername');
+			const taken = new Set(existingUsernames.map(user => user.name));
+			
 			// base 이름이 사용되지 않았으면 그대로 사용
-			if (!taken.has(base))
+			if (!taken.has(base)) {
+				
+				console.log('generateUniqueUsername2');
 				return base;
-
+			}
+			
+			console.log('generateUniqueUsername3');
 			// 숫자 붙여서 사용 가능한 이름 찾기
 			let counter = 1;
 			while (taken.has(`${base}${counter}`)) {
 				counter++;
 			}
+			console.log('generateUniqueUsername4', counter);
 
 			return `${base}${counter}`;
 		}

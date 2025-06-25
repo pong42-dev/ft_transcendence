@@ -23,7 +23,7 @@
     "build": "tsc && mkdir -p dist/assets dist/views && cp -R src/assets/* dist/assets/ && cp -R src/views/* dist/views/ && tsx scripts/fix-ejs.ts",
     "test": "echo \"Error: no test specified\" && exit 1",
     "db:create": "tsx --env-file=.env ./scripts/create-database.ts",
-    "db:drop": "rm -rf ./uploads/users/avatar/* && tsx --env-file=.env ./scripts/drop-database.ts",
+    "db:drop": "rm -rf ./uploads/users/* && tsx --env-file=.env ./scripts/drop-database.ts",
     "db:migrate": "tsx --env-file=.env ./scripts/migrate.ts",
     "db:seed": "tsx --env-file=.env ./scripts/seed-database.ts",
     "db:reset": "npm run db:drop && npm run db:create && npm run db:migrate && npm run db:seed"
@@ -41,7 +41,7 @@
     "@fastify/oauth2": "^8.1.2",
     "@fastify/rate-limit": "^10.2.2",
     "@fastify/session": "^11.1.0",
-    "@fastify/static": "^8.1.1",
+    "@fastify/static": "^8.2.0",
     "@fastify/swagger": "^9.5.1",
     "@fastify/swagger-ui": "^5.2.2",
     "@fastify/type-provider-typebox": "^5.1.0",

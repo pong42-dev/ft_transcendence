@@ -50,7 +50,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 			tags: ["Users"]
 		}
 	}, async (request: FastifyRequest<{ Querystring: { code: string } }>, reply) => {
-		const { googleOAuth2Manager, loginManager, usersRepository, userProfilesRepository, downloadImageFromUrl } = fastify;
+		const { googleOAuth2Manager, loginManager, usersRepository, userProfilesRepository, downloadImageFromUrl, config } = fastify;
 		try {
 			const tokenData = await googleOAuth2Manager.getTokenFromCode(request);
 			console.log("tokenData:", tokenData);
@@ -61,15 +61,23 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 			console.log("userByEmail: ", userByEmail);
 			const userByName = await userProfilesRepository.getRowByColumnValue('name', name);
 			console.log("userByName: ", userByName);
+			console.log("here1");
 			if (!userByEmail) {
+				console.log("here2");
 				const uniqueName = userByName? await userProfilesRepository.generateUniqueUsername(name) : name;
-				const user_id = await usersRepository.insertRow(email, '', 'google', provider_id.toString());
-				const picture_path = await downloadImageFromUrl(
+				console.log("name", name);
+				console.log("userName", userByName);
+				console.log("uniqueName", uniqueName);
+				const userId = await usersRepository.insertRow(email, '', 'google', provider_id.toString());
+				const picturePath = await downloadImageFromUrl(
 					avatar,
-					fastify.config.UPLOAD_DIRNAME + "/" + fastify.config.UPLOAD_AVATAR_DIRNAME
+					config.UPLOAD_DIRNAME + '/' + config.UPLOAD_USERS_DIRNAME + '/' + config.UPLOAD_AVATAR_DIRNAME
 				);
-				await userProfilesRepository.insertRow(user_id, uniqueName, picture_path, 'false');
-				return await loginManager.login(user_id, reply, tokenData.refresh_token);
+				console.log("picturePath:", picturePath);
+				await userProfilesRepository.insertRow(userId, uniqueName, picturePath, 'false');
+				console.log('google register complete');
+				console.log(userProfilesRepository.getRowByColumnValue('user_id', userId));
+				return await loginManager.login(userId, reply, tokenData.refresh_token);
 			} else {
 				if (userByEmail && userByEmail.provider != 'google')
 					return reply.send({ 

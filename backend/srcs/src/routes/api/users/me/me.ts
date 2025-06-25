@@ -50,7 +50,9 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				if (!profileRow) {
 					return reply.status(404).send({ msg: 'User not found.' });
 				}
-				const avatarPath = profileRow.avatar ?? 'uploads/default/avatar.webp';
+				// const avatarPath = profileRow.avatar ?? 'uploads/avatar.webp';
+				const avatarUrl = `http://localhost:3000/api/users/me/avatar/${userId}`;
+
 				const twoFARow = await user2FARepository.getRowByColumnValue('user_id', userId);
 				let is_enabled = false;
 				if (twoFARow && twoFARow.is_enabled) {
@@ -59,10 +61,10 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				const userInfo = {
 					email: userRow.email,
 					name: profileRow.name,
-					avatar : avatarPath, 
+					avatar : avatarUrl, 
 					twoFA: is_enabled
 				}
-
+				console.log("userInfo", userInfo);
 				// const games = await gamesRepository.getGameStats(userId);
 				// const wins = await gamesRepository.getTotalWins(userId);
 				// const winRate = games > 0 ? wins / games : 0;

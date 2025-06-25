@@ -9,6 +9,7 @@ export interface FastifyInstance {
 		COOKIE_SECURED: boolean;
 		RATE_LIMIT_MAX: number;
 		UPLOAD_DIRNAME: string;
+		UPLOAD_USERS_DIRNAME: string;
 		UPLOAD_AVATAR_DIRNAME: string;
 		JWT_SECRET: string;
 		GOOGLE_CLIENT_ID: string;
@@ -66,7 +67,11 @@ const schema = {
 			type: 'string',
 			minLength: 1,
 			pattern: '^(?!.*\\.{2}).*$',
-			default: 'uploads/users/avatar'
+			default: 'uploads'
+		},
+		UPLOAD_USERS_DIRNAME: {
+			type: 'string',
+			default: 'users'
 		},
 		UPLOAD_AVATAR_DIRNAME: {
 			type: 'string',
