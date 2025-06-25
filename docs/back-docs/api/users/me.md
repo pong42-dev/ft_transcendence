@@ -15,10 +15,10 @@ Endpoints for retrieving and managing user profile information — change nickna
 ### ✅ Request
 
 * **Method**: `GET`
-* **Content-Type**: `application/json`
+* **URL**: `/api/users/me`
 * **Headers**:
 
-  * `Authorization`: `Bearer <token>` (✅ required)
+  * `Authorization`: `Bearer <token>` ✅ *Required*
 
 ---
 
@@ -31,11 +31,21 @@ Endpoints for retrieving and managing user profile information — change nickna
   "success": true,
   "msg": "User Profile successfully retrieved.",
   "data": {
-    "me": {
-      "name": "6666",
-      "avatar": "uploads/avatar/07d4fd03-a4ca-4704-9bcf-1c12ef4095ec.png"
+    "userInfo": {
+      "email": "user@example.com",
+      "name": "username",
+      "avatar": "http://localhost:3000/api/users/me/avatar/2",
+      "twoFA": true
     }
   }
+}
+```
+
+#### ▶ Unauthorized (HTTP 401)
+
+```json
+{
+  "msg": "Unauthorized"
 }
 ```
 
@@ -51,7 +61,7 @@ Endpoints for retrieving and managing user profile information — change nickna
 
 ```json
 {
-  "msg": "An internal server error occurred while retrieving the user profile.'"
+  "msg": "An internal server error occurred while retrieving the user profile."
 }
 ```
 
@@ -59,9 +69,12 @@ Endpoints for retrieving and managing user profile information — change nickna
 
 ### 🧩 Additional Notes
 
-* **Authentication**: Required via `preHandler: authenticate`
-* **Error Logging**: All errors are logged internally using Fastify logger
-* **Includes Stats**: Follows logic in `getUserProfileWithStats()` repository method
+* **Authentication Required**: Uses `preHandler: authenticate`
+* **Avatar URL**: Automatically generated using user ID
+* **2FA Status**: Returns `twoFA: true` if enabled in DB
+* **Stats / Match History**: (🚧 *Planned*) Data like games, wins, 1v1 and tournament history is prepared but commented in current implementation
+* **Logging**: All server errors are logged via Fastify logger
+* **Schema Validation**: Fastify uses TypeBox for schema enforcement
 
 ---
 
