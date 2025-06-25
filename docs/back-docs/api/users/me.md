@@ -2,7 +2,7 @@
 # 🧾 User Profile API
 
 **User Profile APIs**
-Endpoints for retrieving and updating user profile information, including display name (nickname) and avatar image.
+Endpoints for retrieving and managing user profile information — change nickname, avatar image, and display avatar image.
 
 ---
 
@@ -222,5 +222,67 @@ const data = await res.json();
   * Deletes existing avatar if present
   * Saves to configured upload directory
 * **Error Logging**: Fastify logger handles internal logs
+
+---
+
+## 📌 `/avatar` \[GET]
+
+**🖼️ Retrieve avatar image of the authenticated user**
+
+---
+
+### ✅ Request
+
+* **Method**: `GET`
+* **Headers**:
+
+  * `Authorization`: `Bearer <token>` (✅ required)
+
+---
+
+### ✅ Response
+
+#### ▶ Success (HTTP 200)
+
+* Returns the user's avatar image as binary (e.g., PNG, JPEG)
+* `Content-Type` will match the file type (`image/png`, `image/jpeg`, etc.)
+
+```
+<binary image stream>
+```
+
+#### ▶ Not Found (HTTP 404)
+
+```json
+{
+  "msg": "User not found."
+}
+```
+
+```json
+{
+  "msg": "Avatar image not found."
+}
+```
+
+#### ▶ Server Error (HTTP 500)
+
+```json
+{
+  "msg": "An internal server error occurred while retrieving the avatar."
+}
+```
+
+---
+
+### 🧩 Additional Notes
+
+* **Authentication**: Required via `authenticate` preHandler
+* **Default Fallback**: If `avatar` field is `null`, defaults to `uploads/avatar.webp`
+* **Validation**:
+
+  * Checks whether the file exists on the file system
+* **Streaming**: Uses `fs.createReadStream()` to stream the file
+* **Logging**: Internal errors are logged via Fastify’s logger
 
 ---
