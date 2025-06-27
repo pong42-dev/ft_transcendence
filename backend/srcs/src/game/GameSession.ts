@@ -1,329 +1,234 @@
-import { GameConfig } from './GameConfig.js';
 import { GameEngine } from './GameEngine.js';
-import { Player, GameState, PlayerInput, GameMode, GameStatus, GameResult } from '../schemas/games.js';
+import {
+  PlayerResponseDto,
+  GameStateDto,
+  GameEventDto,
+  PlayerInputDto,
+  GameMode,
+  GameStatus,
+} from '../schemas/games.js';
+import { GameConfig } from './GameConfig.js';
+
+// GameSession 내부에서 사용할 콜백 타입 정의
+type GameStateUpdateCallback = (dto: GameStateDto) => void;
+type GameEventCallback = (dto: GameEventDto) => void;
 
 /**
- * GameSession - Server-side Game Session Management
- * 
- * PongGameModular.ts를 서버 환경에 맞게 변경한 클래스
- * - 개별 게임 세션을 관리
- * - 60fps 게임 루프 실행
- * - WebSocket을 통한 실시간 상태 브로드캐스트
- * 
- * @role 서버사이드 게임 세션 관리
- * @based_on PongGameModular.ts
+ * GameSession
+ * 개별 게임 세션을 관리하고, 게임 로직(GameEngine)과 외부(GameManager)를 연결합니다.
+ * - 게임의 생명주기(waiting, countdown, playing 등)를 관리합니다.
+ * - 백엔드 주도 카운트다운을 실행합니다.
+ * - GameEngine의 상태를 DTO로 변환하여 콜백으로 전달합니다.
  */
-
 export class GameSession {
+  private engine: GameEngine;
   private config: GameConfig;
-  private gameEngine: GameEngine;
-  
-  // Game session info
-  private gameId: string;
-  private players: Map<string, Player> = new Map();
-  private playerInputs: Map<string, 'UP' | 'DOWN' | 'NONE'> = new Map();
-  
-  // Game state
-  private gameStarted: boolean = false;
-  private gameMode: GameMode = '1v1';
-  private gameStatus: GameStatus = 'waiting';
-  private isMultiplayer: boolean = true;
-  private gameStartTime: number = 0;
-  
-  // Dynamic canvas size (like frontend)
-  private canvasWidth: number;
-  private canvasHeight: number;
-  
-  // Game loop
-  private gameLoop: any = null;
-  private readonly FPS = 60;
-  private readonly FRAME_TIME = 1000 / this.FPS;
-  
+
+  // Session Info
+  public readonly id: string;
+  private players = new Map<number, PlayerResponseDto>();
+  private playerInputs = new Map<number, 'UP' | 'DOWN' | 'NONE'>();
+  private playerReady = new Map<number, boolean>();
+
+  // State
+  private status: GameStatus = 'waiting';
+  private _mode: GameMode = 'local_1v1';
+  private loop: NodeJS.Timeout | null = null;
+  private _startTime: number = 0;
+
   // Callbacks
-  private onGameStateUpdate?: (gameState: GameState) => void;
-  private onGameEnd?: (winner: 'left' | 'right', gameResult: any) => void;
+  private onGameStateUpdate: GameStateUpdateCallback;
+  private onGameEvent: GameEventCallback;
 
   constructor(
-    gameId: string, 
-    canvasWidth?: number,
-    canvasHeight?: number,
-    onGameStateUpdate?: (gameState: GameState) => void,
-    onGameEnd?: (winner: 'left' | 'right', gameResult: any) => void
+    id: string,
+    mode: GameMode,
+    onStateUpdate: GameStateUpdateCallback,
+    onEvent: GameEventCallback,
   ) {
-    this.gameId = gameId;
+    this.id = id;
+    this._mode = mode;
+    this.onGameStateUpdate = onStateUpdate;
+    this.onGameEvent = onEvent;
+
     this.config = new GameConfig();
-    this.gameEngine = new GameEngine(this.config);
-    
-    // 동적 캔버스 크기 설정 (Frontend와 동일)
-    this.canvasWidth = canvasWidth || this.config.canvasWidth;
-    this.canvasHeight = canvasHeight || this.config.canvasHeight;
-    
-    this.onGameStateUpdate = onGameStateUpdate;
-    this.onGameEnd = onGameEnd;
+    this.engine = new GameEngine(this.config);
   }
 
   // =================================================================
-  // Public API - 게임 세션 관리
+  // Public API - Called by GameManager
   // =================================================================
 
-  public addPlayer(player: Player): boolean {
-    if (this.players.size >= 2) {
-      return false; // 이미 2명의 플레이어가 있음
-    }
-    
+  public addPlayer(player: PlayerResponseDto) {
+    if (this.players.size >= 2) return;
     this.players.set(player.id, player);
     this.playerInputs.set(player.id, 'NONE');
-    
-    // 2명이 모이면 게임 시작 준비
-    if (this.players.size === 2) {
-      this.prepareGame();
-    }
-    
-    return true;
+    this.playerReady.set(player.id, false); // 플레이어는 접속 후 준비 상태를 알려야 함
   }
 
-  public removePlayer(playerId: string): void {
+  public removePlayer(playerId: number) {
     this.players.delete(playerId);
     this.playerInputs.delete(playerId);
-    
+    this.playerReady.delete(playerId);
     // 플레이어가 나가면 게임 중단
-    if (this.gameStarted) {
-      this.stop();
+    if (this.status === 'playing' || this.status === 'countdown') {
+      this.stop('player_left');
     }
   }
 
-  public handlePlayerInput(input: PlayerInput): void {
-    if (!this.players.has(input.player_id)) {
-      return; // 해당 플레이어가 게임에 없음
-    }
-    
-    this.playerInputs.set(input.player_id, input.action);
-  }
+  public setPlayerReady(playerId: number) {
+    if (!this.players.has(playerId)) return;
+    this.playerReady.set(playerId, true);
 
-  public start(): void {
-    // Frontend와 동일하게 에러 체크 제거 (주석으로 남김)
-    // if (this.players.size !== 2) {
-    //   throw new Error('게임을 시작하려면 2명의 플레이어가 필요합니다');
-    // }
-    
-    this.resetGame();
-    this.startGame();
-  }
-
-  public stop(): void {
-    if (this.gameLoop) {
-      clearInterval(this.gameLoop);
-      this.gameLoop = null;
-    }
-    this.gameStarted = false;
-  }
-
-  // 캔버스 크기 동적 업데이트 (Frontend와 동일)
-  public updateCanvasSize(width: number, height: number): void {
-    this.canvasWidth = width;
-    this.canvasHeight = height;
-  }
-
-  public getGameState(): GameState {
-    const ballPos = this.gameEngine.getBallPosition();
-    const paddlePos = this.gameEngine.getPaddlePositions();
-    const roundWins = this.gameEngine.getRoundWins();
-    const currentRound = this.gameEngine.getCurrentRound();
-    
-    return {
-      game_id: this.gameId,
-      ball: { x: ballPos.x, y: ballPos.y },
-      paddles: { 
-        left: { y: paddlePos.left }, 
-        right: { y: paddlePos.right } 
-      },
-      score: { left: roundWins.left, right: roundWins.right },
-      round: currentRound,
-      status: this.gameStarted ? 'playing' : 'game_end',
-      timestamp: Date.now()
-    };
-  }
-
-  public getGameResult(): GameResult {
-    const roundWins = this.gameEngine.getRoundWins();
-    const winner: 'left' | 'right' = roundWins.left > roundWins.right ? 'left' : 'right';
-    const winnerPlayer = this.getPlayerBySide(winner);
-    
-    return {
-      game_id: this.gameId,
-      winner: winnerPlayer ? winnerPlayer.id : 'unknown',
-      final_score: { left: roundWins.left, right: roundWins.right },
-      duration: this.gameStartTime > 0 ? Date.now() - this.gameStartTime : 0,
-      end_reason: 'normal'
-    };
-  }
-
-  // 헬퍼 메서드: 왼쪽/오른쪽으로 플레이어 찾기
-  private getPlayerBySide(side: 'left' | 'right'): Player | null {
-    const playersArray = Array.from(this.players.values());
-    if (playersArray.length < 2) return null;
-    return side === 'left' ? playersArray[0] : playersArray[1];
-  }
-
-  // =================================================================
-  // Private Methods - 게임 로직 처리
-  // =================================================================
-
-  private prepareGame(): void {
-    // 2명의 플레이어가 모였을 때 호출
-    const playersArray = Array.from(this.players.values());
-    
-    // 멀티플레이어 모드 설정
-    this.isMultiplayer = true;
-    
-    console.log(`Game ${this.gameId} ready with players:`, playersArray.map(p => p.name));
-  }
-
-  private startGame(): void {
-    this.gameStarted = true;
-    this.gameStatus = 'playing';
-    this.gameStartTime = Date.now();
-    
-    // 60fps 게임 루프 시작
-    this.gameLoop = setInterval(() => {
-      this.updateGame();
-      this.broadcastGameState();
-    }, this.FRAME_TIME);
-    
-    console.log(`Game ${this.gameId} started`);
-  }
-
-  private resetGame(): void {
-    this.gameEngine.resetGame();
-    this.gameStarted = false;
-    
-    // 플레이어 입력 초기화
-    for (const playerId of this.players.keys()) {
-      this.playerInputs.set(playerId, 'NONE');
+    // 모든 플레이어가 준비되었는지 확인
+    if (this.players.size === 2 && [...this.playerReady.values()].every(Boolean)) {
+      this.startCountdown();
     }
   }
 
-  private updateGame(): void {
-    if (!this.gameStarted) return;
-    
-    // 플레이어 입력 처리 (AI 감지 포함)
-    const playersArray = Array.from(this.players.values()); // values()로 변경하여 Player 객체 접근
-    const leftPlayer = playersArray[0];
-    const rightPlayer = playersArray[1];
-    
-    let leftInput = 'NONE';
-    let rightInput = 'NONE';
-    let currentIsMultiplayer = this.isMultiplayer; // 기본값 사용
-    
-    // 좌측 플레이어 입력 처리
-    if (leftPlayer?.type === 'ai') {
-      leftInput = 'AI_CONTROLLED'; // AI 표시를 위한 특별한 값
-      currentIsMultiplayer = false; // AI 모드로 설정
-      console.log(`[GameSession] AI detected on left side: ${leftPlayer.name}`);
-    } else if (leftPlayer) {
-      leftInput = this.playerInputs.get(leftPlayer.id) || 'NONE';
-    }
-    
-    // 우측 플레이어 입력 처리  
-    if (rightPlayer?.type === 'ai') {
-      rightInput = 'AI_CONTROLLED';
-      currentIsMultiplayer = false; // AI 모드로 설정
-      console.log(`[GameSession] AI detected on right side: ${rightPlayer.name}`);
-    } else if (rightPlayer) {
-      rightInput = this.playerInputs.get(rightPlayer.id) || 'NONE';
-    }
-    
-    console.log(`[GameSession] Update - Left: ${leftInput}, Right: ${rightInput}, Multiplayer: ${currentIsMultiplayer}`);
-    
-    // 동적 캔버스 크기 사용 (Frontend와 동일)
-    const goalScorer = this.gameEngine.updateBallPosition(
-      this.canvasWidth, 
-      this.canvasHeight
-    );
-    
-    if (goalScorer) {
-      this.handleRoundEnd(goalScorer);
-      return;
-    }
-    
-    // 패들 위치 업데이트 (AI 감지된 isMultiplayer 값 사용)
-    this.gameEngine.updatePaddlePositions(leftInput, rightInput, currentIsMultiplayer);
+  public handlePlayerInput(playerId: number, input: PlayerInputDto) {
+    if (this.status !== 'playing' || !this.playerInputs.has(playerId)) return;
+    this.playerInputs.set(playerId, input.action);
   }
 
-  private handleRoundEnd(winner: 'left' | 'right'): void {
-    const result = this.gameEngine.handleRoundEnd(winner);
-
-    if (result.gameEnded && result.matchWinner) {
-      // 게임 종료
-      this.stop();
-      if (this.onGameEnd) {
-        this.onGameEnd(result.matchWinner, this.getGameResult());
+  public stop(reason: 'normal' | 'player_left' | 'error') {
+    if (this.loop) {
+      clearInterval(this.loop);
+      this.loop = null;
+    }
+    if (this.status === 'playing' || this.status === 'countdown') {
+      if (reason === 'normal') {
+        this.status = 'finished';
+        // 정상 종료 시에는 'game_canceled' 이벤트를 보내지 않음
+      } else {
+        this.status = 'canceled';
+        // 비정상 종료 시에만 'game_canceled' 이벤트를 보냄
+        this.onGameEvent({ event: 'game_canceled' });
       }
-    } else {
-      // 다음 라운드 시작
-      this.resetRound();
     }
   }
 
-  private resetRound(): void {
-    this.gameEngine.resetRound();
-    
-    // 잠시 멈춤 후 다시 시작 (카운트다운 대신)
-    setTimeout(() => {
-      if (this.gameStarted) {
-        console.log(`Game ${this.gameId} - Round ${this.gameEngine.getCurrentRound()} started`);
+  // =================================================================
+  // Internal Game Flow
+  // =================================================================
+
+  private startCountdown() {
+    if (this.status !== 'waiting') return;
+
+    this.status = 'countdown';
+    let remainingTime = 5;
+
+    this.loop = setInterval(() => {
+      this.onGameEvent({ event: 'countdown', data: { remainingTime } });
+      remainingTime--;
+
+      if (remainingTime < 0) {
+        clearInterval(this.loop!);
+        this._startGameLoop();
       }
     }, 1000);
   }
 
-  private broadcastGameState(): void {
-    if (this.onGameStateUpdate) {
-      const gameState = this.getGameState();
-      this.onGameStateUpdate(gameState);
+  private _startGameLoop() {
+    this.status = 'playing';
+    this._startTime = Date.now();
+    this.onGameEvent({ event: 'round_start' });
+
+    this.loop = setInterval(() => {
+      this._updateGame();
+    }, this.config.gameLoopInterval);
+  }
+
+  private _updateGame() {
+    const players = Array.from(this.players.values());
+    // players 배열이 비어있거나 1명일 경우의 엣지 케이스 처리
+    if (players.length < 2) {
+        this.stop('error'); // 혹은 다른 적절한 처리
+        return;
     }
+    const leftPlayerInput = this.playerInputs.get(players[0].id) || 'NONE';
+    const rightPlayerInput = this.playerInputs.get(players[1].id) || 'NONE';
+
+    // 엔진 업데이트 (GameEngine의 실제 메서드 호출)
+    // 1. 패들 위치 업데이트
+    // TODO: isMultiplayer 로직을 mode에 따라 결정하도록 수정 필요
+    this.engine.updatePaddlePositions(leftPlayerInput, rightPlayerInput, true);
+
+    // 2. 공 위치 업데이트 및 득점자 확인
+    const goalScorer = this.engine.updateBallPosition(
+      this.config.canvasWidth,
+      this.config.canvasHeight,
+    );
+
+    // 3. 득점 발생 시 라운드 종료 처리
+    if (goalScorer) {
+      this._handleRoundEnd(goalScorer);
+      return; // 라운드가 끝났으므로 아래 로직은 실행하지 않음
+    }
+
+    // 상태 DTO 생성 및 전파
+    const gameStateDto = this._createGameStateDto();
+    this.onGameStateUpdate(gameStateDto);
+  }
+
+  private _handleRoundEnd(winnerSide: 'left' | 'right') {
+    const players = Array.from(this.players.values());
+    if (players.length < 2) return;
+
+    const winner = winnerSide === 'left' ? players[0] : players[1];
+    this.onGameEvent({ event: 'round_end', data: { winnerId: winner.id } });
+
+    // GameEngine의 handleRoundEnd는 게임 종료 여부와 승자 정보를 반환
+    const result = this.engine.handleRoundEnd(winnerSide);
+
+    if (result.gameEnded && result.matchWinner) {
+      const matchWinnerPlayer =
+        result.matchWinner === 'left' ? players[0] : players[1];
+      // 'game_end' 이벤트를 먼저 보내고,
+      this.onGameEvent({
+        event: 'game_end',
+        data: { winnerId: matchWinnerPlayer.id },
+      });
+      // 그 다음에 게임 루프를 중지시킵니다.
+      this.stop('normal');
+    } else {
+      // 다음 라운드 준비
+      this.engine.resetRound();
+    }
+  }
+
+  // =================================================================
+  // DTO Creation
+  // =================================================================
+
+  private _createGameStateDto(): GameStateDto {
+    // GameEngine의 개별 getter를 사용하여 상태 DTO 생성
+    const ballPos = this.engine.getBallPosition();
+    const paddlePos = this.engine.getPaddlePositions();
+    const scores = this.engine.getRoundWins();
+
+    return {
+      ball: { x: ballPos.x, y: ballPos.y },
+      paddles: {
+        player1: { y: paddlePos.left },
+        player2: { y: paddlePos.right },
+      },
+      scores: {
+        player1: scores.left,
+        player2: scores.right,
+      },
+    };
   }
 
   // =================================================================
   // Getters
   // =================================================================
 
-  public getGameId(): string {
-    return this.gameId;
+  public getStatus(): GameStatus {
+    return this.status;
   }
 
-  public getPlayers(): Player[] {
+  public getPlayers(): PlayerResponseDto[] {
     return Array.from(this.players.values());
-  }
-
-  public isGameStarted(): boolean {
-    return this.gameStarted;
-  }
-
-  public getGameStatus(): GameStatus {
-    return this.gameStatus;
-  }
-
-  public getGameMode(): GameMode {
-    return this.gameMode;
-  }
-
-  public setGameMode(mode: GameMode): void {
-    this.gameMode = mode;
-  }
-
-  public getPlayerCount(): number {
-    return this.players.size;
-  }
-
-  public getCanvasSize(): { width: number; height: number } {
-    return { width: this.canvasWidth, height: this.canvasHeight };
-  }
-
-  public getGameDuration(): number {
-    return this.gameStartTime > 0 ? Date.now() - this.gameStartTime : 0;
-  }
-
-  public hasPlayer(playerId: string): boolean {
-    return this.players.has(playerId);
   }
 }

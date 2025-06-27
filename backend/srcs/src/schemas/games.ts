@@ -1,132 +1,148 @@
-import {Static, Type} from "@sinclair/typebox";
+import { Static, Type } from '@sinclair/typebox';
 
-// TODO: DB 스키마 확정 후 Player 필드 구조 수정 필요
-// 현재는 임시 구조로 구현
-export const PlayerSchema = Type.Object({
-  id: Type.String(),
-  name: Type.String(),
-  type: Type.Union([Type.Literal('user'), Type.Literal('guest'), Type.Literal('ai')]),
-  user_id: Type.Optional(Type.Number()),
-  guest_name: Type.Optional(Type.String())
-})
-export type Player = Static<typeof PlayerSchema>;
+// =================================================================
+//                            Enums & Types
+// =================================================================
+
+export const PlayerTypeSchema = Type.Union([
+  Type.Literal('user'),
+  Type.Literal('guest'),
+  Type.Literal('ai'),
+]);
+export type PlayerType = Static<typeof PlayerTypeSchema>;
 
 export const GameModeSchema = Type.Union([
-  Type.Literal('1v1'),        // Local 1v1 (2 players required)
-  Type.Literal('vs_ai'),      // VS AI (1 player + AI)
-  Type.Literal('tournament')  // Tournament (4 players, not implemented yet)
-])
-export type GameMode = Static<typeof GameModeSchema>
+  Type.Literal('local_1v1'),
+  Type.Literal('ai_1v1'),
+  Type.Literal('tournament'),
+]);
+export type GameMode = Static<typeof GameModeSchema>;
 
-export const GameStateSchema = Type.Object({
-  game_id: Type.String(),
-  ball: Type.Object({
-    x: Type.Number(),
-    y: Type.Number()
-  }),
-  paddles: Type.Object({
-    left: Type.Object({ y: Type.Number() }),
-    right: Type.Object({ y: Type.Number() })
-  }),
-  score: Type.Object({
-    left: Type.Number(),
-    right: Type.Number()
-  }),
-  round: Type.Number(),
-  status: Type.Union([
-    Type.Literal('playing'),
-    Type.Literal('round_end'), 
-    Type.Literal('game_end')
-  ]),
-  timestamp: Type.Number()
-})
-
-export interface GameState {
-  game_id: string;
-  ball: { x: number; y: number };
-  paddles: {
-    left: { y: number };
-    right: { y: number };
-  };
-  score: { left: number; right: number };
-  round: number;
-  status: 'playing' | 'round_end' | 'game_end';
-  timestamp: number;
-}
-
-export const PlayerInputSchema = Type.Object({
-  player_id: Type.String(),
-  action: Type.Union([
-    Type.Literal('UP'),
-    Type.Literal('DOWN'),
-    Type.Literal('NONE')
-  ]),
-  timestamp: Type.Number()
-})
-
-// Static을 사용하지 않고 직접 인터페이스 정의
-export interface PlayerInput {
-  player_id: string;
-  action: 'UP' | 'DOWN' | 'NONE';
-  timestamp: number;
-}
-
-export const GameResultSchema = Type.Object({
-  game_id: Type.String(),
-  winner: Type.String(),
-  final_score: Type.Object({
-    left: Type.Number(),
-    right: Type.Number()
-  }),
-  duration: Type.Number(),
-  end_reason: Type.Union([
-    Type.Literal('normal'),
-    Type.Literal('disconnect'),
-    Type.Literal('timeout')
-  ])
-})
-
-export interface GameResult {
-  game_id: string;
-  winner: string;
-  final_score: { left: number; right: number };
-  duration: number;
-  end_reason: 'normal' | 'disconnect' | 'timeout';
-}
-
+// GameStatus includes 'countdown' for backend-driven start sequence
 export const GameStatusSchema = Type.Union([
   Type.Literal('waiting'),
-  Type.Literal('starting'),
+  Type.Literal('countdown'), // Game is set, starting countdown
   Type.Literal('playing'),
-  Type.Literal('paused'),
-  Type.Literal('finished')
-])
-export type GameStatus = Static<typeof GameStatusSchema>
+  Type.Literal('finished'),
+  Type.Literal('canceled'),
+]);
+export type GameStatus = Static<typeof GameStatusSchema>;
 
-// 게임 생성 요청 스키마
-export const CreateGameSchema = Type.Object({
-  player1: PlayerSchema,
-  player2: Type.Optional(PlayerSchema),
-  gameMode: Type.Optional(GameModeSchema)
-})
+// =================================================================
+//                      Database Schema Types
+// =================================================================
 
-export interface CreateGame {
-  player1: Player;
-  player2?: Player;
-  gameMode?: GameMode;
-}
+export const DBPlayerSchema = Type.Object({
+  id: Type.Integer(),
+  type: PlayerTypeSchema,
+  user_id: Type.Optional(Type.Integer()),
+  display_name: Type.Optional(Type.String()),
+  created_at: Type.String(),
+});
+export type DBPlayer = Static<typeof DBPlayerSchema>;
 
-// 게임 취소 요청 스키마
-export const CancelGameSchema = Type.Object({
-  reason: Type.Union([
-    Type.Literal('user_exit'),
-    Type.Literal('page_unload'),
-    Type.Literal('network_error')
+export const DBGameSchema = Type.Object({
+  id: Type.Integer(),
+  type: GameModeSchema,
+  tournament_id: Type.Optional(Type.Integer()),
+  round_number: Type.Integer(),
+  winner_id: Type.Optional(Type.Integer()),
+  status: GameStatusSchema,
+  started_at: Type.Optional(Type.String()),
+  ended_at: Type.Optional(Type.String()),
+});
+export type DBGame = Static<typeof DBGameSchema>;
+
+export const DBGameParticipantSchema = Type.Object({
+  id: Type.Integer(),
+  game_id: Type.Integer(),
+  player_id: Type.Integer(),
+  score: Type.Integer(),
+});
+export type DBGameParticipant = Static<typeof DBGameParticipantSchema>;
+
+// =================================================================
+//                         API DTOs
+// =================================================================
+
+// --- Player DTOs ---
+export const CreatePlayerRequestDtoSchema = Type.Object({
+  type: PlayerTypeSchema,
+  userId: Type.Optional(Type.Integer()), // user 타입인 경우 필수
+  displayName: Type.Optional(Type.String()), // guest 타입인 경우 필수
+});
+export type CreatePlayerRequestDto = Static<typeof CreatePlayerRequestDtoSchema>;
+
+export const PlayerResponseDtoSchema = Type.Object({
+  id: Type.Integer(),
+  type: PlayerTypeSchema,
+  name: Type.String(), // users.nickname or players.display_name
+});
+export type PlayerResponseDto = Static<typeof PlayerResponseDtoSchema>;
+
+// --- Game DTOs ---
+export const CreateGameRequestDtoSchema = Type.Object({
+  type: GameModeSchema,
+  players: Type.Array(CreatePlayerRequestDtoSchema), // 플레이어 정보 배열
+});
+export type CreateGameRequestDto = Static<typeof CreateGameRequestDtoSchema>;
+
+export const GameResponseDtoSchema = Type.Object({
+  gameId: Type.String(), // This will be a UUID for the game session
+  status: GameStatusSchema,
+  type: GameModeSchema,
+  players: Type.Array(PlayerResponseDtoSchema),
+});
+export type GameResponseDto = Static<typeof GameResponseDtoSchema>;
+
+// =================================================================
+//                      WebSocket DTOs
+// =================================================================
+
+// --- Client to Server ---
+export const PlayerInputDtoSchema = Type.Object({
+  action: Type.Union([Type.Literal('UP'), Type.Literal('DOWN')]),
+});
+export type PlayerInputDto = Static<typeof PlayerInputDtoSchema>;
+
+// --- Server to Client ---
+
+export const BallStateSchema = Type.Object({
+  x: Type.Number(),
+  y: Type.Number(),
+});
+
+export const PaddleStateSchema = Type.Object({
+  y: Type.Number(),
+});
+
+// For periodic state synchronization
+export const GameStateDtoSchema = Type.Object({
+  ball: BallStateSchema,
+  paddles: Type.Object({
+    player1: PaddleStateSchema,
+    player2: PaddleStateSchema,
+  }),
+  scores: Type.Object({
+    player1: Type.Integer(),
+    player2: Type.Integer(),
+  }),
+});
+export type GameStateDto = Static<typeof GameStateDtoSchema>;
+
+// For discrete events (countdown, game end, etc.)
+export const GameEventDtoSchema = Type.Object({
+  event: Type.Union([
+    Type.Literal('countdown'),
+    Type.Literal('round_start'),
+    Type.Literal('round_end'),
+    Type.Literal('game_end'),
+    Type.Literal('game_canceled'),
   ]),
-  playerId: Type.Optional(Type.String())
-})
-
-export interface CancelGame {
-  reason: 'user_exit' | 'page_unload' | 'network_error';
-  playerId?: string;
-}
+  data: Type.Optional(Type.Object({
+    remainingTime: Type.Optional(Type.Number()), // For 'countdown'
+    winnerId: Type.Optional(Type.Integer()),      // For 'game_end'
+    // Can be extended with more data for other events
+  })),
+});
+export type GameEventDto = Static<typeof GameEventDtoSchema>;

@@ -1,151 +1,235 @@
 import { FastifyInstance } from 'fastify';
 import fp from 'fastify-plugin';
+import { 
+	DBGame, 
+	DBPlayer, 
+	GameMode, 
+	GameStatus, 
+	CreatePlayerRequestDto,
+	PlayerResponseDto 
+} from '../../../schemas/games.js';
 
 declare module 'fastify' {
-interface FastifyInstance {
-	gamesRepository: ReturnType<typeof creategamesRepository>;
-}
-}
-
-interface GameMatchHistory {
-	endedAt: string | null;
-	guest: string | null;
-	winner: string | null;
-	rank: 1 | 2;
+	interface FastifyInstance {
+		gameRepository: ReturnType<typeof createGameRepository>;
+	}
 }
 
-interface TournMatchHistory {
-	endedAt: string | null;
-	guest1: string | null;
-	guest2: string | null;
-	guest3: string | null;
-	winner: string | null;
-	rank: 1 | 2 | 3;
-}
-
-export function creategamesRepository(fastify: FastifyInstance) {
+export function createGameRepository(fastify: FastifyInstance) {
 	const knex = fastify.knex;
 
 	return {
-		async getGameStats(userId: number): Promise<number> {
-			const localGamesResult: Array<{ count: number }> = await knex('games')
-			.where({ user_id: userId, type: '1vs1' })
-			.count('id as count');
+		// =================================================================
+		// Player Operations
+		// =================================================================
 
-			const localGamesCount = Number(localGamesResult[0]?.count ?? 0);
+		/**
+		 * 플레이어 생성
+		 */
+		async createPlayer(playerData: CreatePlayerRequestDto): Promise<PlayerResponseDto> {
+			const { type, userId, displayName } = playerData;
 
-			const tournamentsResult: Array<{ count: number }> = await knex('tournaments')
-			.where({ user_id: userId })
-			.count('id as count');
+			// 데이터 유효성 검증
+			if (type === 'user' && !userId) {
+				throw new Error('User type player must have userId');
+			}
+			if ((type === 'guest' || type === 'ai') && !displayName) {
+				throw new Error('Guest and AI type players must have displayName');
+			}
 
-			const tournamentsCount = Number(tournamentsResult[0]?.count ?? 0);
-
-			return localGamesCount + tournamentsCount;
-		},
-
-		async getTotalWins(userId: number): Promise<number> {
-			const localWinsResult: Array<{ count: number }> = await knex('games')
-				.where({
-				user_id: userId,
-				type: '1vs1',
-				winner: 'user',
-				})
-				.count('id as count');
-			const localWins = Number(localWinsResult[0]?.count ?? 0);
-
-			const tournamentFinalWinsResult: Array<{ count: number }> = await knex('tournaments as t')
-				.join('games as g', 't.game3_id', 'g.id')
-				.where('t.user_id', userId)
-				.andWhere('g.winner', 'user')
-				.count('t.id as count');
-			const tournamentFinalWins = Number(tournamentFinalWinsResult[0]?.count ?? 0);
-
-			return localWins + tournamentFinalWins;
-		},
-
-		async get1v1MatchHistory(userId: number, userName: string): Promise<GameMatchHistory[]> {
-			const rows = await knex('games')
-				.select('ended_at', 'guest_name', 'winner')
-				.where({
-				user_id: userId,
-				type: '1vs1',
-				status: 'finished',
-				})
-				.orderBy('ended_at', 'desc');
-
-			return rows.map(row => ({
-				endedAt: row.ended_at,
-				guest: row.guest_name,
-				winner: row.winner === userName ? userName : row.guest_name,
-				rank: row.winner === userName ? 1 : 2,
-			}));
-		},
-		
-		async getTournMatchHistory(userId: number, userName: string): Promise<TournMatchHistory[]> {
-			const tournaments = await knex('tournaments as t')
-				.leftJoin('games as g1', 't.game1_id', 'g1.id')
-				.leftJoin('games as g2', 't.game2_id', 'g2.id')
-				.leftJoin('games as g3', 't.game3_id', 'g3.id')
-				.select(
-				't.id as tournamentId',
-				't.ended_at as endedAt',
-				't.guest1_name as guest1',
-				't.guest2_name as guest2',
-				't.guest3_name as guest3',
-				'g1.winner as winner1',
-				'g2.winner as winner2',
-				'g3.winner as winner3'
-				)
-				.where({
-				't.user_id': userId,
-				't.status': 'finished'
-				})
-				.orderBy('t.ended_at', 'desc');
-
-			return tournaments.map(t => {
-				let rank: 1 | 2 | 3 = 3;
-
-				if (t.winner3 === userName) {
-					rank = 1;
-				} else if (t.winner1 === userName || t.winner2 === userName) {
-					rank = 2;
-				} else { 
-					rank = 3;
-				}
-
-				let winnerName: string | null = null;
-				if (t.winner3 === userName) {
-					winnerName = userName;
-				} else if (t.winner3 === t.guest1) {
-					winnerName = t.guest1;
-				} else if (t.winner3 === t.guest2) {
-					winnerName = t.guest2;
-				} else if (t.winner3 === t.guest3) {
-					winnerName = t.guest3;
-				} else {
-					winnerName = null;
-				}
-
-				return {
-					endedAt: t.endedAt,
-					guest1: t.guest1,
-					guest2: t.guest2,
-					guest3: t.guest3,
-					winner: winnerName,
-					rank,
-				};
+			const [playerId] = await knex('players').insert({
+				type,
+				user_id: userId || null,
+				display_name: displayName || null
 			});
+
+			return await this.getPlayerById(playerId);
+		},
+
+		/**
+		 * 플레이어 조회 (ID로)
+		 */
+		async getPlayerById(playerId: number): Promise<PlayerResponseDto> {
+			const player = await knex('players').where('id', playerId).first() as DBPlayer;
+
+			if (!player) {
+				throw new Error(`Player not found: ${playerId}`);
+			}
+
+			return await this.mapDBPlayerToResponseDto(player);
+		},
+
+		/**
+		 * 사용자 ID로 플레이어 조회 (user 타입인 경우)
+		 */
+		async getPlayerByUserId(userId: number): Promise<PlayerResponseDto | null> {
+			const player = await knex('players')
+				.where('type', 'user')
+				.where('user_id', userId)
+				.first() as DBPlayer;
+
+			return player ? await this.mapDBPlayerToResponseDto(player) : null;
+		},
+
+		/**
+		 * AI 플레이어 조회 또는 생성
+		 */
+		async getOrCreateAIPlayer(): Promise<PlayerResponseDto> {
+			let aiPlayer = await knex('players')
+				.where('type', 'ai')
+				.first() as DBPlayer;
+
+			if (!aiPlayer) {
+				// AI 플레이어가 없으면 생성
+				const [aiPlayerId] = await knex('players').insert({
+					type: 'ai',
+					user_id: null,
+					display_name: 'AI'
+				});
+				aiPlayer = await knex('players').where('id', aiPlayerId).first() as DBPlayer;
+			}
+
+			return await this.mapDBPlayerToResponseDto(aiPlayer);
+		},
+
+		/**
+		 * DB Player를 Response DTO로 변환
+		 */
+		async mapDBPlayerToResponseDto(dbPlayer: DBPlayer): Promise<PlayerResponseDto> {
+			let name: string;
+
+			if (dbPlayer.type === 'user' && dbPlayer.user_id) {
+				// 사용자 프로필에서 닉네임 조회
+				const userProfile = await knex('user_profiles')
+					.where('user_id', dbPlayer.user_id)
+					.first();
+				name = userProfile?.nickname || `User ${dbPlayer.user_id}`;
+			} else {
+				name = dbPlayer.display_name || 'Unknown';
+			}
+
+			return {
+				id: dbPlayer.id,
+				type: dbPlayer.type,
+				name
+			};
+		},
+
+		// =================================================================
+		// Game Operations
+		// =================================================================
+
+		/**
+		 * 게임 생성 (플레이어들과 함께)
+		 */
+		async createGameWithPlayers(
+			gameMode: GameMode, 
+			playerIds: number[]
+		): Promise<number> {
+			const trx = await knex.transaction();
+			
+			try {
+				// 1. 게임 생성
+				const [gameId] = await trx('games').insert({
+					type: gameMode,
+					tournament_id: null,
+					round_number: 1,
+					status: 'waiting',
+					started_at: null,
+					ended_at: null,
+					winner_id: null
+				});
+
+				// 2. 플레이어들을 game_participants에 등록
+				if (playerIds.length > 0) {
+					const participantData = playerIds.map(playerId => ({
+						game_id: gameId,
+						player_id: playerId,
+						score: 0
+					}));
+					
+					await trx('game_participants').insert(participantData);
+				}
+
+				await trx.commit();
+				return gameId;
+			} catch (error) {
+				await trx.rollback();
+				throw error;
+			}
+		},
+
+		/**
+		 * 게임 상태 업데이트
+		 */
+		async updateGameStatus(gameId: number, status: GameStatus): Promise<void> {
+			const updateData: any = { status };
+			
+			if (status === 'playing') {
+				updateData.started_at = knex.fn.now();
+			} else if (status === 'finished' || status === 'canceled') {
+				updateData.ended_at = knex.fn.now();
+			}
+
+			await knex('games').where('id', gameId).update(updateData);
+		},
+
+		/**
+		 * 게임 승자 설정
+		 */
+		async setGameWinner(gameId: number, winnerId: number): Promise<void> {
+			await knex('games').where('id', gameId).update({
+				winner_id: winnerId,
+				status: 'finished',
+				ended_at: knex.fn.now()
+			});
+		},
+
+		/**
+		 * 플레이어 점수 업데이트
+		 */
+		async updatePlayerScore(gameId: number, playerId: number, score: number): Promise<void> {
+			await knex('game_participants')
+				.where('game_id', gameId)
+				.where('player_id', playerId)
+				.update({ score });
+		},
+
+		/**
+		 * 게임 정보 조회
+		 */
+		async getGameById(gameId: number): Promise<DBGame | null> {
+			const game = await knex('games').where('id', gameId).first() as DBGame;
+			return game || null;
+		},
+
+		/**
+		 * 게임 참가자 조회
+		 */
+		async getGameParticipants(gameId: number): Promise<PlayerResponseDto[]> {
+			const participants = await knex('game_participants as gp')
+				.join('players as p', 'gp.player_id', 'p.id')
+				.select('p.*', 'gp.score')
+				.where('gp.game_id', gameId) as (DBPlayer & { score: number })[];
+
+			const result: PlayerResponseDto[] = [];
+			for (const participant of participants) {
+				const playerDto = await this.mapDBPlayerToResponseDto(participant);
+				result.push(playerDto);
+			}
+
+			return result;
 		}
-	}
+	};
 }
 
 export default fp(
 	async function (fastify: FastifyInstance) {
-		const repo = creategamesRepository(fastify);
-		fastify.decorate('gamesRepository', repo);
+		const repo = createGameRepository(fastify);
+		fastify.decorate('gameRepository', repo);
 	},
 	{
-		name: 'games-repository',
+		name: 'game-repository',
 		dependencies: ['knex'],
 	}
-)
+);
