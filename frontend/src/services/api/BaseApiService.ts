@@ -250,9 +250,10 @@ export abstract class BaseApiService {
       // 기본 헤더 설정
       let defaultHeaders: Record<string, string> = {};
       
-      // FormData가 아닌 경우만 Content-Type 설정
+      // FormData가 아닌 경우이고 body가 있을 때만 Content-Type 설정
       const isFormData = options.body instanceof FormData;
-      if (!isFormData) {
+      const hasBody = options.body !== undefined && options.body !== null;
+      if (!isFormData && hasBody) {
         defaultHeaders['Content-Type'] = 'application/json';
       }
 

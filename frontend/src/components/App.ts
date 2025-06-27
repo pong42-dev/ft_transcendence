@@ -590,7 +590,7 @@ export class App {
             <div class="flex-1 border-b border-terminal-gray"></div>
           </div>
           <!-- Terminal Container -->
-          <div class="terminal-container flex-1 flex flex-col border-l border-r border-terminal-gray">
+          <div class="terminal-container flex-1 flex flex-col border-l border-r border-terminal-gray overflow-hidden" style="max-height: calc(240px - 40px); height: calc(240px - 40px);">
             <!-- Terminal will be inserted here -->
           </div>
         </div>
@@ -737,7 +737,7 @@ export class App {
         await this.handleLogoutCommand();
         break;
       case 'friend':
-        await this.handleFriendCommand();
+        await this.handleFriendCommand(args);
         break;
       case 'profile':
         this.handleProfileCommand(args);
@@ -769,7 +769,7 @@ export class App {
         '  profile  - View user profile (profile <username>)\n' +
         '  play     - Start a game of Pong\n' +
         '  logout   - Log out of current session\n' +
-        '  friend   - Manage friends list\n' +
+        '  friend   - Manage friends (friend follow|unfollow|list)\n' +
         '  2fa      - Manage two-factor authentication (2fa enable|disable|status)\n' +
         '  set      - Update profile settings (set avatar|name)\n' +
         '  clear    - Clear the terminal screen'
@@ -882,17 +882,135 @@ export class App {
     this.router.navigate('/');
   }
 
-  private async handleFriendCommand(): Promise<void> {
+  private async handleFriendCommand(args?: string[]): Promise<void> {
     if (!this.state.isLoggedIn) {
       this.mainTerminal.appendOutput('Please login first to manage friends.');
       return;
     }
 
+    // If no arguments provided, show help
+    if (!args || args.length === 0) {
+      this.mainTerminal.appendOutput('Usage: friend <follow|unfollow|list> [username]');
+      this.mainTerminal.appendOutput('  friend follow <username>   - Follow a user');
+      this.mainTerminal.appendOutput('  friend unfollow <username> - Unfollow a user');
+      this.mainTerminal.appendOutput('  friend list                - Show friends list');
+      return;
+    }
+
+    const subCommand = args[0].toLowerCase();
+
+    switch (subCommand) {
+      case 'follow':
+        await this.handleFriendFollow(args.slice(1));
+        break;
+      case 'unfollow':
+        await this.handleFriendUnfollow(args.slice(1));
+        break;
+      case 'list':
+        await this.handleFriendList();
+        break;
+      default:
+        this.mainTerminal.appendOutput(`Unknown friend command: ${subCommand}`);
+        this.mainTerminal.appendOutput('Usage: friend <follow|unfollow|list> [username]');
+    }
+  }
+
+  private async handleFriendFollow(args: string[]): Promise<void> {
+    if (args.length === 0) {
+      this.mainTerminal.appendOutput('Usage: friend follow <username>');
+      return;
+    }
+
+    const username = args.join(' ').trim();
+    if (!username) {
+      this.mainTerminal.appendOutput('Please provide a username to follow.');
+      return;
+    }
+
     try {
-      const friendModal = new FriendModal(this.apiClient);
-      await friendModal.open();
+      this.mainTerminal.appendOutput(`Following ${username}...`);
+      await this.apiClient.friend.addFriend(username);
+      this.mainTerminal.appendOutput(`✅ Successfully followed ${username}`);
     } catch (error) {
-      this.mainTerminal.appendOutput('Error opening friend manager.');
+      let errorMessage = `❌ Failed to follow ${username}.`;
+      if (error instanceof Error) {
+        if (error.message.includes('already following')) {
+          errorMessage = `You are already following ${username}.`;
+        } else if (error.message.includes('User not found')) {
+          errorMessage = `User ${username} not found.`;
+        } else if (error.message.includes('cannot follow yourself')) {
+          errorMessage = 'You cannot follow yourself.';
+        }
+      }
+      this.mainTerminal.appendOutput(errorMessage);
+    }
+  }
+
+  private async handleFriendUnfollow(args: string[]): Promise<void> {
+    if (args.length === 0) {
+      this.mainTerminal.appendOutput('Usage: friend unfollow <username>');
+      return;
+    }
+
+    const username = args.join(' ').trim();
+    if (!username) {
+      this.mainTerminal.appendOutput('Please provide a username to unfollow.');
+      return;
+    }
+
+    try {
+      this.mainTerminal.appendOutput(`Unfollowing ${username}...`);
+      
+      // Get friend list to find the friend ID
+      const friends = await this.apiClient.friend.getFriends();
+      const friend = friends.find(f => f.username === username);
+      
+      if (!friend || !friend.id) {
+        this.mainTerminal.appendOutput(`You are not following ${username}.`);
+        return;
+      }
+
+      await this.apiClient.friend.removeFriend(friend.id);
+      this.mainTerminal.appendOutput(`✅ Successfully unfollowed ${username}`);
+    } catch (error) {
+      let errorMessage = `❌ Failed to unfollow ${username}.`;
+      if (error instanceof Error) {
+        if (error.message.includes('not following')) {
+          errorMessage = `You are not following ${username}.`;
+        } else if (error.message.includes('User not found')) {
+          errorMessage = `User ${username} not found.`;
+        }
+      }
+      this.mainTerminal.appendOutput(errorMessage);
+    }
+  }
+
+  private async handleFriendList(): Promise<void> {
+    try {
+      this.mainTerminal.appendOutput('Loading friends list...');
+      const friends = await this.apiClient.friend.getFriends();
+      
+      if (friends.length === 0) {
+        this.mainTerminal.appendOutput('You have no friends yet. Use "friend follow <username>" to follow someone.');
+        return;
+      }
+
+      this.mainTerminal.appendOutput(`\nFriends (${friends.length}):`);
+      this.mainTerminal.appendOutput('─'.repeat(50));
+      
+      friends.forEach((friend, index) => {
+        const statusIcon = friend.status === 'online' ? '🟢' : 
+                          friend.status === 'inGame' ? '🎮' : '⚫';
+        const blockedText = friend.blocked ? ' [BLOCKED]' : '';
+        this.mainTerminal.appendOutput(
+          `${(index + 1).toString().padStart(2)}. ${statusIcon} ${friend.username} (${friend.nickname})${blockedText}`
+        );
+      });
+      
+      this.mainTerminal.appendOutput('─'.repeat(50));
+    } catch (error) {
+      this.mainTerminal.appendOutput('❌ Failed to load friends list. Please try again.');
+      console.error('Friend list error:', error);
     }
   }
 

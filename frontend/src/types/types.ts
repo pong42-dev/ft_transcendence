@@ -25,6 +25,7 @@ export interface User {
 }
 
 export interface Friend {
+  id?: number;
   username: string;
   nickname: string;
   status: 'online' | 'offline' | 'inGame';

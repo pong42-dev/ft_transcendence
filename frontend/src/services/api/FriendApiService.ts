@@ -28,8 +28,9 @@ export class FriendApiService extends BaseApiService {
         throw new Error(response.msg || 'Invalid response format');
       }
       
-      // Friend 객체로 변환 (user_id 포함)
+      // Friend 객체로 변환 (id 포함)
       return response.data.friends.map(friend => ({
+        id: friend.user_id,
         username: friend.name,
         nickname: friend.name,
         status: friend.status ? 'online' : 'offline' as 'online' | 'offline' | 'inGame',
@@ -137,25 +138,24 @@ export class FriendApiService extends BaseApiService {
         success: boolean;
         msg: string;
         data: {
-          friend: {
-            user_id?: number;
+          userInfo: {
             name: string;
             avatar: string | null;
           };
         };
       }>(`/api/users/me/friends/${friendId}`);
       
-      // 응답 검증
-      if (!response.success || !response.data?.friend) {
+      // 응답 검증 (백엔드는 userInfo로 반환)
+      if (!response.success || !response.data?.userInfo) {
         throw new Error(response.msg || 'Invalid response format');
       }
       
       // User 객체로 변환
       return {
-        id: (response.data.friend.user_id || friendId).toString(),
-        username: response.data.friend.name,
-        nickname: response.data.friend.name,
-        avatarUrl: response.data.friend.avatar || undefined,
+        id: friendId.toString(),
+        username: response.data.userInfo.name,
+        nickname: response.data.userInfo.name,
+        avatarUrl: response.data.userInfo.avatar || undefined,
         twoFactorEnabled: false,
         gamesPlayed: 0,
         gamesWon: 0,
