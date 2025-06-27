@@ -4,7 +4,7 @@ import {
   PlayerResponseDto,
   PlayerInputDto,
 } from '../schemas/games.js';
-import { randomUUID } from 'crypto';
+// import { randomUUID } from 'crypto'; // 더 이상 사용하지 않음
 
 /**
  * GameManager
@@ -41,8 +41,6 @@ export class GameManager {
   // =================================================================
 
   public async createGame(mode: GameMode, players: PlayerResponseDto[]): Promise<string> {
-    const gameId = randomUUID();
-
     try {
       // 1. DB에 게임 생성
       const dbGameId = await this.gameRepository?.createGameWithPlayers(
@@ -50,10 +48,13 @@ export class GameManager {
         players.map(p => p.id)
       );
 
-      // 2. 게임 세션 생성
+      // 2. 게임 세션 생성 (DB ID를 문자열로 변환해서 gameId로 사용)
+      const gameId = dbGameId.toString();
       const session = new GameSession(
         gameId,
+        dbGameId,
         mode,
+        this.gameRepository,
         // GameStateDto 콜백
         (gameState) => {
           this.webSocketHandler?.broadcastGameState(gameId, gameState);
@@ -80,6 +81,10 @@ export class GameManager {
 
   public getSession(gameId: string): GameSession | undefined {
     return this.sessions.get(gameId)?.session;
+  }
+
+  public getDbGameId(gameId: string): number | undefined {
+    return this.sessions.get(gameId)?.dbGameId;
   }
 
   public removeGame(gameId: string) {

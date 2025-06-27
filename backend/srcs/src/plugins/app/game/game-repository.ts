@@ -93,6 +93,55 @@ export function createGameRepository(fastify: FastifyInstance) {
 		},
 
 		/**
+		 * 유저 플레이어 조회 또는 생성
+		 */
+		async getOrCreateUserPlayer(userId: number): Promise<PlayerResponseDto> {
+			// 기존 유저 플레이어 조회
+			let userPlayer = await knex('players')
+				.where({ type: 'user', user_id: userId })
+				.first() as DBPlayer;
+
+			if (!userPlayer) {
+				// 유저 정보 조회
+				const user = await knex('users')
+					.where('id', userId)
+					.first();
+
+				if (!user) {
+					throw new Error(`User not found: ${userId}`);
+				}
+
+				// 새 유저 플레이어 생성
+				const [playerIdArray] = await knex('players').insert({
+					type: 'user',
+					user_id: userId,
+					display_name: null
+				});
+
+				const playerId = Array.isArray(playerIdArray) ? playerIdArray[0] : playerIdArray;
+				userPlayer = await knex('players').where('id', playerId).first() as DBPlayer;
+			}
+
+			return await this.mapDBPlayerToResponseDto(userPlayer);
+		},
+
+		/**
+		 * 게스트 플레이어 생성 (항상 새로 생성)
+		 */
+		async createGuestPlayer(displayName: string): Promise<PlayerResponseDto> {
+			const [playerIdArray] = await knex('players').insert({
+				type: 'guest',
+				user_id: null,
+				display_name: displayName
+			});
+
+			const playerId = Array.isArray(playerIdArray) ? playerIdArray[0] : playerIdArray;
+			const guestPlayer = await knex('players').where('id', playerId).first() as DBPlayer;
+
+			return await this.mapDBPlayerToResponseDto(guestPlayer);
+		},
+
+		/**
 		 * DB Player를 Response DTO로 변환
 		 */
 		async mapDBPlayerToResponseDto(dbPlayer: DBPlayer): Promise<PlayerResponseDto> {

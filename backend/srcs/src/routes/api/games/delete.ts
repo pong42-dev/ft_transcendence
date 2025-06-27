@@ -1,10 +1,12 @@
 import { FastifyPluginAsyncTypebox, Type } from '@fastify/type-provider-typebox'
 import { GameManager } from '../../../game/GameManager.js'
-import { GameResultSchema } from '../../../schemas/games.js'
 
 const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 	// const { authenticate } = fastify  // TODO: 테스트 완료 후 활성화
 	const gameManager = GameManager.getInstance()
+	
+	// GameManager에 Repository 주입
+	gameManager.setGameRepository(fastify.gameRepository)
 
 	// DELETE /api/games/:gameId - 게임 삭제 (세션 정리)
 	fastify.delete(
@@ -16,23 +18,20 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				}),
 				response: {
 					200: Type.Object({
-						success: Type.Literal(true),
-						msg: Type.String(),
-						data: Type.Object({
-							gameId: Type.String(),
-							finalResult: Type.Optional(GameResultSchema)
-						})
+						message: Type.String(),
+						gameId: Type.String()
 					}),
 					404: Type.Object({
-						msg: Type.String()
+						message: Type.String()
 					}),
 					500: Type.Object({
-						msg: Type.String()
+						message: Type.String()
 					})
 				},
-				tags: ["Games"]		},
-		// TODO: 테스트 완료 후 인증 재활성화
-		// preHandler: [authenticate]
+				tags: ["Games"]
+			},
+			// TODO: 테스트 완료 후 인증 재활성화
+			// preHandler: [authenticate]
 		},
 		async (request, reply) => {
 			try {
@@ -40,35 +39,28 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 
 				const session = gameManager.getSession(gameId)
 				if (!session) {
-					return reply.status(404).send({ msg: 'Game not found' })
+					return reply.status(404).send({ message: 'Game not found' })
 				}
 
-				// 게임 결과 가져오기 (게임이 끝난 경우)
-				let finalResult
-				if (session.isGameStarted()) {
+				// 게임 세션 정리
+				gameManager.removeGame(gameId)
+
+				// DB에서도 게임 상태 업데이트 (선택적)
+				if (fastify.gameRepository) {
 					try {
-						finalResult = session.getGameResult()
-					} catch {
-						// 게임이 진행 중이거나 결과가 없는 경우
+						await fastify.gameRepository.updateGameStatus(parseInt(gameId), 'finished')
+					} catch (dbError) {
+						fastify.log.warn('Failed to update game status in DB:', dbError)
 					}
-				}
-
-				const success = gameManager.removeGame(gameId)
-				if (!success) {
-					return reply.status(500).send({ msg: 'Failed to delete game' })
 				}
 
 				return reply.send({
-					success: true,
-					msg: 'Game deleted successfully',
-					data: {
-						gameId,
-						finalResult
-					}
+					message: 'Game deleted successfully',
+					gameId
 				})
-			} catch (error) {
-				fastify.log.error(error)
-				return reply.status(500).send({ msg: 'Internal server error' })
+			} catch (error: any) {
+				fastify.log.error('Error deleting game:', error)
+				return reply.status(500).send({ message: 'Internal server error' })
 			}
 		}
 	)

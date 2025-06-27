@@ -8,10 +8,12 @@ import {
   GameStatus,
 } from '../schemas/games.js';
 import { GameConfig } from './GameConfig.js';
+import { createGameRepository } from '../plugins/app/game/game-repository.js';
 
 // GameSession 내부에서 사용할 콜백 타입 정의
 type GameStateUpdateCallback = (dto: GameStateDto) => void;
 type GameEventCallback = (dto: GameEventDto) => void;
+type GameRepositoryType = ReturnType<typeof createGameRepository>;
 
 /**
  * GameSession
@@ -23,9 +25,11 @@ type GameEventCallback = (dto: GameEventDto) => void;
 export class GameSession {
   private engine: GameEngine;
   private config: GameConfig;
+  private gameRepository: GameRepositoryType;
 
   // Session Info
   public readonly id: string;
+  public readonly gameId: number; // DB의 games 테이블 ID
   private players = new Map<number, PlayerResponseDto>();
   private playerInputs = new Map<number, 'UP' | 'DOWN' | 'NONE'>();
   private playerReady = new Map<number, boolean>();
@@ -34,7 +38,7 @@ export class GameSession {
   private status: GameStatus = 'waiting';
   private _mode: GameMode = 'local_1v1';
   private loop: NodeJS.Timeout | null = null;
-  private _startTime: number = 0;
+  // private _startTime: number = 0; // 나중에 필요시 사용
 
   // Callbacks
   private onGameStateUpdate: GameStateUpdateCallback;
@@ -42,12 +46,16 @@ export class GameSession {
 
   constructor(
     id: string,
+    gameId: number,
     mode: GameMode,
+    gameRepository: GameRepositoryType,
     onStateUpdate: GameStateUpdateCallback,
     onEvent: GameEventCallback,
   ) {
     this.id = id;
+    this.gameId = gameId;
     this._mode = mode;
+    this.gameRepository = gameRepository;
     this.onGameStateUpdate = onStateUpdate;
     this.onGameEvent = onEvent;
 
@@ -91,17 +99,27 @@ export class GameSession {
     this.playerInputs.set(playerId, input.action);
   }
 
-  public stop(reason: 'normal' | 'player_left' | 'error') {
+  public async stop(reason: 'normal' | 'player_left' | 'error') {
+    console.log(`[GameSession] stop called with reason: ${reason}, gameId: ${this.gameId}, current status: ${this.status}`);
+    
     if (this.loop) {
       clearInterval(this.loop);
       this.loop = null;
     }
-    if (this.status === 'playing' || this.status === 'countdown') {
+    
+    // 'waiting' 상태에서도 취소 가능하도록 조건 확장
+    if (this.status === 'playing' || this.status === 'countdown' || this.status === 'waiting') {
       if (reason === 'normal') {
         this.status = 'finished';
+        // DB에 게임 상태 업데이트
+        console.log(`[GameSession] Updating DB status to 'finished' for gameId: ${this.gameId}`);
+        await this.gameRepository.updateGameStatus(this.gameId, 'finished');
         // 정상 종료 시에는 'game_canceled' 이벤트를 보내지 않음
       } else {
         this.status = 'canceled';
+        // DB에 게임 상태 업데이트
+        console.log(`[GameSession] Updating DB status to 'canceled' for gameId: ${this.gameId}`);
+        await this.gameRepository.updateGameStatus(this.gameId, 'canceled');
         // 비정상 종료 시에만 'game_canceled' 이벤트를 보냄
         this.onGameEvent({ event: 'game_canceled' });
       }
@@ -129,9 +147,11 @@ export class GameSession {
     }, 1000);
   }
 
-  private _startGameLoop() {
+  private async _startGameLoop() {
     this.status = 'playing';
-    this._startTime = Date.now();
+    // this._startTime = Date.now(); // 나중에 필요시 사용
+    // DB에 게임 시작 상태 업데이트
+    await this.gameRepository.updateGameStatus(this.gameId, 'playing');
     this.onGameEvent({ event: 'round_start' });
 
     this.loop = setInterval(() => {
@@ -171,7 +191,7 @@ export class GameSession {
     this.onGameStateUpdate(gameStateDto);
   }
 
-  private _handleRoundEnd(winnerSide: 'left' | 'right') {
+  private async _handleRoundEnd(winnerSide: 'left' | 'right') {
     const players = Array.from(this.players.values());
     if (players.length < 2) return;
 
@@ -181,16 +201,28 @@ export class GameSession {
     // GameEngine의 handleRoundEnd는 게임 종료 여부와 승자 정보를 반환
     const result = this.engine.handleRoundEnd(winnerSide);
 
+    // 현재 점수를 DB에 업데이트
+    const scores = this.engine.getRoundWins();
+    const leftPlayer = players[0];
+    const rightPlayer = players[1];
+    
+    await this.gameRepository.updatePlayerScore(this.gameId, leftPlayer.id, scores.left);
+    await this.gameRepository.updatePlayerScore(this.gameId, rightPlayer.id, scores.right);
+
     if (result.gameEnded && result.matchWinner) {
       const matchWinnerPlayer =
         result.matchWinner === 'left' ? players[0] : players[1];
+      
+      // DB에 게임 승자 설정
+      await this.gameRepository.setGameWinner(this.gameId, matchWinnerPlayer.id);
+      
       // 'game_end' 이벤트를 먼저 보내고,
       this.onGameEvent({
         event: 'game_end',
         data: { winnerId: matchWinnerPlayer.id },
       });
       // 그 다음에 게임 루프를 중지시킵니다.
-      this.stop('normal');
+      await this.stop('normal');
     } else {
       // 다음 라운드 준비
       this.engine.resetRound();
@@ -230,5 +262,9 @@ export class GameSession {
 
   public getPlayers(): PlayerResponseDto[] {
     return Array.from(this.players.values());
+  }
+
+  public getGameMode(): GameMode {
+    return this._mode;
   }
 }

@@ -1,6 +1,6 @@
 import { FastifyPluginAsyncTypebox, Type } from '@fastify/type-provider-typebox'
 import { GameManager } from '../../../game/GameManager.js'
-import { GameStateSchema } from '../../../schemas/games.js'
+import { GameResponseDtoSchema } from '../../../schemas/games.js'
 
 const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 	// const { authenticate } = fastify  // TODO: 테스트 완료 후 활성화
@@ -15,26 +15,12 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 					gameId: Type.String()
 				}),
 				response: {
-					200: Type.Object({
-						success: Type.Literal(true),
-						msg: Type.String(),
-						data: Type.Object({
-							gameId: Type.String(),
-							status: Type.String(),
-							players: Type.Array(Type.Object({
-								id: Type.String(),
-								name: Type.String(),
-								type: Type.String()
-							})),
-							playerCount: Type.Number(),
-							gameState: Type.Optional(GameStateSchema)
-						})
-					}),
+					200: GameResponseDtoSchema,
 					404: Type.Object({
-						msg: Type.String()
+						message: Type.String()
 					}),
 					500: Type.Object({
-						msg: Type.String()
+						message: Type.String()
 					})
 				},
 				tags: ["Games"]		},
@@ -47,32 +33,26 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 
 				const session = gameManager.getSession(gameId)
 				if (!session) {
-					return reply.status(404).send({ msg: 'Game not found' })
+					return reply.status(404).send({ message: 'Game not found' })
 				}
 
+				// GameSession에서 필요한 정보 조회
 				const players = session.getPlayers()
-				const playerCount = session.getPlayerCount()
-				const isStarted = session.isGameStarted()
-				const gameState = isStarted ? session.getGameState() : undefined
+				const status = session.getStatus()
+				const gameType = session.getGameMode()
 
-				return reply.send({
-					success: true,
-					msg: 'Game retrieved successfully',
-					data: {
-						gameId,
-						status: isStarted ? 'playing' : 'waiting',
-						players: players.map(p => ({
-							id: p.id,
-							name: p.name,
-							type: p.type
-						})),
-						playerCount,
-						gameState
-					}
-				})
-			} catch (error) {
-				fastify.log.error(error)
-				return reply.status(500).send({ msg: 'Internal server error' })
+				// GameResponseDto 형식으로 응답
+				const response = {
+					gameId,
+					status,
+					type: gameType,
+					players
+				}
+
+				return reply.send(response)
+			} catch (error: any) {
+				fastify.log.error('Error getting game status:', error)
+				return reply.status(500).send({ message: 'Internal server error' })
 			}
 		}
 	)
