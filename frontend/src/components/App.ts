@@ -62,6 +62,7 @@ export class App {
     // 즉시 세션 스토리지에서 토큰 복원 시도
     this.tryRestoreSessionToken();
     
+    
     // 인증 상태 확인을 백그라운드에서 실행 (UI 블로킹 방지)
     setTimeout(() => {
       this.checkAuthStateWithTimeout();
@@ -142,24 +143,38 @@ export class App {
   }
 
   private async checkAuthState(): Promise<void> {
-    console.log('🔍 Starting authentication check...');
-    
     try {
       // Check for OAuth callback first
       const url = new URL(window.location.href);
       const hasOAuthParams = url.searchParams.has('code') || url.pathname.includes('callback');
       
-      if (hasOAuthParams) {
-        console.log('🔗 OAuth callback detected, handling...');
+      // OAuth 리다이렉트 후 쿠키 기반 로그인 시도 (구글 OAuth 콜백은 code 없이 리다이렉트됨)
+      const isOAuthRedirect = document.referrer.includes('accounts.google.com') || 
+                              sessionStorage.getItem('oauth_login_attempt') === 'true';
+      
+      if (hasOAuthParams || isOAuthRedirect) {
         const user = await this.handleOAuthCallback();
+        
         if (user) {
           this.state.isLoggedIn = true;
           this.state.currentUser = user;
-          this.cacheUserState(user); // OAuth 로그인 시 사용자 상태 캐시
-          console.log('✅ OAuth login successful:', user.username);
+          this.cacheUserState(user);
+          this.mainTerminal.reset();
+          this.mainTerminal.appendOutput(`Welcome back, ${user.username}!`);
+          this.mainTerminal.appendOutput('Type "help" to see available commands.');
+          
+          // OAuth 로그인 시도 추적 정리
+          sessionStorage.removeItem('oauth_login_attempt');
+          
+          setTimeout(() => {
+            this.router.navigate('/profile');
+            this.mainTerminal.focus();
+          }, 100);
           return;
+        } else {
+          // OAuth 실패 시에도 추적 정리
+          sessionStorage.removeItem('oauth_login_attempt');
         }
-        // OAuth failed, continue with normal auth check
       }
 
       // 토큰 상태 디버깅
@@ -419,17 +434,20 @@ export class App {
 
 
   private async handleOAuthCallback(): Promise<Types.User | null> {
-    // Only try OAuth callback if we're actually coming from OAuth redirect
+    // OAuth callback can be triggered by URL params or OAuth redirect detection
     const url = new URL(window.location.href);
     const hasOAuthParams = url.searchParams.has('code') || url.pathname.includes('callback');
+    const isOAuthRedirect = document.referrer.includes('accounts.google.com') || 
+                            sessionStorage.getItem('oauth_login_attempt') === 'true';
     
-    if (!hasOAuthParams) {
+    if (!hasOAuthParams && !isOAuthRedirect) {
       return null;
     }
     
     try {
       // Try to get user info (only works if OAuth callback was successful)
       const user = await this.apiClient.auth.handleOAuthCallback();
+      
       if (user) {
         // Clean up URL after successful OAuth callback
         window.history.replaceState({}, document.title, '/');

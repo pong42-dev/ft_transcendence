@@ -184,6 +184,9 @@ export class AuthApiService extends BaseApiService {
       throw new Error('Mock OAuth redirect');
     }
     
+    // OAuth 로그인 시도 추적
+    sessionStorage.setItem('oauth_login_attempt', 'true');
+    
     // 실제 환경에서는 전체 페이지 리다이렉트
     window.location.href = 'http://localhost:3000/api/users/login/google';
     
