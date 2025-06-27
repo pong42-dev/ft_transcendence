@@ -1,74 +1,36 @@
-import {Static, Type} from "@sinclair/typebox";
-import { PlayerSchema, GameStateSchema, GameResultSchema, PlayerInputSchema } from "./games.js";
-import type { Player, GameState, GameResult, PlayerInput } from "./games.js";
+import { Type, Static } from '@sinclair/typebox'
+import { GameStateDtoSchema, GameEventDtoSchema, PlayerInputDtoSchema } from './games.js'
 
 // =================================================================
 // WebSocket Message Types
 // =================================================================
 
-export const WSMessageTypeSchema = Type.Union([
-  Type.Literal('player_input'),
-  Type.Literal('game_state'),
-  Type.Literal('game_end'),
-  Type.Literal('player_joined'),
-  Type.Literal('player_left'),
-  Type.Literal('error')
-])
-export type WSMessageType = Static<typeof WSMessageTypeSchema>
-
-// =================================================================
-// Client → Server Messages
-// =================================================================
-
+// Client -> Server Messages
 export const WSPlayerInputMessageSchema = Type.Object({
   type: Type.Literal('player_input'),
-  data: PlayerInputSchema
-})
-
-export interface WSPlayerInputMessage {
-  type: 'player_input';
-  data: PlayerInput;
-}
-
-// =================================================================
-// Server → Client Messages
-// =================================================================
-
-export const WSGameStateMessageSchema = Type.Object({
-  type: Type.Literal('game_state'),
-  data: GameStateSchema
-})
-
-export interface WSGameStateMessage {
-  type: 'game_state';
-  data: GameState;
-}
-
-export const WSGameEndMessageSchema = Type.Object({
-  type: Type.Literal('game_end'),
-  data: GameResultSchema
-})
-
-export interface WSGameEndMessage {
-  type: 'game_end';
-  data: GameResult;
-}
-
-export const WSPlayerJoinedMessageSchema = Type.Object({
-  type: Type.Literal('player_joined'),
   data: Type.Object({
-    player: PlayerSchema,
-    playerCount: Type.Number()
+    playerId: Type.Number(),
+    input: PlayerInputDtoSchema
   })
 })
 
-export interface WSPlayerJoinedMessage {
-  type: 'player_joined';
-  data: {
-    player: Player;
-    playerCount: number;
-  };
-}
+export const WSPlayerReadyMessageSchema = Type.Object({
+  type: Type.Literal('player_ready'),
+  data: Type.Object({
+    playerId: Type.Number()
+  })
+})
+
+// Server -> Client Messages
+export const WSGameStateMessageSchema = Type.Object({
+  type: Type.Literal('game_state'),
+  data: GameStateDtoSchema
+})
+
+export const WSGameEventMessageSchema = Type.Object({
+  type: Type.Literal('game_event'),
+  data: GameEventDtoSchema
+})
 
 export const WSErrorMessageSchema = Type.Object({
   type: Type.Literal('error'),
@@ -78,24 +40,40 @@ export const WSErrorMessageSchema = Type.Object({
   })
 })
 
-export interface WSErrorMessage {
-  type: 'error';
-  data: {
-    message: string;
-    code?: string;
-  };
-}
+export const WSConnectionStatusMessageSchema = Type.Object({
+  type: Type.Literal('connection_status'),
+  data: Type.Object({
+    status: Type.Union([
+      Type.Literal('connected'),
+      Type.Literal('disconnected'),
+      Type.Literal('reconnected')
+    ]),
+    gameId: Type.String(),
+    playerId: Type.Optional(Type.Number()),
+    message: Type.Optional(Type.String())
+  })
+})
 
-// =================================================================
-// Union Types for Type Safety
-// =================================================================
+// Union types for type safety
+export const WSClientMessageSchema = Type.Union([
+  WSPlayerInputMessageSchema,
+  WSPlayerReadyMessageSchema
+])
 
-export type ClientToServerMessage = WSPlayerInputMessage;
+export const WSServerMessageSchema = Type.Union([
+  WSGameStateMessageSchema,
+  WSGameEventMessageSchema,
+  WSErrorMessageSchema,
+  WSConnectionStatusMessageSchema
+])
 
-export type ServerToClientMessage = 
-  | WSGameStateMessage 
-  | WSGameEndMessage 
-  | WSPlayerJoinedMessage 
-  | WSErrorMessage;
+// TypeScript types (inferred from schemas)
+export type WSPlayerInputMessage = Static<typeof WSPlayerInputMessageSchema>
+export type WSPlayerReadyMessage = Static<typeof WSPlayerReadyMessageSchema>
+export type WSGameStateMessage = Static<typeof WSGameStateMessageSchema>
+export type WSGameEventMessage = Static<typeof WSGameEventMessageSchema>
+export type WSErrorMessage = Static<typeof WSErrorMessageSchema>
+export type WSConnectionStatusMessage = Static<typeof WSConnectionStatusMessageSchema>
 
-export type GameWebSocketMessage = ClientToServerMessage | ServerToClientMessage;
+export type WSClientMessage = Static<typeof WSClientMessageSchema>
+export type WSServerMessage = Static<typeof WSServerMessageSchema>

@@ -13,14 +13,14 @@ export class GameConfig {
   public readonly paddleWidth: number = 10;
   public readonly paddleHeight: number = 80;
   public readonly ballSize: number = 10;
-  public readonly ballSpeedX: number = 6; // Reduced from 8 for better playability
-  public readonly ballSpeedY: number = 4; // Reduced from 5 for better playability
-  public readonly paddleSpeed: number = 8;
-  public readonly aiSpeed: number = 6;
+  public readonly ballSpeedX: number = 3; // Much slower for better playability
+  public readonly ballSpeedY: number = 2; // Much slower for better playability
+  public readonly paddleSpeed: number = 5; // Slower paddle movement
+  public readonly aiSpeed: number = 4; // Slower AI movement
   public readonly paddleOffset: number = 40; // left paddle: 40px from left, right paddle: 40px from right
   
   // Server-specific configurations
-  public readonly gameLoopInterval: number = 1000 / 60; // 60 FPS
+  public readonly gameLoopInterval: number = 1000 / 30; // 30 FPS for slower gameplay
   public readonly maxPlayersPerGame: number = 2;
   public readonly gameSessionTimeout: number = 5 * 60 * 1000; // 5 minutes
 }

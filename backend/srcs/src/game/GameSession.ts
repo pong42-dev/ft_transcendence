@@ -88,9 +88,22 @@ export class GameSession {
     if (!this.players.has(playerId)) return;
     this.playerReady.set(playerId, true);
 
-    // 모든 플레이어가 준비되었는지 확인
-    if (this.players.size === 2 && [...this.playerReady.values()].every(Boolean)) {
+    // 게임 모드에 따른 시작 조건 확인
+    let canStart = false;
+    
+    if (this._mode === 'local_1v1') {
+      // local_1v1: 한 명만 연결되어도 시작 (같은 컴퓨터에서 두 패들 조작)
+      canStart = this.players.size >= 1 && [...this.playerReady.values()].some(Boolean);
+    } else {
+      // ai_1v1, tournament: 모든 플레이어가 준비되어야 시작
+      canStart = this.players.size === 2 && [...this.playerReady.values()].every(Boolean);
+    }
+    
+    if (canStart) {
+      console.log(`[GameSession] Starting countdown for game ${this.id}, mode: ${this._mode}`);
       this.startCountdown();
+    } else {
+      console.log(`[GameSession] Waiting for more players - current: ${this.players.size}, ready: ${[...this.playerReady.values()].filter(Boolean).length}`);
     }
   }
 

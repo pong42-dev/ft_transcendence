@@ -148,7 +148,7 @@ export class GameManager {
       console.error(`[GameManager] Failed to save game result:`, error);
     }
 
-    // 30초 후 게임 세션 정리
-    setTimeout(() => this.removeGame(gameId), 30000);
+    // 10분 후 게임 세션 정리 (status API에서 충분히 조회할 수 있도록)
+    setTimeout(() => this.removeGame(gameId), 10 * 60 * 1000);
   }
 }

@@ -3,11 +3,12 @@ import { WebSocket } from 'ws'
 import { GameManager } from '../game/GameManager.js'
 import { 
   WSPlayerInputMessage, 
+  WSPlayerReadyMessage,
   WSGameStateMessage, 
-  WSGameEndMessage, 
+  WSGameEventMessage, 
   WSErrorMessage
 } from '../schemas/game-websocket.js'
-import { PlayerInput } from '../schemas/games.js'
+import { PlayerInputDto, GameStateDto, GameEventDto } from '../schemas/games.js'
 
 /**
  * GameWebSocketHandler
@@ -20,9 +21,12 @@ import { PlayerInput } from '../schemas/games.js'
 export class GameWebSocketHandler {
   private gameManager: GameManager
   private gameRooms: Map<string, Set<WebSocket>> = new Map()
+  private playerSockets: Map<string, Map<number, WebSocket>> = new Map() // gameId -> playerId -> socket
   
   constructor() {
     this.gameManager = GameManager.getInstance()
+    // GameManager에 WebSocket 핸들러 등록
+    this.gameManager.setWebSocketHandler(this)
   }
 
   /**
@@ -30,11 +34,16 @@ export class GameWebSocketHandler {
    */
   public registerRoutes(fastify: FastifyInstance): void {
     // WebSocket 연결: /ws/game/:gameId
-    const self = this
-    fastify.register(async function (fastifyInstance: FastifyInstance) {
-      fastifyInstance.get('/ws/game/:gameId', { websocket: true }, (connection: any, request: FastifyRequest) => {
-        self.handleConnection(connection.socket, request)
-      })
+    fastify.get('/ws/game/:gameId', { websocket: true }, (connection, request) => {
+      console.log('[WebSocket] New connection received')
+      console.log('[WebSocket] Connection object:', typeof connection)
+      console.log('[WebSocket] Connection keys:', Object.keys(connection))
+      
+      try {
+        this.handleConnection(connection as WebSocket, request)
+      } catch (error) {
+        console.error('[WebSocket] Error in handleConnection:', error)
+      }
     })
   }
 
@@ -43,29 +52,52 @@ export class GameWebSocketHandler {
    */
   private handleConnection(socket: WebSocket, request: FastifyRequest): void {
     const { gameId } = request.params as { gameId: string }
+    const query = request.query as { playerId?: string }
+    const playerId = parseInt(query.playerId || '0') // URL 쿼리에서 playerId 가져오기
+    
+    console.log(`[WebSocket] Connection attempt - gameId: ${gameId}, playerId: ${playerId}`)
     
     // 게임 세션 존재 확인
     const gameSession = this.gameManager.getSession(gameId)
     if (!gameSession) {
+      console.log(`[WebSocket] Game not found: ${gameId}`)
       this.sendError(socket, 'Game not found', 'GAME_NOT_FOUND')
       socket.close()
       return
     }
 
+    // playerId 유효성 확인
+    if (!playerId || isNaN(playerId)) {
+      console.log(`[WebSocket] Invalid playerId: ${query.playerId}`)
+      this.sendError(socket, 'Invalid player ID', 'INVALID_PLAYER_ID')
+      socket.close()
+      return
+    }
+
+    // 플레이어 유효성 확인
+    const players = gameSession.getPlayers()
+    const player = players.find(p => p.id === playerId)
+    if (!player) {
+      console.log(`[WebSocket] Player ${playerId} not found in game ${gameId}. Available players:`, players.map(p => p.id))
+      this.sendError(socket, 'Player not found in this game', 'PLAYER_NOT_FOUND')
+      socket.close()
+      return
+    }
+
     // 게임 룸에 클라이언트 추가
-    this.addClientToRoom(gameId, socket)
+    this.addClientToRoom(gameId, playerId, socket)
     
     // 연결 성공 알림
-    console.log(`Client connected to game ${gameId}`)
-    
-    // 현재 게임 상태 전송
-    this.sendGameState(socket, gameSession.getGameState())
+    console.log(`Player ${playerId} connected to game ${gameId}`)
+
+    // GameManager에 플레이어 연결 알림
+    this.gameManager.handlePlayerConnection(gameId, playerId)
 
     // 메시지 처리
     socket.on('message', (data: Buffer) => {
       try {
         const message = JSON.parse(data.toString())
-        this.handleMessage(gameId, socket, message)
+        this.handleMessage(gameId, playerId, socket, message)
       } catch (error) {
         this.sendError(socket, 'Invalid message format', 'INVALID_MESSAGE')
       }
@@ -73,20 +105,22 @@ export class GameWebSocketHandler {
 
     // 연결 종료 처리
     socket.on('close', () => {
-      this.removeClientFromRoom(gameId, socket)
-      console.log(`Client disconnected from game ${gameId}`)
+      this.removeClientFromRoom(gameId, playerId, socket)
+      this.gameManager.handlePlayerDisconnection(gameId, playerId)
+      console.log(`Player ${playerId} disconnected from game ${gameId}`)
     })
 
     socket.on('error', (error) => {
-      console.error(`WebSocket error in game ${gameId}:`, error)
-      this.removeClientFromRoom(gameId, socket)
+      console.error(`WebSocket error for player ${playerId} in game ${gameId}:`, error)
+      this.removeClientFromRoom(gameId, playerId, socket)
+      this.gameManager.handlePlayerDisconnection(gameId, playerId)
     })
   }
 
   /**
    * 메시지 처리
    */
-  private handleMessage(gameId: string, socket: WebSocket, message: any): void {
+  private handleMessage(gameId: string, playerId: number, socket: WebSocket, message: any): void {
     const gameSession = this.gameManager.getSession(gameId)
     if (!gameSession) {
       this.sendError(socket, 'Game session not found', 'SESSION_NOT_FOUND')
@@ -95,7 +129,11 @@ export class GameWebSocketHandler {
 
     switch (message.type) {
       case 'player_input':
-        this.handlePlayerInput(gameId, message as WSPlayerInputMessage)
+        this.handlePlayerInput(gameId, playerId, message as WSPlayerInputMessage)
+        break
+      
+      case 'player_ready':
+        this.handlePlayerReady(gameId, playerId, message as WSPlayerReadyMessage)
         break
       
       default:
@@ -106,23 +144,31 @@ export class GameWebSocketHandler {
   /**
    * 플레이어 입력 처리
    */
-  private handlePlayerInput(gameId: string, message: WSPlayerInputMessage): void {
+  private handlePlayerInput(gameId: string, playerId: number, message: WSPlayerInputMessage): void {
     const gameSession = this.gameManager.getSession(gameId)
     if (!gameSession) return
 
-    const playerInput: PlayerInput = {
-      ...message.data,
-      timestamp: Date.now() // 서버 타임스탬프로 덮어쓰기
-    }
+    const playerInput: PlayerInputDto = message.data.input
 
-    // GameSession에 입력 전달
-    gameSession.handlePlayerInput(playerInput)
+    // GameManager에 입력 전달
+    this.gameManager.handlePlayerInput(gameId, playerId, playerInput)
   }
 
   /**
-   * 게임 상태 브로드캐스트
+   * 플레이어 준비 상태 처리
    */
-  public broadcastGameState(gameId: string, gameState: any): void {
+  private handlePlayerReady(gameId: string, playerId: number, message: WSPlayerReadyMessage): void {
+    const gameSession = this.gameManager.getSession(gameId)
+    if (!gameSession) return
+
+    // GameManager에 플레이어 준비 상태 전달
+    this.gameManager.handlePlayerConnection(gameId, playerId)
+  }
+
+  /**
+   * 게임 상태 브로드캐스트 (GameManager에서 호출)
+   */
+  public broadcastGameState(gameId: string, gameState: GameStateDto): void {
     const clients = this.gameRooms.get(gameId)
     if (!clients || clients.size === 0) return
 
@@ -135,39 +181,57 @@ export class GameWebSocketHandler {
   }
 
   /**
-   * 게임 종료 브로드캐스트
+   * 게임 이벤트 브로드캐스트 (GameManager에서 호출)
    */
-  public broadcastGameEnd(gameId: string, gameResult: any): void {
-    const message: WSGameEndMessage = {
-      type: 'game_end',
-      data: gameResult
+  public broadcastGameEvent(gameId: string, gameEvent: GameEventDto): void {
+    const message: WSGameEventMessage = {
+      type: 'game_event',
+      data: gameEvent
     }
 
     this.broadcast(gameId, message)
     
-    // 게임 종료 후 5초 뒤에 모든 연결 종료
-    setTimeout(() => {
-      this.closeGameRoom(gameId)
-    }, 5000)
+    // 게임 종료 이벤트인 경우 5초 후에 연결 정리
+    if (gameEvent.event === 'game_end') {
+      setTimeout(() => {
+        this.closeGameRoom(gameId)
+      }, 5000)
+    }
   }
 
   /**
    * 룸 관리 메서드들
    */
-  private addClientToRoom(gameId: string, socket: WebSocket): void {
+  private addClientToRoom(gameId: string, playerId: number, socket: WebSocket): void {
+    // 게임 룸에 소켓 추가
     if (!this.gameRooms.has(gameId)) {
       this.gameRooms.set(gameId, new Set())
     }
-    
     this.gameRooms.get(gameId)!.add(socket)
+
+    // 플레이어별 소켓 매핑 추가
+    if (!this.playerSockets.has(gameId)) {
+      this.playerSockets.set(gameId, new Map())
+    }
+    this.playerSockets.get(gameId)!.set(playerId, socket)
   }
 
-  private removeClientFromRoom(gameId: string, socket: WebSocket): void {
+  private removeClientFromRoom(gameId: string, playerId: number, socket: WebSocket): void {
+    // 게임 룸에서 소켓 제거
     const room = this.gameRooms.get(gameId)
     if (room) {
       room.delete(socket)
       if (room.size === 0) {
         this.gameRooms.delete(gameId)
+      }
+    }
+
+    // 플레이어별 소켓 매핑 제거
+    const playerRoom = this.playerSockets.get(gameId)
+    if (playerRoom) {
+      playerRoom.delete(playerId)
+      if (playerRoom.size === 0) {
+        this.playerSockets.delete(gameId)
       }
     }
   }
@@ -182,6 +246,7 @@ export class GameWebSocketHandler {
       })
       this.gameRooms.delete(gameId)
     }
+    this.playerSockets.delete(gameId)
   }
 
   /**
@@ -200,23 +265,34 @@ export class GameWebSocketHandler {
     })
   }
 
-  private sendGameState(socket: WebSocket, gameState: any): void {
-    if (socket.readyState === WebSocket.OPEN) {
-      const message: WSGameStateMessage = {
-        type: 'game_state',
-        data: gameState
-      }
-      socket.send(JSON.stringify(message))
-    }
-  }
+  // private sendToPlayer(gameId: string, playerId: number, message: any): void {
+  //   const playerSocket = this.playerSockets.get(gameId)?.get(playerId)
+  //   if (playerSocket && playerSocket.readyState === WebSocket.OPEN) {
+  //     playerSocket.send(JSON.stringify(message))
+  //   }
+  // }
+
+  // private sendConnectionStatus(socket: WebSocket, status: 'connected' | 'disconnected' | 'reconnected', gameId: string, playerId?: number): void {
+  //   if (socket && socket.readyState === WebSocket.OPEN) {
+  //     const message: WSConnectionStatusMessage = {
+  //       type: 'connection_status',
+  //       data: { status, gameId, playerId }
+  //     }
+  //     socket.send(JSON.stringify(message))
+  //   } else {
+  //     console.log(`[WebSocket] Cannot send connection status - socket not ready: ${status}`)
+  //   }
+  // }
 
   private sendError(socket: WebSocket, message: string, code?: string): void {
-    if (socket.readyState === WebSocket.OPEN) {
+    if (socket && socket.readyState === WebSocket.OPEN) {
       const errorMessage: WSErrorMessage = {
         type: 'error',
         data: { message, code }
       }
       socket.send(JSON.stringify(errorMessage))
+    } else {
+      console.log(`[WebSocket] Cannot send error message - socket not ready: ${message}`)
     }
   }
 

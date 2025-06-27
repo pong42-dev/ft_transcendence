@@ -31,22 +31,45 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 			try {
 				const { gameId } = request.params
 
+				// 먼저 활성 세션에서 조회 시도
 				const session = gameManager.getSession(gameId)
-				if (!session) {
+				if (session) {
+					// 활성 세션이 있으면 세션에서 정보 조회
+					const players = session.getPlayers()
+					const status = session.getStatus()
+					const gameType = session.getGameMode()
+
+					const response = {
+						gameId,
+						status,
+						type: gameType,
+						players
+					}
+					return reply.send(response)
+				}
+
+				// 활성 세션이 없으면 DB에서 직접 조회
+				const dbGameId = parseInt(gameId)
+				if (isNaN(dbGameId)) {
 					return reply.status(404).send({ message: 'Game not found' })
 				}
 
-				// GameSession에서 필요한 정보 조회
-				const players = session.getPlayers()
-				const status = session.getStatus()
-				const gameType = session.getGameMode()
+				const gameRepository = (fastify as any).gameRepository
+				if (!gameRepository) {
+					return reply.status(500).send({ message: 'Game repository not available' })
+				}
 
-				// GameResponseDto 형식으로 응답
+				const gameData = await gameRepository.getGameById(dbGameId)
+				if (!gameData) {
+					return reply.status(404).send({ message: 'Game not found' })
+				}
+
+				// DB에서 조회한 게임 정보로 응답 생성
 				const response = {
 					gameId,
-					status,
-					type: gameType,
-					players
+					status: gameData.status,
+					type: gameData.mode,
+					players: gameData.players
 				}
 
 				return reply.send(response)
