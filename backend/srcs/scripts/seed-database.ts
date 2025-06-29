@@ -15,6 +15,7 @@ async function seed() {
   try {
     await clearTables(db)
     await seedUsers(db)
+    await seedPlayers(db)
   } catch (err) {
     console.error('Error seeding database:', err)
   } finally {
@@ -25,6 +26,9 @@ async function seed() {
 async function clearTables(db: sqlite3.Database) {
   // foreign key 제약 때문에 비활성화 후 데이터 삭제
   await db.exec('PRAGMA foreign_keys = OFF')
+  await db.exec('DELETE FROM game_participants')
+  await db.exec('DELETE FROM games')
+  await db.exec('DELETE FROM players')
   await db.exec('DELETE FROM friends')
   await db.exec('DELETE FROM user_profiles')
   await db.exec('DELETE FROM users')
@@ -55,7 +59,16 @@ async function seedUsers(db: sqlite3.Database) {
       VALUES (?, ?, ?, ?)
     `, [userId, nameFromEmail, user.avatar, false])
   }
-  console.log('Seed data inserted')
+  console.log('Users seed data inserted')
+}
+
+async function seedPlayers(db: any) {
+  // AI 플레이어 추가
+  await db.run(`
+    INSERT INTO players (id, type, user_id, display_name)
+    VALUES (1, 'ai', NULL, 'AI')
+  `)
+  console.log('Players seed data inserted')
 }
 
 seed()
