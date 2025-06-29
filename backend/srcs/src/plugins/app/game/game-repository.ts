@@ -142,6 +142,75 @@ export function createGameRepository(fastify: FastifyInstance) {
 		},
 
 		/**
+		 * 특정 유저의 1v1 게임 기록 목록 조회 (완료된 게임만)
+		 * @param userId 조회할 유저의 ID
+		 */
+		async getUser1v1History(userId: number): Promise<any[]> {
+			const knex = fastify.knex;
+
+			// 1. 요청된 userId를 기반으로 player_id를 찾습니다.
+			const playerSubQuery = knex('players').where('user_id', userId).first('id');
+
+			// 2. 메인 쿼리를 작성합니다.
+			const results = await knex('games as g')
+				// 필요한 정보들을 SELECT 합니다.
+				.select(
+					'g.ended_at',
+					'g.winner_id',
+					// 내 스코어 (me.score)
+					'me.score as my_score',
+					// 상대방의 스코어 (opponent.score)
+					'op.score as opponent_score',
+					// 상대방 플레이어 정보
+					'op_player.id as opponent_player_id',
+					'op_player.type as opponent_player_type',
+					'op_player.user_id as opponent_user_id',
+					'op_player.display_name as opponent_display_name'
+				)
+				// 내 게임 참가 기록(me)을 JOIN 합니다.
+				.join('game_participants as me', 'g.id', 'me.game_id')
+				// 상대방 게임 참가 기록(opponent)을 JOIN 합니다.
+				// 같은 게임 ID를 가지지만, 내 player_id와는 다른 기록을 찾습니다.
+				.join('game_participants as op', function() {
+					this.on('g.id', '=', 'op.game_id')
+						.andOn('me.player_id', '!=', 'op.player_id');
+				})
+				// 상대방 플레이어 정보(opponent_player)를 JOIN 합니다.
+				.join('players as op_player', 'op.player_id', 'op_player.id')
+				// WHERE 조건 설정
+				.where('g.status', 'finished') // 완료된 게임만 조회
+				.where(function() { // 1v1 게임 타입만 조회
+					this.where('g.type', 'local_1v1').orWhere('g.type', 'ai_1v1');
+				})
+				.where('me.player_id', playerSubQuery) // 내가 참여한 게임만 조회
+				// 정렬
+				.orderBy('g.ended_at', 'desc'); // 게임 종료 시각으로 내림차순 정렬
+
+			// 3. 조회된 결과를 DTO 형태로 가공합니다.
+			// 기존 `mapDBPlayerToResponseDto` 헬퍼 함수를 재활용하여 상대방 정보를 만듭니다.
+			const history = [];
+			for (const row of results) {
+				const opponentInfo = await this.mapDBPlayerToResponseDto({
+					id: row.opponent_player_id,
+					type: row.opponent_player_type,
+					user_id: row.opponent_user_id,
+					display_name: row.opponent_display_name,
+					created_at: '' // 이 필드는 DTO 변환에 사용되지 않음
+				});
+
+				history.push({
+					endedAt: row.ended_at,
+					opponent: opponentInfo,
+					myScore: row.my_score,
+					opponentScore: row.opponent_score,
+					winnerId: row.winner_id
+				});
+			}
+
+			return history;
+		},
+
+		/**
 		 * DB Player를 Response DTO로 변환
 		 */
 		async mapDBPlayerToResponseDto(dbPlayer: DBPlayer): Promise<PlayerResponseDto> {
