@@ -27,8 +27,7 @@
     "db:drop": "rm -rf ./public/users/* && tsx --env-file=.env ./scripts/drop-database.ts",
     "db:migrate": "tsx --env-file=.env ./scripts/migrate.ts",
     "db:seed": "tsx --env-file=.env ./scripts/seed-database.ts",
-    "db:reset": "npm run db:drop && npm run db:create && npm run db:migrate && npm run db:seed",
-    "force-logout": "tsx --env-file=.env ./scripts/force-logout.ts"
+    "db:reset": "npm run db:drop && npm run db:create && npm run db:migrate && npm run db:seed"
   },
   "keywords": [],
   "author": "",
