@@ -17,6 +17,15 @@ export interface PaddleState {
   y: number;
 }
 
+export interface GameSettingsDto {
+  canvasWidth: number;
+  canvasHeight: number;
+  paddleWidth: number;
+  paddleHeight: number;
+  ballSize: number;
+  paddleOffset: number;
+}
+
 export interface GameStateDto {
   ball: BallState;
   paddles: {
@@ -27,6 +36,7 @@ export interface GameStateDto {
     player1: number;
     player2: number;
   };
+  settings: GameSettingsDto;
 }
 
 export type GameEventType =

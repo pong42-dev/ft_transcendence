@@ -262,6 +262,14 @@ export class GameSession {
         player1: scores.left,
         player2: scores.right,
       },
+      settings: {
+        canvasWidth: this.config.canvasWidth,
+        canvasHeight: this.config.canvasHeight,
+        paddleWidth: this.config.paddleWidth,
+        paddleHeight: this.config.paddleHeight,
+        ballSize: this.config.ballSize,
+        paddleOffset: this.config.paddleOffset,
+      }
     };
   }
 

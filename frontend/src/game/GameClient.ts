@@ -1,6 +1,6 @@
 // frontend/src/game/GameClient.ts
 
-import { WebSocketService } from '../services/websocket/WebsocketService';
+import { WebSocketService } from '../services/websocket/WebSocketService';
 import { GameApiService } from '../services/api/GameApiService';
 import { GameRenderer } from './GameRenderer';
 import { InputHandler } from './InputHandler';
