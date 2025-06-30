@@ -1,80 +1,84 @@
+// ./frontend/src/game/InputHandler.ts
+
+type InputAction = 'UP' | 'DOWN';
+type InputEventCallback = (action: InputAction) => void;
+
 /**
- * Input Handler Module
- * 
- * 키보드 입력 및 AI 제어를 담당하는 모듈
- * 원본 PongGame.ts의 입력 처리 로직을 분리
- * 
- * @role 사용자 입력 및 AI 제어
- * @extracted_from PongGame.ts (기존 로직 그대로 유지)
+ * Input Handler Module (Refactored for WebSocket)
+ * * 사용자 키보드 입력을 감지하여 'UP' 또는 'DOWN' 액션 이벤트를 발생시키는 역할만 합니다.
+ * 게임의 종류나 플레이어에 대한 정보를 갖지 않습니다.
  */
 export class InputHandler {
   private keyState: { [key: string]: boolean } = {};
+  private eventListeners: Set<InputEventCallback> = new Set();
+  private isActive: boolean = false;
 
   constructor() {
-    this.setupEventListeners();
+    this.setupKeyListeners();
   }
 
-  private setupEventListeners(): void {
+  private setupKeyListeners(): void {
     window.addEventListener('keydown', (e) => {
+      if (!this.isActive || this.keyState[e.key]) return; // 중복 입력 방지
       this.keyState[e.key] = true;
+      this.handleKeyPress(e.key);
     });
 
     window.addEventListener('keyup', (e) => {
       this.keyState[e.key] = false;
     });
   }
-  
-  public cleanup(): void {
-    // Remove event listeners if needed for cleanup
-    // For now, we'll keep it simple like the original
-  }
 
-  public activate(): void {
-    // Clear any existing key states
-    this.keyState = {};
-  }
-
-  public deactivate(): void {
-    this.keyState = {};
-  }
-
-  public isKeyPressed(key: string): boolean {
-    return !!this.keyState[key];
-  }
-
-  public getPlayerInputs(isMultiplayer: boolean): { leftInput: 'UP' | 'DOWN' | 'NONE', rightInput: 'UP' | 'DOWN' | 'NONE' } {
-    let leftInput: 'UP' | 'DOWN' | 'NONE' = 'NONE';
-    let rightInput: 'UP' | 'DOWN' | 'NONE' = 'NONE';
-
-    if (isMultiplayer) {
-      // Local multiplayer mode: Player1 (W/S) controls left paddle, Player2 (Arrow keys) controls right paddle
-      
-      // Player1 controls (W/S for left paddle) - optimized direct access
-      if (this.keyState['w'] || this.keyState['W']) {
-        leftInput = 'UP';
-      } else if (this.keyState['s'] || this.keyState['S']) {
-        leftInput = 'DOWN';
-      }
-      
-      // Player2 controls (Arrow keys for right paddle) - optimized direct access
-      if (this.keyState['ArrowUp']) {
-        rightInput = 'UP';
-      } else if (this.keyState['ArrowDown']) {
-        rightInput = 'DOWN';
-      }
-    } else {
-      // VS AI mode: Player (Arrow keys) controls right paddle, AI controls left paddle
-      
-      // Player controls (Arrow keys for right paddle) - optimized direct access
-      if (this.keyState['ArrowUp']) {
-        rightInput = 'UP';
-      } else if (this.keyState['ArrowDown']) {
-        rightInput = 'DOWN';
-      }
-      
-      // Left input is handled by AI in GameLogic
+  private handleKeyPress(key: string): void {
+    let action: InputAction | null = null;
+    switch (key.toLowerCase()) {
+      case 'w':
+      case 'arrowup':
+        action = 'UP';
+        break;
+      case 's':
+      case 'arrowdown':
+        action = 'DOWN';
+        break;
     }
 
-    return { leftInput, rightInput };
+    if (action) {
+      // 'input' 이벤트를 발생시켜 등록된 모든 콜백을 실행
+      this.emit(action);
+    }
+  }
+
+  /**
+   * [핵심 변경] GameClient가 입력을 구독할 수 있도록 이벤트 리스너를 등록합니다.
+   * @param event - 'input' 이벤트 타입
+   * @param callback - 실행할 콜백 함수
+   */
+  public on(event: 'input', callback: InputEventCallback): void {
+    if (event === 'input') {
+      this.eventListeners.add(callback);
+    }
+  }
+
+  public off(event: 'input', callback: InputEventCallback): void {
+    if (event === 'input') {
+      this.eventListeners.delete(callback);
+    }
+  }
+
+  // 등록된 콜백들에게 이벤트를 전달
+  private emit(action: InputAction): void {
+    this.eventListeners.forEach(callback => callback(action));
+  }
+  
+  // 게임 시작 시 호출하여 입력을 받기 시작
+  public activate(): void {
+    this.isActive = true;
+    this.keyState = {};
+  }
+
+  // 게임 종료 시 호출하여 입력을 중단
+  public deactivate(): void {
+    this.isActive = false;
+    this.keyState = {};
   }
 }

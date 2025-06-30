@@ -1,16 +1,16 @@
-import { Player } from '../types/types.js';
-import { GameConfig } from './GameConfig.js';
+// ./frontend/src/game/GameRenderer.ts
+
+import { GameStateDto } from '../types/game-websocket'; // 실제 경로에 맞게 수정
+import { PlayerResponseDto } from '../types/types';     // 실제 경로에 맞게 수정
+import { GameConfig } from './GameConfig';
 
 /**
- * Game Renderer Module
- * 
- * UI 렌더링 및 DOM 조작을 담당하는 모듈
- * 원본 PongGame.ts의 화면 표시 및 UI 업데이트 로직을 분리
- * 
- * @role UI 렌더링 및 화면 표시
- * @extracted_from PongGame.ts (기존 로직 그대로 유지)
+ * Game Renderer Module (Refactored for WebSocket)
+ * * GameClient로부터 받은 상태(state)를 화면에 그리는 역할만 담당합니다.
+ * 자체적인 상태나 로직을 갖지 않습니다.
  */
 export class GameRenderer {
+  // ... 기존 프로퍼티들은 그대로 유지 ...
   private config: GameConfig;
   private gameElement: HTMLElement;
   private leftPaddle: HTMLElement;
@@ -20,8 +20,8 @@ export class GameRenderer {
   private leftPlayerInfo: HTMLElement;
   private rightPlayerInfo: HTMLElement;
   private scoreElement: HTMLElement;
-  private roundElement: HTMLElement;
-
+  
+  // 생성자는 기존과 동일
   constructor(config: GameConfig) {
     this.config = config;
     this.gameElement = document.createElement('div');
@@ -32,10 +32,11 @@ export class GameRenderer {
     this.leftPlayerInfo = document.createElement('div');
     this.rightPlayerInfo = document.createElement('div');
     this.scoreElement = document.createElement('div');
-    this.roundElement = document.createElement('div');
   }
 
+  // render 메서드는 기존과 동일
   public render(): HTMLElement {
+    // ... 기존 render 로직 ...
     this.gameElement.className = 'relative w-full h-full bg-terminal-black overflow-hidden';
     
     this.leftPlayerInfo.className = 'absolute top-4 left-4 flex items-center gap-3';
@@ -72,81 +73,81 @@ export class GameRenderer {
     this.gameElement.appendChild(this.leftPlayerInfo);
     this.gameElement.appendChild(this.rightPlayerInfo);
     this.gameElement.appendChild(this.scoreElement);
-    this.gameElement.appendChild(this.roundElement);
 
     return this.gameElement;
   }
 
-  public updatePlayerInfo(leftPlayer: Player | null, rightPlayer: Player | null): void {
+  /**
+   * [핵심 변경] 서버로부터 받은 게임 상태 전체를 받아 화면을 업데이트합니다.
+   * GameClient는 이 메서드 하나만 호출하면 됩니다.
+   * @param state - 서버에서 받은 GameStateDto 객체
+   */
+  public update(state: GameStateDto): void {
+    this.ball.style.left = `${state.ball.x}px`;
+    this.ball.style.top = `${state.ball.y}px`;
+
+    this.leftPaddle.style.top = `${state.paddles.player1.y}px`;
+    this.rightPaddle.style.top = `${state.paddles.player2.y}px`;
+
+    this.scoreElement.innerHTML = `
+      <span>${state.scores.player1}</span>
+      <span class="text-terminal-gray">-</span>
+      <span>${state.scores.player2}</span>
+    `;
+  }
+
+  // 플레이어 정보 업데이트는 초기 한 번만 필요할 수 있으므로 별도 메서드로 유지
+   /**
+   * [구현 완료] 플레이어 정보를 받아와 UI를 업데이트합니다.
+   * GameClient가 게임 시작 시 한 번 호출해줍니다.
+   * @param leftPlayer - 왼쪽 플레이어 정보 DTO
+   * @param rightPlayer - 오른쪽 플레이어 정보 DTO
+   */
+  public updatePlayerInfo(leftPlayer: PlayerResponseDto, rightPlayer: PlayerResponseDto): void {
     if (!leftPlayer || !rightPlayer) return;
 
+    // 왼쪽 플레이어 UI 업데이트
     this.leftPlayerInfo.innerHTML = `
       <div class="flex items-center gap-3">
         <div class="w-10 h-10 rounded-full bg-terminal-gray bg-opacity-20 flex items-center justify-center overflow-hidden">
-          ${leftPlayer.avatarUrl ? 
-            `<img src="${leftPlayer.avatarUrl}" alt="${leftPlayer.nickname}" class="w-full h-full object-cover">` :
-            `<span class="text-sm">${leftPlayer.nickname?.charAt(0).toUpperCase() || 'P'}</span>`
-          }
+          
+          <span class="text-sm font-bold">${leftPlayer.name.charAt(0).toUpperCase()}</span>
+          
         </div>
-        <div class="text-sm font-bold">${leftPlayer.nickname || 'Player 1'}</div>
+        <div class="text-sm font-bold">${leftPlayer.name}</div>
       </div>
     `;
 
+    // 오른쪽 플레이어 UI 업데이트
     this.rightPlayerInfo.innerHTML = `
       <div class="flex items-center gap-3">
-        <div class="text-sm font-bold">${rightPlayer.nickname || 'Player 2'}</div>
+        <div class="text-sm font-bold">${rightPlayer.name}</div>
         <div class="w-10 h-10 rounded-full bg-terminal-gray bg-opacity-20 flex items-center justify-center overflow-hidden">
-          ${rightPlayer.avatarUrl ? 
-            `<img src="${rightPlayer.avatarUrl}" alt="${rightPlayer.nickname}" class="w-full h-full object-cover">` :
-            `<span class="text-sm">${rightPlayer.nickname?.charAt(0).toUpperCase() || 'P'}</span>`
-          }
+          
+          <span class="text-sm font-bold">${rightPlayer.name.charAt(0).toUpperCase()}</span>
+
         </div>
       </div>
     `;
   }
 
-  public updateScore(leftScore: number, rightScore: number): void {
-    this.scoreElement.className = 'absolute top-4 left-1/2 transform -translate-x-1/2 flex items-center gap-4 text-2xl font-bold';
-    this.scoreElement.innerHTML = `
-      <span>${leftScore}</span>
-      <span class="text-terminal-gray">-</span>
-      <span>${rightScore}</span>
-    `;
+  
+  // 카운트다운 표시는 이벤트 기반이므로 별도 메서드로 유지
+  public showCountdown(count: number | undefined | null): void {
+    if (typeof count === 'number' && !isNaN(count)) {
+      this.countdownElement.style.opacity = '1';
+      this.ball.style.opacity = '0';
+      this.countdownElement.textContent = `${count}`;
+    } else {
+      // count가 undefined/null이면 카운트다운 숨김
+      this.countdownElement.style.opacity = '0';
+      this.countdownElement.textContent = '';
+    }
   }
 
-  public updateRound(round: number): void {
-    this.roundElement.className = 'absolute top-16 left-1/2 transform -translate-x-1/2 text-sm opacity-70';
-    this.roundElement.textContent = `Round ${round}`;
-  }
-
-  public updateBallPosition(x: number, y: number): void {
-    this.ball.style.left = `${x}px`;
-    this.ball.style.top = `${y}px`;
-  }
-
-  public updatePaddlePositions(leftY: number, rightY: number): void {
-    this.leftPaddle.style.top = `${leftY}px`;
-    this.rightPaddle.style.top = `${rightY}px`;
-  }
-
-  public showCountdown(count: number, round: number): void {
-    this.countdownElement.style.opacity = '1';
-    this.ball.style.opacity = '0';
-    
-    this.countdownElement.innerHTML = `
-      <div class="flex flex-col items-center">
-        <div class="text-6xl font-bold mb-2 text-center">${count}</div>
-        <div class="text-2xl opacity-70 text-center">Round ${round}</div>
-      </div>
-    `;
-  }
-
-  public hideCountdown(): void {
+  // 카운트다운이 끝나고 게임이 시작될 때 공을 표시
+  public showBall(): void {
     this.countdownElement.style.opacity = '0';
     this.ball.style.opacity = '1';
   }
-
-//   public resizeCanvas(width: number, height: number): void {
-//     // Update canvas dimensions if needed
-//   }
 }

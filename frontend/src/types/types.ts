@@ -382,3 +382,36 @@ export type DeepReadonly<T> = {
     ? DeepReadonly<T[P]>
     : T[P];
 };
+
+// ===============================
+// Backend API DTOs (for Game)
+// ===============================
+
+export type PlayerType = 'user' | 'guest' | 'ai';
+export type GameMode = 'local_1v1' | 'ai_1v1' | 'tournament';
+
+export interface CreatePlayerRequestDto {
+  type: PlayerType;
+  userId?: number;
+  displayName?: string;
+}
+
+export interface PlayerResponseDto {
+  id: number;
+  type: PlayerType;
+  name: string;
+}
+
+export interface CreateGameRequestDto {
+  type: GameMode;
+  players: CreatePlayerRequestDto[];
+}
+
+export type GameStatus = 'waiting' | 'countdown' | 'playing' | 'finished' | 'canceled';
+
+export interface GameResponseDto {
+  gameId: string;
+  status: GameStatus;
+  type: GameMode;
+  players: PlayerResponseDto[];
+}
