@@ -30,19 +30,28 @@ async function doMigration (): Promise<void> {
 				`Migration directory "${migrationDir}" does not exist. Skipping migrations.`
 			)
 		}
+		
+		// 마이그레이션 파일 목록 출력
+		const migrationFiles = fs.readdirSync(migrationDir)
+			.filter(file => file.endsWith('.sql'))
+			.sort()
+		console.log('Available migration files:', migrationFiles)
+		
 		// Postgrator 설정
 		const postgrator = new Postgrator({
 			migrationPattern: path.join(migrationDir, '*'),
 			driver: 'sqlite3',
 			database: DB_FILE,
 			execQuery: async (query: string) => {
+			  console.log('Executing query:', query.substring(0, 100) + '...')
 			  await db.exec(query)
 			  return { rows: [], fields: [] }
 			},
 			schemaTable: 'schemaversion'
 		})
 		// 마이그레이션 실행
-		await postgrator.migrate()
+		const migrations = await postgrator.migrate()
+		console.log('Executed migrations:', migrations)
 		console.log('Migration completed!')
 	} catch (err) {
 		 // 오류 발생 시 에러 출력

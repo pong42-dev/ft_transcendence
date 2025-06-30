@@ -2,6 +2,7 @@ import { AuthApiService } from './api/AuthApiService';
 import { GameApiService } from './api/GameApiService';
 import { FriendApiService } from './api/FriendApiService';
 import { UserApiService } from './api/UserApiService';
+import { TournamentApiService } from './api/TournamentApiService';
 import { BaseApiService } from './api/BaseApiService';
 import { getConfig } from '../config/environment';
 import { SimpleInterceptorManager } from './core/Interceptors';
@@ -14,6 +15,7 @@ export class ApiClient {
   public game: GameApiService;
   public friend: FriendApiService;
   public user: UserApiService;
+  public tournament: TournamentApiService;
   private config = getConfig();
 
   constructor(options?: {
@@ -31,6 +33,7 @@ export class ApiClient {
     this.game = new GameApiService();
     this.friend = new FriendApiService();
     this.user = new UserApiService();
+    this.tournament = new TournamentApiService();
 
     // 기존 토큰 설정 (한 번만)
     const existingToken = TokenManager.getAccessToken();
@@ -50,6 +53,7 @@ export class ApiClient {
     this.game.setToken(token);
     this.friend.setToken(token);
     this.user.setToken(token);
+    this.tournament.setToken(token);
   }
 
   // ...existing code...
@@ -60,6 +64,7 @@ export class ApiClient {
     this.game.clearCache();
     this.friend.clearCache();
     this.user.clearCache();
+    this.tournament.clearCache();
   }
 
   // 인터셉터 초기화 (단순화된 시스템)
