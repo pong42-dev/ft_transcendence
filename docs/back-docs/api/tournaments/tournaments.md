@@ -214,6 +214,67 @@ Retrieves tournament history for the currently authenticated user.
 }
 ```
 
+* **500 Internal Server Error**
+
+```json
+{
+  "message": "Internal server error"
+}
+```
+
+---
+
+## 📌 `GET /api/tournaments/history/user/:userId`
+
+**Description**:
+Retrieves tournament history for a specific user (Admin/Management API).
+
+### ✅ Request
+
+* **Authentication**: Optional (for testing)
+* **Method**: `GET`
+* **URL**: `/api/tournaments/history/user/4`
+
+### ✅ Response
+
+* **200 OK**
+
+```json
+[
+  {
+    "id": 1,
+    "status": "waiting",
+    "created_at": "2025-06-29T13:10:49.074Z",
+    "ended_at": null,
+    "winner_player_id": null,
+    "participants": [
+      {
+        "id": 1,
+        "display_name": "mgd",
+        "user_id": 4,
+        "type": "user"
+      }
+    ]
+  }
+]
+```
+
+* **404 Not Found**
+
+```json
+{
+  "message": "User not found"
+}
+```
+
+* **500 Internal Server Error**
+
+```json
+{
+  "message": "Internal server error"
+}
+```
+
 ---
 
 ## 📌 `GET /api/tournaments/:tournamentId/matches`
@@ -474,88 +535,6 @@ Retrieves the list of participants for a specific tournament.
 
 ---
 
-## 📌 `POST /api/tournaments/:tournamentId/participants`
-
-**Description**:
-Adds a new participant to a tournament.
-
-### ✅ Request
-
-* **Authentication**: Optional (for testing)
-* **Method**: `POST`
-* **URL**: `/api/tournaments/1/participants`
-* **Body**:
-
-```json
-{
-  "type": "guest",
-  "displayName": "Guest4"
-}
-```
-
-### ✅ Response
-
-* **201 Created**
-
-```json
-{
-  "id": 5,
-  "display_name": "Guest4",
-  "user_id": null,
-  "type": "guest",
-  "created_at": "2025-06-29T13:10:49.080Z"
-}
-```
-
-* **409 Conflict**
-
-```json
-{
-  "message": "Tournament is full (maximum 4 participants)"
-}
-```
-
----
-
-## 📌 `POST /api/tournaments/:tournamentId/bracket`
-
-**Description**:
-Manually generates the bracket for a tournament.
-
-### ✅ Request
-
-* **Authentication**: Optional (for testing)
-* **Method**: `POST`
-* **URL**: `/api/tournaments/1/bracket`
-
-### ✅ Response
-
-* **200 OK**
-
-```json
-{
-  "tournament_id": 1,
-  "message": "Tournament bracket generated successfully",
-  "games": [
-    {
-      "id": 1,
-      "round_number": 1,
-      "status": "waiting"
-    }
-  ]
-}
-```
-
-* **400 Bad Request**
-
-```json
-{
-  "message": "Tournament must have exactly 4 participants. Current: 3"
-}
-```
-
----
-
 ## 🔧 Internal Components Summary
 
 | Component | Purpose |
@@ -595,6 +574,25 @@ Manually generates the bracket for a tournament.
 | `waiting` | 매치 대기 중 |
 | `playing` | 매치 진행 중 |
 | `completed` | 매치 완료 |
+
+---
+
+## 📋 API Endpoints Summary
+
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| `POST` | `/api/tournaments` | Create tournament | ❌ |
+| `GET` | `/api/tournaments` | Get all tournaments | ❌ |
+| `GET` | `/api/tournaments/:id` | Get tournament details | ❌ |
+| `GET` | `/api/tournaments/user/history` | Get current user history | ✅ |
+| `GET` | `/api/tournaments/history/user/:userId` | Get specific user history | ❌ |
+| `GET` | `/api/tournaments/:id/matches` | Get tournament matches | ❌ |
+| `GET` | `/api/tournaments/:id/participants` | Get tournament participants | ❌ |
+| `POST` | `/api/tournaments/:id/participants` | Add participant | ❌ |
+| `POST` | `/api/tournaments/:id/bracket` | Generate bracket | ❌ |
+| `PATCH` | `/api/tournaments/:id/cancel` | Cancel tournament | ❌ |
+| `POST` | `/api/tournaments/:id/matches/:matchId/start` | Start match | ❌ |
+| `POST` | `/api/tournaments/:id/matches/:matchId/end` | End match | ❌ |
 
 ---
 
