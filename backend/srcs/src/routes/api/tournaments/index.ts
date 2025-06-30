@@ -7,10 +7,14 @@ import {
 	ParticipantResponseDtoSchema
 } from '../../../schemas/tournaments.js'
 import matchesPlugin from './matches.js'
+import historyPlugin from './history.js'
 
 const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 	// matches 플러그인 등록
 	await fastify.register(matchesPlugin, { prefix: '/' })
+	
+	// history 플러그인 등록
+	await fastify.register(historyPlugin, { prefix: '/' })
 
 	// const { authenticate } = fastify  // TODO: 테스트 완료 후 활성화
 
@@ -268,86 +272,6 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 
 			} catch (error: any) {
 				fastify.log.error('Error canceling tournament:', error);
-				return reply.status(500).send({ 
-					message: 'Internal server error' 
-				});
-			}
-		}
-	)
-
-	// GET /api/tournaments/user/history - 현재 사용자의 토너먼트 히스토리 조회
-	fastify.get(
-		'/user/history',
-		{
-			schema: {
-				response: {
-					200: Type.Array(Type.Object({
-						id: Type.Integer(),
-						status: Type.String(),
-						created_at: Type.String(),
-						ended_at: Type.Optional(Type.String()),
-						winner_player_id: Type.Optional(Type.Integer()),
-						participants: Type.Array(Type.Object({
-							id: Type.Integer(),
-							display_name: Type.Optional(Type.String()),
-							user_id: Type.Optional(Type.Integer()),
-							type: Type.String()
-						}))
-					})),
-					500: Type.Object({
-						message: Type.String()
-					})
-				},
-				tags: ["Tournaments"]
-			},
-			preHandler: [fastify.authenticate]
-		},
-		async (request, reply) => {
-			try {
-				// JWT 토큰에서 사용자 ID 추출
-				const userId = request.user.user_id;
-				fastify.log.info('User ID from token:', userId);
-
-				// 사용자가 참가한 토너먼트들 조회
-				fastify.log.info('Fetching user tournaments for user ID:', userId);
-				const userTournaments = await fastify.knex('tournaments as t')
-					.join('games as g', 't.id', 'g.tournament_id')
-					.join('game_participants as gp', 'g.id', 'gp.game_id')
-					.join('players as p', 'gp.player_id', 'p.id')
-					.select('t.id', 't.status', 't.created_at', 't.ended_at', 't.winner_player_id')
-					.where('p.user_id', userId)
-					.groupBy('t.id')
-					.orderBy('t.created_at', 'desc');
-				
-				fastify.log.info('Found tournaments:', userTournaments.length);
-
-				// 각 토너먼트의 참가자 정보 조회
-				const tournamentsWithParticipants = [];
-				for (const tournament of userTournaments) {
-					fastify.log.info('Fetching participants for tournament:', tournament.id);
-					const participants = await fastify.knex('games as g')
-						.join('game_participants as gp', 'g.id', 'gp.game_id')
-						.join('players as p', 'gp.player_id', 'p.id')
-						.select('p.id', 'p.display_name', 'p.user_id', 'p.type')
-						.where('g.tournament_id', tournament.id)
-						.groupBy('p.id');
-					
-					fastify.log.info('Found participants for tournament', tournament.id, ':', participants.length);
-
-					tournamentsWithParticipants.push({
-						...tournament,
-						participants
-					});
-				}
-
-				fastify.log.info('Returning tournaments with participants:', tournamentsWithParticipants.length);
-				return reply.status(200).send(tournamentsWithParticipants);
-
-			} catch (error: any) {
-				fastify.log.error('Error fetching user tournament history:', error);
-				fastify.log.error('Error stack:', error.stack);
-				fastify.log.error('Error message:', error.message);
-				fastify.log.error('Error details:', JSON.stringify(error, null, 2));
 				return reply.status(500).send({ 
 					message: 'Internal server error' 
 				});
