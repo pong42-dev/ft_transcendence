@@ -91,8 +91,8 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				const { friend_name: friendName } = request.body;
 				const row = await userProfilesRepository.getRowByColumnValue("name", friendName);
 				const friendId = row?.user_id;
-				if (!friendId)
-					return reply.status(409).send({ msg: 'User does not exist.' });
+				if (!friendId || userId === friendId)
+					return reply.status(409).send({ msg: 'Invalid friend ID.' });
 				const isFollowing = await friendsRepository.isFollowing(Number(userId), Number(friendId));
 				if (isFollowing)
 					return reply.status(409).send({ msg: 'You are already following this user.' });
