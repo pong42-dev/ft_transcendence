@@ -1,4 +1,5 @@
 import { BaseApiService } from './BaseApiService';
+import type { UserTournamentHistory } from '../../types/types';
 
 export class TournamentApiService extends BaseApiService {
   constructor() {
@@ -17,27 +18,39 @@ export class TournamentApiService extends BaseApiService {
     return this.get<any>('/api/tournaments');
   }
 
-  async joinTournament(tournamentId: number): Promise<any> {
-    return this.post<any>(`/api/tournaments/${tournamentId}/participants`);
-  }
-
-  async generateBracket(tournamentId: number): Promise<any> {
-    return this.post<any>(`/api/tournaments/${tournamentId}/bracket`);
-  }
-
-  async getTournamentMatches(tournamentId: number): Promise<any> {
-    return this.get<any>(`/api/tournaments/${tournamentId}/matches`);
+  async getTournamentDetails(tournamentId: number): Promise<any> {
+    return this.get<any>(`/api/tournaments/${tournamentId}`);
   }
 
   async getTournamentParticipants(tournamentId: number): Promise<any> {
     return this.get<any>(`/api/tournaments/${tournamentId}/participants`);
   }
 
+  async getTournamentProgress(tournamentId: number): Promise<any> {
+    return this.get<any>(`/api/tournaments/${tournamentId}/progress`);
+  }
+
+  async cancelTournament(tournamentId: number): Promise<any> {
+    return this.patch<any>(`/api/tournaments/${tournamentId}/cancel`);
+  }
+
+  async getTournamentMatches(tournamentId: number): Promise<any> {
+    return this.get<any>(`/api/tournaments/${tournamentId}/matches`);
+  }
+
+  async startMatch(tournamentId: number, matchId: number): Promise<any> {
+    return this.post<any>(`/api/tournaments/${tournamentId}/matches/${matchId}/start`);
+  }
+
+  async endMatch(tournamentId: number, matchId: number, winnerId: number): Promise<any> {
+    return this.post<any>(`/api/tournaments/${tournamentId}/matches/${matchId}/end`, { winnerId });
+  }
+
   async getUserProfile(): Promise<any> {
     return this.get<any>('/api/users/me');
   }
 
-  async getUserTournamentHistory(): Promise<any> {
-    return this.get<any>('/api/tournaments/user/history');
+  async getUserTournamentHistory(): Promise<UserTournamentHistory[]> {
+    return this.get<UserTournamentHistory[]>('/api/tournaments/user/history');
   }
 } 

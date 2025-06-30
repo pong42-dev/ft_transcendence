@@ -483,7 +483,7 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 				return {
 					...tournament,
 					participants,
-					games: gamesWithParticipants
+					matches: gamesWithParticipants
 				};
 			} catch (err: any) {
 				console.error('Error getting tournament details:', err.message);
@@ -598,7 +598,7 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 		/**
 		 * 사용자의 토너먼트 기록 조회
 		 */
-		async getUserTournamentHistory(userId: number): Promise<UserTournamentHistory[]> {
+		async getUserTournamentHistory(userId: number): Promise<any[]> {
 			try {
 				// 1. 사용자가 참가한 모든 토너먼트 조회
 				const tournaments = await knex('tournaments as t')
@@ -623,61 +623,54 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 				});
 
 				// 3. 각 토너먼트의 기록 구성
-				const history: UserTournamentHistory[] = [];
-				
+				const history: any[] = [];
 				for (const [tournamentId, matches] of tournamentGroups) {
-					// 토너먼트의 모든 참가자 조회 (SQLite 문법으로 수정)
+					// 토너먼트의 모든 참가자 조회
 					const allParticipants = await knex('games as g')
 						.join('game_participants as gp', 'g.id', 'gp.game_id')
 						.join('players as p', 'gp.player_id', 'p.id')
 						.select('p.id', 'p.display_name', 'p.user_id')
 						.where('g.tournament_id', tournamentId)
 						.groupBy('p.id');
+					const participantNames = allParticipants.map(p => p.display_name || `User${p.user_id}`);
 
-					const participantNames = allParticipants.map(p => 
-						p.display_name || `User${p.user_id}`
+					// 토너먼트의 모든 매치 조회 (라운드별)
+					const allGames = await knex('games')
+						.where('tournament_id', tournamentId)
+						.orderBy('round_number', 'asc')
+						.orderBy('id', 'asc');
+
+					// 각 매치의 참가자, 승자 정보 조회
+					const rounds = await Promise.all(
+						allGames.map(async (game) => {
+							const participants = await knex('game_participants as gp')
+								.join('players as p', 'gp.player_id', 'p.id')
+								.select('p.display_name', 'p.user_id', 'p.id')
+								.where('gp.game_id', game.id);
+							const playerNames = participants.map(p => p.display_name || `User${p.user_id}`);
+							const winner = participants.find(p => p.id === game.winner_id);
+							let result: string | undefined = undefined;
+							if (game.round_number === 2 && game.winner_id) {
+								result = (game.winner_id === matches[0].player_id) ? 'champion' : (playerNames.includes(matches[0].display_name) ? 'runner_up' : undefined);
+							}
+							return {
+								round_number: game.round_number,
+								players: playerNames,
+								winner: winner ? (winner.display_name || `User${winner.user_id}`) : null,
+								result
+							};
+						})
 					);
 
-					// 사용자의 라운드별 기록 구성
-					const userRounds: any[] = [];
+					// 최종 순위 결정 (기존 로직 유지)
+					let finalRank = 4;
 					const userMatches = matches.filter(m => m.user_id === userId);
-					
-					for (const match of userMatches) {
-						const opponents = matches
-							.filter(m => m.game_id === match.game_id && m.user_id !== userId)
-							.map(m => m.display_name || `User${m.user_id}`);
-
-						let result: 'win' | 'lose' | 'champion' | 'runner_up';
-						
-						if (match.winner_id === match.player_id) {
-							if (match.round_number === 2) {
-								result = 'champion';
-							} else {
-								result = 'win';
-							}
-						} else {
-							if (match.round_number === 2) {
-								result = 'runner_up';
-							} else {
-								result = 'lose';
-							}
-						}
-
-						userRounds.push({
-							round_number: match.round_number,
-							opponents,
-							result
-						});
-					}
-
-					// 최종 순위 결정
-					let finalRank = 4; // 기본값
 					const lastMatch = userMatches[userMatches.length - 1];
 					if (lastMatch) {
 						if (lastMatch.round_number === 2) {
 							finalRank = lastMatch.winner_id === lastMatch.player_id ? 1 : 2;
 						} else {
-							finalRank = 3; // 4강에서 탈락
+							finalRank = 3;
 						}
 					}
 
@@ -685,11 +678,10 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 						tournament_id: tournamentId,
 						tournament_date: matches[0].created_at,
 						participants: participantNames,
-						user_rounds: userRounds,
+						rounds,
 						final_rank: finalRank
 					});
 				}
-
 				return history;
 			} catch (err: any) {
 				console.error('Error getting user tournament history:', err.message);

@@ -382,3 +382,18 @@ export type DeepReadonly<T> = {
     ? DeepReadonly<T[P]>
     : T[P];
 };
+
+export interface TournamentRound {
+  round_number: number;
+  players: string[];
+  winner?: string;
+  result?: string;
+}
+
+export interface UserTournamentHistory {
+  tournament_id: number;
+  tournament_date: string;
+  participants: string[];
+  rounds: TournamentRound[];
+  final_rank: number;
+}

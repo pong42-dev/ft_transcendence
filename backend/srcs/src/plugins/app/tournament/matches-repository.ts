@@ -33,6 +33,42 @@ export function createMatchesRepository(fastify: FastifyInstance) {
 
 	return {
 		/**
+		 * 특정 매치 조회
+		 */
+		async getMatchById(matchId: number): Promise<TournamentMatch | null> {
+			try {
+				const match = await knex('games')
+					.where('id', matchId)
+					.first();
+
+				if (!match) {
+					return null;
+				}
+
+				// 참가자 정보 조회
+				const participants = await knex('game_participants as gp')
+					.join('players as p', 'gp.player_id', 'p.id')
+					.leftJoin('user_profiles as up', function() {
+						this.on('p.user_id', '=', 'up.user_id');
+					})
+					.select('p.id', 'p.type', 'p.user_id', 'p.display_name', 'up.name as user_name', 'gp.score')
+					.where('gp.game_id', matchId)
+					.then(rows => rows.map(row => ({
+						...row,
+						display_name: row.type === 'user' && row.user_name ? row.user_name : row.display_name
+					})));
+
+				return {
+					...match,
+					participants
+				} as TournamentMatch;
+			} catch (err: any) {
+				console.error('Error getting match by ID:', err.message);
+				throw err;
+			}
+		},
+
+		/**
 		 * 토너먼트의 모든 매치 조회
 		 */
 		async getTournamentMatches(tournamentId: number): Promise<TournamentMatch[]> {

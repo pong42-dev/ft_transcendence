@@ -102,7 +102,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				}
 
 				// 매치 존재 여부 및 상태 확인
-				const match = await fastify.tournamentsRepository.getTournamentGame(matchId);
+				const match = await fastify.matchesRepository.getMatchById(matchId);
 				if (!match) {
 					return reply.status(404).send({ 
 						message: 'Match not found' 
@@ -116,7 +116,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				}
 
 				// 매치 시작 (게임 상태를 'playing'으로 변경)
-				await fastify.tournamentsRepository.updateMatchStatus(matchId, 'playing');
+				await fastify.matchesRepository.updateMatchStatus(matchId, 'playing');
 
 				// 게임 세션 ID 생성 (실제 게임 시작을 위해)
 				const gameId = `tournament-${tournamentId}-match-${matchId}`;
@@ -181,7 +181,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				}
 
 				// 매치 존재 여부 및 상태 확인
-				const match = await fastify.tournamentsRepository.getTournamentGame(matchId);
+				const match = await fastify.matchesRepository.getMatchById(matchId);
 				if (!match) {
 					return reply.status(404).send({ 
 						message: 'Match not found' 
@@ -194,20 +194,20 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 					});
 				}
 
-				// 매치 종료 처리
-				await fastify.tournamentsRepository.endMatch(matchId, winnerId);
+				// 매치 종료 처리 (승자 기록, 다음 라운드 준비)
+				const matchResult = await fastify.matchesRepository.processMatchResult(matchId, winnerId);
 
-				// 다음 매치 확인 (4강전 완료 시 결승전 자동 등록)
+				// 다음 매치 확인
 				let nextMatchId: number | undefined;
 				if (match.round_number === 1) {
-					// 4강전이 완료된 경우, 결승전 참가자 등록
-					const finalMatch = await fastify.tournamentsRepository.getFinalMatch(tournamentId);
-					if (finalMatch) {
-						nextMatchId = finalMatch.id;
+					// 4강전이 완료된 경우, 다음 4강전 확인
+					const nextMatch = await fastify.matchesRepository.getNextPendingMatch(tournamentId);
+					if (nextMatch) {
+						nextMatchId = nextMatch.id;
 					}
 				} else if (match.round_number === 2) {
 					// 결승전이 완료된 경우, 토너먼트 종료
-					await fastify.tournamentsRepository.updateTournamentStatus(tournamentId, 'ended', winnerId);
+					await fastify.matchesRepository.setTournamentWinner(tournamentId, winnerId);
 				}
 
 				return reply.status(200).send({

@@ -155,15 +155,11 @@ export const UserTournamentHistoryResponseDtoSchema = Type.Object({
   tournament_id: Type.Integer(),
   tournament_date: Type.String(),
   participants: Type.Array(Type.String()),
-  user_rounds: Type.Array(Type.Object({
+  rounds: Type.Array(Type.Object({
     round_number: Type.Integer(),
-    opponents: Type.Array(Type.String()),
-    result: Type.Union([
-      Type.Literal('win'),
-      Type.Literal('lose'),
-      Type.Literal('champion'),
-      Type.Literal('runner_up'),
-    ]),
+    players: Type.Array(Type.String()),
+    winner: Type.Optional(Type.String()),
+    result: Type.Optional(Type.String()),
   })),
   final_rank: Type.Integer(),
 });
