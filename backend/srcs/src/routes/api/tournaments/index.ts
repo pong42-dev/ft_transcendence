@@ -35,7 +35,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				},
 				tags: ["Tournaments"]
 			},
-			preHandler: [authenticate]
+			// preHandler: [authenticate]
 		},
 		async (request, reply) => {
 			const trx = await fastify.knex.transaction();
@@ -153,7 +153,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				},
 				tags: ["Tournaments"]
 			},
-			preHandler: [authenticate]
+			// preHandler: [authenticate]
 		},
 		async (request, reply) => {
 			try {
@@ -188,7 +188,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				},
 				tags: ["Tournaments"]
 			},
-			preHandler: [authenticate]
+			// preHandler: [authenticate]
 		},
 		async (request, reply) => {
 			try {
@@ -237,7 +237,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				},
 				tags: ["Tournaments"]
 			},
-			preHandler: [authenticate]
+			// preHandler: [authenticate]
 		},
 		async (request, reply) => {
 			try {
@@ -294,7 +294,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				},
 				tags: ["Tournaments"]
 			},
-			preHandler: [authenticate]
+					// preHandler: [authenticate]
 		},
 		async (request, reply) => {
 			try {

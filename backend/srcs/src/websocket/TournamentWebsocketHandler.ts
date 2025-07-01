@@ -1,47 +1,43 @@
+// backend/srcs/websocket/TournamentWebsocketHandler.ts
+
 import { FastifyInstance, FastifyRequest } from 'fastify';
 import { WebSocket } from 'ws';
-
-// 토너먼트 ID를 키로, 접속한 클라이언트 Set을 값으로 가짐
-type TournamentId = string;
-const tournamentSessions = new Map<TournamentId, Set<WebSocket>>();
+import { TournamentSession } from './TournamentSession';
 
 export class TournamentWebSocketHandler {
+  private sessions = new Map<string, TournamentSession>();
+
   constructor(private fastify: FastifyInstance) {}
 
   public handleConnection(socket: WebSocket, request: FastifyRequest) {
+    // URL에서 tournamentId와 playerId 가져옴 (playerId는 쿼리 파라미터로 받는다고 가정)
+    // ex ) 클라이언트가 ws://.../ws/tournament/123?playerId=456처럼 쿼리 스트링으로 자신의 ID를 보내준다고 가정
     const { tournamentId } = request.params as { tournamentId: string };
+    const { playerId } = request.query as { playerId?: string };
 
-    // 1. 이 토너먼트의 세션이 없으면 새로 생성
-    if (!tournamentSessions.has(tournamentId)) {
-      tournamentSessions.set(tournamentId, new Set());
+    if (!playerId) {
+      this.fastify.log.error('Player ID is missing.');
+      socket.close(1008, 'Player ID is required');
+      return;
     }
 
-    // 2. 현재 연결을 해당 토너먼트 세션에 추가
-    const session = tournamentSessions.get(tournamentId)!;
-    session.add(socket);
-    this.fastify.log.info(
-      `[Tournament] Connection established for tournament: ${tournamentId}. Current participants: ${session.size}`
-    );
+    // 1. 세션을 찾거나 새로 생성합니다.
+    let session = this.sessions.get(tournamentId);
+    if (!session) {
+      session = new TournamentSession(tournamentId, this.fastify);
+      this.sessions.set(tournamentId, session);
+      this.fastify.log.info(`[Handler] New session created for tournament: ${tournamentId}`);
+    }
 
-    // 3. 연결이 끊겼을 때의 처리
+    // 2. 플레이어를 세션에 추가하는 것은 세션 객체의 책임입니다.
+    session.addPlayer(parseInt(playerId, 10), socket);
+
+    // 연결이 끊어졌을 때 세션이 비면 맵에서 제거
     socket.on('close', () => {
-      session.delete(socket);
-      this.fastify.log.info(
-        `[Tournament] Connection closed for tournament: ${tournamentId}. Remaining participants: ${session.size}`
-      );
-      // 세션에 아무도 없으면 맵에서 삭제하여 메모리 관리
-      if (session.size === 0) {
-        tournamentSessions.delete(tournamentId);
+      if (session?.players.size === 0) {
+        this.sessions.delete(tournamentId);
+        this.fastify.log.info(`[Handler] Session for tournament ${tournamentId} is empty and has been removed.`);
       }
-    });
-
-    // 4. 메시지 수신 처리 (지금은 로그만 남김)
-    socket.on('message', (message) => {
-      const messageString = message.toString();
-      this.fastify.log.info(`[Tournament ${tournamentId}] MSG: ${messageString}`);
-      
-      // 받은 메시지를 클라이언트에게 다시 전송 (에코)
-      socket.send(`Server received: ${messageString}`);
     });
   }
 }
