@@ -451,11 +451,18 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 					return null;
 				}
 
-				// 2. 토너먼트 참가자 조회 (players 테이블에서)
+				// 2. 토너먼트 참가자 조회 (players 테이블에서, user_profiles 조인)
 				const participants = await knex('games as g')
 					.join('game_participants as gp', 'g.id', 'gp.game_id')
 					.join('players as p', 'gp.player_id', 'p.id')
-					.select('p.id', 'p.type', 'p.user_id', 'p.display_name')
+					.leftJoin('user_profiles as up', 'p.user_id', 'up.user_id')
+					.select(
+						'p.id',
+						'p.type',
+						'p.user_id',
+						'p.display_name',
+						knex.raw('COALESCE(up.name, p.display_name) as name')
+					)
 					.where('g.tournament_id', tournamentId)
 					.distinct('p.id');
 
@@ -465,14 +472,21 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 					.orderBy('round_number', 'asc')
 					.orderBy('id', 'asc');
 
-				// 4. 각 게임의 참가자 정보 조회
+				// 4. 각 게임의 참가자 정보 조회 (user_profiles 조인)
 				const gamesWithParticipants = await Promise.all(
 					games.map(async (game) => {
 						const gameParticipants = await knex('game_participants as gp')
 							.join('players as p', 'gp.player_id', 'p.id')
-							.select('p.id', 'p.type', 'p.user_id', 'p.display_name', 'gp.score')
+							.leftJoin('user_profiles as up', 'p.user_id', 'up.user_id')
+							.select(
+								'p.id',
+								'p.type',
+								'p.user_id',
+								'p.display_name',
+								'gp.score',
+								knex.raw('COALESCE(up.name, p.display_name) as name')
+							)
 							.where('gp.game_id', game.id);
-						
 						return {
 							...game,
 							participants: gameParticipants
@@ -496,22 +510,19 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 		 */
 		async getTournamentParticipants(tournamentId: number): Promise<any[]> {
 			try {
-				// 1. 토너먼트 참가자 조회 (players 테이블에서)
+				// 1. 토너먼트 참가자 조회 (players 테이블에서, user_profiles 조인)
 				const participants = await knex('games as g')
 					.join('game_participants as gp', 'g.id', 'gp.game_id')
 					.join('players as p', 'gp.player_id', 'p.id')
+					.leftJoin('user_profiles as up', 'p.user_id', 'up.user_id')
 					.select(
-						'p.id', 
-						'p.type', 
+						'p.id',
+						'p.type',
 						'p.user_id',
-						knex.raw('COALESCE(p.display_name) as name')
+						knex.raw('COALESCE(up.name, p.display_name) as name')
 					)
 					.where('g.tournament_id', tournamentId)
 					.distinct('p.id');
-				
-				// COALESCE를 사용하여 user의 nickname을 가져오는 로직 추가 필요
-				// 현재는 display_name만 name으로 반환
-
 				return participants;
 			} catch (err: any) {
 				console.error('Error getting tournament participants:', err.message);

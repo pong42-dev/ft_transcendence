@@ -1,7 +1,7 @@
 //참가자 관리, 모든 참가자에게 브로드캐스트
 import { WebSocket } from 'ws';
 import { FastifyInstance } from 'fastify';
-import { WSTournamentStartMessage, WSTournamentBracketMessage, TournamentBracket } from '../src/schemas/tournament-websocket';
+import { WSTournamentStartMessage, WSTournamentBracketMessage, TournamentBracket } from '../schemas/tournament-websocket';
 
 type PlayerId = number; // 실제 프로젝트에 맞는 타입으로 변경 가능
 
@@ -85,15 +85,23 @@ export class TournamentSession {
       if (!roundsMap.has(match.round_number)) {
         roundsMap.set(match.round_number, []);
       }
+      const getNickname = (p: any) => {
+        if (p.type === 'user') {
+          // 반드시 participants에 name이 포함되어 있어야 함 (쿼리/조인에서 users.name을 포함)
+          return p.name || `User${p.user_id}`;
+        } else {
+          return p.display_name || `Player${p.id}`;
+        }
+      };
       roundsMap.get(match.round_number)!.push({
         matchId: String(match.id),
         player1: {
           id: match.participants[0].id,
-          name: match.participants[0].name,
+          nickname: getNickname(match.participants[0]),
         },
         player2: {
           id: match.participants[1].id,
-          name: match.participants[1].name,
+          nickname: getNickname(match.participants[1]),
         },
         winnerId: match.winner_id ?? undefined,
       });
