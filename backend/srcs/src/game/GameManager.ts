@@ -42,6 +42,8 @@ export class GameManager {
 
   public async createGame(mode: GameMode, players: PlayerResponseDto[]): Promise<string> {
     try {
+      console.log(`[GameManager] Creating game - Mode: ${mode}, Players: ${players.length}`);
+      
       // 1. DB에 게임 생성
       const dbGameId = await this.gameRepository?.createGameWithPlayers(
         mode, 
@@ -50,6 +52,7 @@ export class GameManager {
 
       // 2. 게임 세션 생성 (DB ID를 문자열로 변환해서 gameId로 사용)
       const gameId = dbGameId.toString();
+      
       const session = new GameSession(
         gameId,
         dbGameId,
@@ -68,10 +71,13 @@ export class GameManager {
         },
       );
 
-      players.forEach((p) => session.addPlayer(p));
+      players.forEach((p) => {
+        session.addPlayer(p);
+      });
+      
       this.sessions.set(gameId, { session, dbGameId });
 
-      console.log(`[GameManager] Game created: ${gameId}, Mode: ${mode}, DB ID: ${dbGameId}`);
+      console.log(`[GameManager] Game created: ${gameId} (DB: ${dbGameId})`);
       return gameId;
     } catch (error) {
       console.error(`[GameManager] Failed to create game:`, error);
@@ -101,14 +107,13 @@ export class GameManager {
     if (!session) return;
 
     console.log(`[GameManager] Player ${playerId} connected to game ${gameId}`);
-    session.setPlayerReady(playerId);
+    session.startCountdown();
   }
 
   public handlePlayerDisconnection(gameId: string, playerId: number) {
     const session = this.getSession(gameId);
     if (!session) return;
 
-    console.log(`[GameManager] Player ${playerId} disconnected from game ${gameId}`);
     session.removePlayer(playerId);
 
     // 세션에 남은 플레이어가 없으면 게임 제거
@@ -126,7 +131,7 @@ export class GameManager {
   // =================================================================
 
   private async _handleGameEnd(gameId: string, winnerId?: number) {
-    console.log(`[GameManager] Game ended: ${gameId}, Winner ID: ${winnerId}`);
+    console.log(`[GameManager] Game ended: ${gameId}${winnerId ? `, Winner: ${winnerId}` : ''}`);
 
     const gameData = this.sessions.get(gameId);
     if (!gameData) return;

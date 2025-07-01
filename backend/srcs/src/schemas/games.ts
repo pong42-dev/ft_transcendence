@@ -101,7 +101,7 @@ export type GameResponseDto = Static<typeof GameResponseDtoSchema>;
 
 // --- Client to Server ---
 export const PlayerInputDtoSchema = Type.Object({
-  action: Type.Union([Type.Literal('UP'), Type.Literal('DOWN')]),
+  action: Type.Union([Type.Literal('UP'), Type.Literal('DOWN'), Type.Literal('NONE')]),
 });
 export type PlayerInputDto = Static<typeof PlayerInputDtoSchema>;
 

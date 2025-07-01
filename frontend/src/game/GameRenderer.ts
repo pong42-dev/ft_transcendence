@@ -8,6 +8,7 @@ import { PlayerResponseDto } from '../types/types';
  * 서버에서 받은 state.settings만을 사용하여 화면을 그립니다.
  */
 export class GameRenderer {
+  private container: HTMLElement;
   private gameElement: HTMLElement;
   private leftPaddle: HTMLElement;
   private rightPaddle: HTMLElement;
@@ -16,9 +17,11 @@ export class GameRenderer {
   private leftPlayerInfo: HTMLElement;
   private rightPlayerInfo: HTMLElement;
   private scoreElement: HTMLElement;
+  private roundElement: HTMLElement;
   private initialized = false;
 
-  constructor() {
+  constructor(container: HTMLElement) {
+    this.container = container;
     this.gameElement = document.createElement('div');
     this.leftPaddle = document.createElement('div');
     this.rightPaddle = document.createElement('div');
@@ -27,15 +30,85 @@ export class GameRenderer {
     this.leftPlayerInfo = document.createElement('div');
     this.rightPlayerInfo = document.createElement('div');
     this.scoreElement = document.createElement('div');
+    this.roundElement = document.createElement('div');
+    
+    // Initialize the game area
+    this.setupGameArea();
   }
 
-  public render(): HTMLElement {
-    this.gameElement.className = 'relative w-full h-full bg-terminal-black overflow-hidden';
-    this.leftPlayerInfo.className = 'absolute top-4 left-4 flex items-center gap-3';
-    this.rightPlayerInfo.className = 'absolute top-4 right-4 flex items-center gap-3';
-    this.countdownElement.className = 'absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-6xl font-bold opacity-0 transition-opacity duration-300';
+  private setupGameArea(): void {
+    // Clear the container
+    this.container.innerHTML = '';
+    
+    // Set up the main game element with proper styles
+    this.gameElement.style.position = 'relative';
+    this.gameElement.style.width = '800px';
+    this.gameElement.style.height = '500px';
+    this.gameElement.style.backgroundColor = '#0a0a0a';
+    this.gameElement.style.border = '2px solid #00ff00';
+    this.gameElement.style.overflow = 'hidden';
+    this.gameElement.style.margin = '0 auto';
+    
+    // Set up UI elements with proper absolute positioning
+    this.leftPlayerInfo.style.position = 'absolute';
+    this.leftPlayerInfo.style.top = '16px';
+    this.leftPlayerInfo.style.left = '16px';
+    this.leftPlayerInfo.style.display = 'flex';
+    this.leftPlayerInfo.style.alignItems = 'center';
+    this.leftPlayerInfo.style.gap = '12px';
+    this.leftPlayerInfo.style.color = '#00ff00';
+    
+    this.rightPlayerInfo.style.position = 'absolute';
+    this.rightPlayerInfo.style.top = '16px';
+    this.rightPlayerInfo.style.right = '16px';
+    this.rightPlayerInfo.style.display = 'flex';
+    this.rightPlayerInfo.style.alignItems = 'center';
+    this.rightPlayerInfo.style.gap = '12px';
+    this.rightPlayerInfo.style.color = '#00ff00';
+    
+    this.countdownElement.style.position = 'absolute';
+    this.countdownElement.style.top = '50%';
+    this.countdownElement.style.left = '50%';
+    this.countdownElement.style.transform = 'translate(-50%, -50%)';
+    this.countdownElement.style.color = '#00ff00';
+    this.countdownElement.style.fontSize = '48px';
+    this.countdownElement.style.fontWeight = 'bold';
+    this.countdownElement.style.textAlign = 'center';
+    this.countdownElement.style.opacity = '0';
+    this.countdownElement.style.transition = 'opacity 0.3s ease';
+    
+    // Set up score element
+    this.scoreElement.style.position = 'absolute';
+    this.scoreElement.style.top = '16px';
+    this.scoreElement.style.left = '50%';
+    this.scoreElement.style.transform = 'translateX(-50%)';
+    this.scoreElement.style.color = '#00ff00';
+    this.scoreElement.style.fontSize = '24px';
+    this.scoreElement.style.fontWeight = 'bold';
+    this.scoreElement.style.textAlign = 'center';
+    
+    // Set up round element
+    this.roundElement.style.position = 'absolute';
+    this.roundElement.style.top = '64px';
+    this.roundElement.style.left = '50%';
+    this.roundElement.style.transform = 'translateX(-50%)';
+    this.roundElement.style.color = '#00ff00';
+    this.roundElement.style.fontSize = '14px';
+    this.roundElement.style.opacity = '0.7';
+    this.roundElement.style.textAlign = 'center';
+    
+    // Create the net
     const net = document.createElement('div');
-    net.className = 'absolute top-0 left-1/2 transform -translate-x-1/2 h-full border-l border-dashed border-terminal-green opacity-50';
+    net.style.position = 'absolute';
+    net.style.top = '0';
+    net.style.left = '50%';
+    net.style.width = '2px';
+    net.style.height = '100%';
+    net.style.backgroundColor = '#00ff00';
+    net.style.opacity = '0.3';
+    net.style.transform = 'translateX(-50%)';
+    
+    // Add all elements to the game area
     this.gameElement.appendChild(net);
     this.gameElement.appendChild(this.leftPaddle);
     this.gameElement.appendChild(this.rightPaddle);
@@ -44,6 +117,13 @@ export class GameRenderer {
     this.gameElement.appendChild(this.leftPlayerInfo);
     this.gameElement.appendChild(this.rightPlayerInfo);
     this.gameElement.appendChild(this.scoreElement);
+    this.gameElement.appendChild(this.roundElement);
+    
+    // Add the game element to the container
+    this.container.appendChild(this.gameElement);
+  }
+
+  public render(): HTMLElement {
     return this.gameElement;
   }
 
@@ -52,32 +132,46 @@ export class GameRenderer {
    */
   public update(state: GameStateDto): void {
     if (!this.initialized && state.settings) {
-      this.leftPaddle.className = 'absolute bg-terminal-green';
+      // Left paddle setup
+      this.leftPaddle.style.position = 'absolute';
+      this.leftPaddle.style.backgroundColor = '#00ff00';
       this.leftPaddle.style.width = `${state.settings.paddleWidth}px`;
       this.leftPaddle.style.height = `${state.settings.paddleHeight}px`;
       this.leftPaddle.style.left = `${state.settings.paddleOffset}px`;
       this.leftPaddle.style.top = `${state.settings.canvasHeight / 2 - state.settings.paddleHeight / 2}px`;
-      this.rightPaddle.className = 'absolute bg-terminal-green';
+      
+      // Right paddle setup
+      this.rightPaddle.style.position = 'absolute';
+      this.rightPaddle.style.backgroundColor = '#00ff00';
       this.rightPaddle.style.width = `${state.settings.paddleWidth}px`;
       this.rightPaddle.style.height = `${state.settings.paddleHeight}px`;
       this.rightPaddle.style.right = `${state.settings.paddleOffset}px`;
       this.rightPaddle.style.top = `${state.settings.canvasHeight / 2 - state.settings.paddleHeight / 2}px`;
-      this.ball.className = 'absolute bg-terminal-green rounded-full opacity-0 transition-opacity duration-300';
+      
+      // Ball setup
+      this.ball.style.position = 'absolute';
+      this.ball.style.backgroundColor = '#00ff00';
+      this.ball.style.borderRadius = '50%';
       this.ball.style.width = `${state.settings.ballSize}px`;
       this.ball.style.height = `${state.settings.ballSize}px`;
       this.ball.style.left = `${state.settings.canvasWidth / 2 - state.settings.ballSize / 2}px`;
       this.ball.style.top = `${state.settings.canvasHeight / 2 - state.settings.ballSize / 2}px`;
-      this.gameElement.style.width = `${state.settings.canvasWidth}px`;
-      this.gameElement.style.height = `${state.settings.canvasHeight}px`;
-      this.initialized = true;
+      this.ball.style.opacity = '1'; // Make ball visible
+      this.ball.style.transition = 'opacity 0.3s ease';
+      
+      console.log('Game initialized with settings:', state.settings);
     }
+    
+    // Update positions
     this.ball.style.left = `${state.ball.x}px`;
     this.ball.style.top = `${state.ball.y}px`;
     this.leftPaddle.style.top = `${state.paddles.player1.y}px`;
     this.rightPaddle.style.top = `${state.paddles.player2.y}px`;
+    
+    // Update score
     this.scoreElement.innerHTML = `
       <span>${state.scores.player1}</span>
-      <span class="text-terminal-gray">-</span>
+      <span style="color: #666; margin: 0 8px;">-</span>
       <span>${state.scores.player2}</span>
     `;
   }
@@ -99,6 +193,68 @@ export class GameRenderer {
           <span class="text-sm font-bold">${rightPlayer.name.charAt(0).toUpperCase()}</span>
         </div>
       </div>
+    `;
+  }
+
+  public updateRound(round: number): void {
+    this.roundElement.className = 'absolute top-16 left-1/2 transform -translate-x-1/2 text-sm opacity-70';
+    this.roundElement.textContent = `Round ${round}`;
+  }
+
+  // 기존 updatePlayerInfo에 아바타 지원 추가
+  public updatePlayerInfoWithAvatar(leftPlayer: { name: string; avatarUrl?: string }, rightPlayer: { name: string; avatarUrl?: string }): void {
+    if (!leftPlayer || !rightPlayer) return;
+    
+    this.leftPlayerInfo.innerHTML = `
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-full bg-terminal-gray bg-opacity-20 flex items-center justify-center overflow-hidden">
+          ${leftPlayer.avatarUrl ? 
+            `<img src="${leftPlayer.avatarUrl}" alt="${leftPlayer.name}" class="w-full h-full object-cover">` :
+            `<span class="text-sm font-bold">${leftPlayer.name.charAt(0).toUpperCase()}</span>`
+          }
+        </div>
+        <div class="text-sm font-bold">${leftPlayer.name}</div>
+      </div>
+    `;
+    
+    this.rightPlayerInfo.innerHTML = `
+      <div class="flex items-center gap-3">
+        <div class="text-sm font-bold">${rightPlayer.name}</div>
+        <div class="w-10 h-10 rounded-full bg-terminal-gray bg-opacity-20 flex items-center justify-center overflow-hidden">
+          ${rightPlayer.avatarUrl ? 
+            `<img src="${rightPlayer.avatarUrl}" alt="${rightPlayer.name}" class="w-full h-full object-cover">` :
+            `<span class="text-sm font-bold">${rightPlayer.name.charAt(0).toUpperCase()}</span>`
+          }
+        </div>
+      </div>
+    `;
+  }
+
+  // 라운드 정보와 함께 카운트다운 표시
+  public showCountdownWithRound(count: number, round: number): void {
+    this.countdownElement.style.opacity = '1';
+    this.ball.style.opacity = '0';
+    
+    this.countdownElement.innerHTML = `
+      <div class="flex flex-col items-center">
+        <div class="text-6xl font-bold mb-2 text-center">${count}</div>
+        <div class="text-2xl opacity-70 text-center">Round ${round}</div>
+      </div>
+    `;
+  }
+
+  public hideCountdown(): void {
+    this.countdownElement.style.opacity = '0';
+    this.ball.style.opacity = '1';
+  }
+
+  // 점수와 라운드를 별도로 업데이트하는 메서드들
+  public updateScore(leftScore: number, rightScore: number): void {
+    this.scoreElement.className = 'absolute top-4 left-1/2 transform -translate-x-1/2 flex items-center gap-4 text-2xl font-bold';
+    this.scoreElement.innerHTML = `
+      <span>${leftScore}</span>
+      <span class="text-terminal-gray">-</span>
+      <span>${rightScore}</span>
     `;
   }
 

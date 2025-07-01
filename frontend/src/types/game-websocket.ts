@@ -4,7 +4,7 @@
 
 // Client → Server
 export interface PlayerInputDto {
-  action: 'UP' | 'DOWN';
+  action: 'UP' | 'DOWN' | 'NONE';
 }
 
 // Server → Client

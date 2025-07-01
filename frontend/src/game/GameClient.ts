@@ -9,7 +9,10 @@ import { GameStateDto, GameEventDto, PlayerInputDto } from '../types/game-websoc
 
 export class GameClient {
   private gameId: string | null = null;
-  private playerId: number | null = null; // 이 클라이언트를 사용하는 플레이어의 ID
+  private playerId: number | null = null;
+  private gameMode: string | null = null; // 게임 모드 저장 // 이 클라이언트를 사용하는 플레이어의 ID
+  private isLocalMultiplayer: boolean = false; // 로컬 멀티플레이어 모드 여부
+  private player2Id: number | null = null; // 로컬 멀티플레이어에서 2번째 플레이어 ID
 
   // 의존성 주입: GameClient는 직접 DOM이나 API를 다루지 않고, 서비스를 통해 작업합니다.
   constructor(
@@ -28,32 +31,79 @@ export class GameClient {
     try {
       // 1. REST API로 서버에 게임 생성을 요청합니다.
       const response = await this.gameApiService.createGame(createGameDto);
+      
       this.gameId = response.gameId;
-      // 중요: 이 클라이언트를 사용하는 플레이어의 ID를 어딘가에서 받아와야 합니다.
-      // 예시: this.playerId = getMyPlayerIdFromAuthState();
+      this.gameMode = response.type; // 게임 모드 저장
+      
+      // 2. 응답에서 사용자 플레이어 ID를 찾아 설정
+      if (!response.players || !Array.isArray(response.players)) {
+        console.error('Invalid response format:', response);
+        throw new Error('Invalid response: players array not found');
+      }
+      
+      const userPlayer = response.players.find(p => p.type === 'user');
+      if (!userPlayer) {
+        console.error('Available players:', response.players);
+        throw new Error('User player not found in game response');
+      }
+      this.playerId = userPlayer.id;
 
-      console.log(`Game session created with ID: ${this.gameId}`);
+      // 로컬 멀티플레이어 모드 설정 및 두 번째 플레이어 ID 설정
+      if (response.type === 'local_1v1') {
+        this.isLocalMultiplayer = true;
+        const guestPlayer = response.players.find(p => p.type === 'guest');
+        if (guestPlayer) {
+          this.player2Id = guestPlayer.id;
+        } else {
+          console.warn('Guest player not found for local multiplayer game');
+        }
+      } else {
+        this.isLocalMultiplayer = false;
+        this.player2Id = null;
+      }
 
-      // 2. 웹소켓 이벤트 리스너를 미리 등록합니다.
+      console.log(`Game created: ${this.gameId}, Player: ${this.playerId}, Mode: ${this.gameMode}`);
+
+      // 3. 웹소켓 이벤트 리스너를 미리 등록합니다.
       this.setupWebSocketListeners();
 
-      // 3. 웹소켓 서버에 연결합니다.
-      const wsUrl = `/ws/game/${this.gameId}?playerId=${this.playerId}`;
+      // 4. 웹소켓 서버에 연결합니다.
+      const wsUrl = `ws://localhost:3000/ws/game/${this.gameId}?playerId=${this.playerId}`;
       this.webSocketService.connect(wsUrl);
 
     } catch (error) {
       console.error('Failed to start game:', error);
-      // 사용자에게 에러 알림 UI 표시
+      throw error; // 에러를 다시 던져서 호출자가 처리할 수 있도록
     }
   }
 
   /**
    * 사용자 입력을 처리하는 로직을 InputHandler와 연결합니다.
+   * 로컬 멀티플레이어의 경우 두 플레이어의 입력을 모두 처리합니다.
    */
   private setupInputHandling(): void {
-    // InputHandler가 키 입력을 감지하면, 이 콜백 함수를 실행합니다.
-    this.inputHandler.on('input', (action: 'UP' | 'DOWN') => {
-      // 받은 입력을 서버로 전송합니다.
+    // 기존 리스너 제거 (재설정 시)
+    this.inputHandler.off('input', this.handleInput);
+    
+    // 새 리스너 등록
+    this.inputHandler.on('input', this.handleInput);
+  }
+
+  private handleInput = (action: 'UP' | 'DOWN' | 'NONE', playerSide?: 'left' | 'right') => {
+    if (this.isLocalMultiplayer && playerSide) {
+      // 로컬 멀티플레이어: 두 플레이어의 입력을 구분해서 전송
+      const targetPlayerId = playerSide === 'left' ? this.playerId : this.player2Id;
+      const playerInput: PlayerInputDto = { action };
+      
+      this.webSocketService.sendMessage({
+        type: 'player_input',
+        data: {
+          playerId: targetPlayerId ?? 0,
+          input: playerInput
+        }
+      });
+    } else {
+      // 싱글플레이어 또는 온라인: 기존 방식
       const playerInput: PlayerInputDto = { action };
       this.webSocketService.sendMessage({
         type: 'player_input',
@@ -62,7 +112,7 @@ export class GameClient {
           input: playerInput
         }
       });
-    });
+    }
   }
 
   /**
@@ -70,8 +120,10 @@ export class GameClient {
    */
   private setupWebSocketListeners(): void {
     this.webSocketService.on('open', () => {
-      console.log('WebSocket connection established. Ready to play!');
-      // 필요시, 'player_ready' 같은 메시지를 보내 준비 상태를 알릴 수 있습니다.
+      console.log('WebSocket connected - Game ready');
+      // 웹소켓 연결 후 입력 핸들러 활성화 (게임 모드에 따라)
+      const isLocalMultiplayer = this.gameMode === 'local_1v1';
+      this.inputHandler.activate(isLocalMultiplayer);
     });
 
     this.webSocketService.on('game_state', (gameState: GameStateDto) => {
@@ -80,12 +132,13 @@ export class GameClient {
     });
 
     this.webSocketService.on('game_event', (gameEvent: GameEventDto) => {
-      console.log('Game event received:', gameEvent.event);
       // 서버가 보내준 특정 이벤트(카운트다운, 게임 종료 등)를 처리합니다.
       switch (gameEvent.event) {
         case 'countdown':
           // 카운트다운 UI를 화면에 표시
-          this.renderer.showCountdown(gameEvent.data?.remainingTime);
+          if (typeof gameEvent.data?.remainingTime === 'number') {
+            this.renderer.showCountdown(gameEvent.data.remainingTime);
+          }
           break;
         case 'game_end':
           // 게임 종료 모달을 띄우고 결과 표시

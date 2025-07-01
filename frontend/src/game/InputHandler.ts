@@ -1,7 +1,8 @@
 // ./frontend/src/game/InputHandler.ts
 
-type InputAction = 'UP' | 'DOWN';
-type InputEventCallback = (action: InputAction) => void;
+type InputAction = 'UP' | 'DOWN' | 'NONE';
+type PlayerSide = 'left' | 'right';
+type InputEventCallback = (action: InputAction, playerSide?: PlayerSide) => void;
 
 /**
  * Input Handler Module (Refactored for WebSocket)
@@ -12,6 +13,7 @@ export class InputHandler {
   private keyState: { [key: string]: boolean } = {};
   private eventListeners: Set<InputEventCallback> = new Set();
   private isActive: boolean = false;
+  private isLocalMultiplayer: boolean = false; // 로컬 멀티플레이어 모드
 
   constructor() {
     this.setupKeyListeners();
@@ -21,30 +23,50 @@ export class InputHandler {
     window.addEventListener('keydown', (e) => {
       if (!this.isActive || this.keyState[e.key]) return; // 중복 입력 방지
       this.keyState[e.key] = true;
-      this.handleKeyPress(e.key);
+      this.handleKeyPress(e.key, true); // keydown
     });
 
     window.addEventListener('keyup', (e) => {
+      if (!this.isActive || !this.keyState[e.key]) return;
       this.keyState[e.key] = false;
+      this.handleKeyPress(e.key, false); // keyup
     });
   }
 
-  private handleKeyPress(key: string): void {
+  private handleKeyPress(key: string, isKeyDown: boolean): void {
     let action: InputAction | null = null;
+    let playerSide: PlayerSide | null = null;
     switch (key.toLowerCase()) {
       case 'w':
-      case 'arrowup':
-        action = 'UP';
+      case 'ㅈ':
+        action = isKeyDown ? 'UP' : 'NONE';
+        playerSide = 'left';
         break;
       case 's':
+      case 'ㄴ':
+        action = isKeyDown ? 'DOWN' : 'NONE';
+        playerSide = 'left';
+        break;
+      case 'arrowup':
+        action = isKeyDown ? 'UP' : 'NONE';
+        playerSide = 'right';
+        break;
       case 'arrowdown':
-        action = 'DOWN';
+        action = isKeyDown ? 'DOWN' : 'NONE';
+        playerSide = 'right';
         break;
     }
-
-    if (action) {
-      // 'input' 이벤트를 발생시켜 등록된 모든 콜백을 실행
-      this.emit(action);
+    
+    if (action && playerSide) {
+      if (this.isLocalMultiplayer) {
+        // 로컬 멀티플레이어: 플레이어 구분해서 전송
+        this.emit(action, playerSide);
+      } else {
+        // AI 게임: 위아래 방향키(오른쪽)만 처리 - 사용자가 오른쪽 패들 조작
+        if (playerSide === 'right') {
+          this.emit(action);
+        }
+      }
     }
   }
 
@@ -66,14 +88,16 @@ export class InputHandler {
   }
 
   // 등록된 콜백들에게 이벤트를 전달
-  private emit(action: InputAction): void {
-    this.eventListeners.forEach(callback => callback(action));
+  private emit(action: InputAction, playerSide?: PlayerSide): void {
+    this.eventListeners.forEach(callback => callback(action, playerSide));
   }
   
   // 게임 시작 시 호출하여 입력을 받기 시작
-  public activate(): void {
+  public activate(isLocalMultiplayer: boolean = false): void {
     this.isActive = true;
+    this.isLocalMultiplayer = isLocalMultiplayer;
     this.keyState = {};
+    console.log(`[InputHandler] Activated - Local Multiplayer: ${isLocalMultiplayer}`);
   }
 
   // 게임 종료 시 호출하여 입력을 중단

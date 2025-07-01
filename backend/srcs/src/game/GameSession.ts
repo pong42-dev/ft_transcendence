@@ -32,7 +32,6 @@ export class GameSession {
   public readonly gameId: number; // DB의 games 테이블 ID
   private players = new Map<number, PlayerResponseDto>();
   private playerInputs = new Map<number, 'UP' | 'DOWN' | 'NONE'>();
-  private playerReady = new Map<number, boolean>();
 
   // State
   private status: GameStatus = 'waiting';
@@ -61,6 +60,8 @@ export class GameSession {
 
     this.config = new GameConfig();
     this.engine = new GameEngine(this.config);
+    
+    console.log(`[GameSession] Created session ${id} with mode ${mode}`);
   }
 
   // =================================================================
@@ -71,39 +72,14 @@ export class GameSession {
     if (this.players.size >= 2) return;
     this.players.set(player.id, player);
     this.playerInputs.set(player.id, 'NONE');
-    this.playerReady.set(player.id, false); // 플레이어는 접속 후 준비 상태를 알려야 함
-  }
+    }
 
   public removePlayer(playerId: number) {
     this.players.delete(playerId);
     this.playerInputs.delete(playerId);
-    this.playerReady.delete(playerId);
     // 플레이어가 나가면 게임 중단
     if (this.status === 'playing' || this.status === 'countdown') {
       this.stop('player_left');
-    }
-  }
-
-  public setPlayerReady(playerId: number) {
-    if (!this.players.has(playerId)) return;
-    this.playerReady.set(playerId, true);
-
-    // 게임 모드에 따른 시작 조건 확인
-    let canStart = false;
-    
-    if (this._mode === 'local_1v1') {
-      // local_1v1: 한 명만 연결되어도 시작 (같은 컴퓨터에서 두 패들 조작)
-      canStart = this.players.size >= 1 && [...this.playerReady.values()].some(Boolean);
-    } else {
-      // ai_1v1, tournament: 모든 플레이어가 준비되어야 시작
-      canStart = this.players.size === 2 && [...this.playerReady.values()].every(Boolean);
-    }
-    
-    if (canStart) {
-      console.log(`[GameSession] Starting countdown for game ${this.id}, mode: ${this._mode}`);
-      this.startCountdown();
-    } else {
-      console.log(`[GameSession] Waiting for more players - current: ${this.players.size}, ready: ${[...this.playerReady.values()].filter(Boolean).length}`);
     }
   }
 
@@ -139,26 +115,23 @@ export class GameSession {
     }
   }
 
-  // =================================================================
-  // Internal Game Flow
-  // =================================================================
-
-  private startCountdown() {
+  public startCountdown() {
     if (this.status !== 'waiting') return;
-
-    this.status = 'countdown';
     let remainingTime = 5;
-
+    this.status = 'countdown';
     this.loop = setInterval(() => {
       this.onGameEvent({ event: 'countdown', data: { remainingTime } });
       remainingTime--;
-
       if (remainingTime < 0) {
         clearInterval(this.loop!);
         this._startGameLoop();
       }
     }, 1000);
   }
+
+  // =================================================================
+  // Internal Game Flow
+  // =================================================================
 
   private async _startGameLoop() {
     this.status = 'playing';
@@ -179,8 +152,21 @@ export class GameSession {
         this.stop('error'); // 혹은 다른 적절한 처리
         return;
     }
-    const leftPlayerInput = this.playerInputs.get(players[0].id) || 'NONE';
-    const rightPlayerInput = this.playerInputs.get(players[1].id) || 'NONE';
+    
+    let leftPlayerInput, rightPlayerInput;
+    
+    if (this._mode === 'ai_1v1') {
+      // AI 게임: 사용자는 왼쪽 패들, AI는 오른쪽 패들
+      const userPlayer = players.find(p => p.type === 'user');
+      // const aiPlayer = players.find(p => p.type === 'ai');
+      
+      leftPlayerInput = 'AI_CONTROLLED';
+      rightPlayerInput = userPlayer ? (this.playerInputs.get(userPlayer.id) || 'NONE') : 'NONE';
+    } else {
+      // 로컬 게임: 플레이어 순서대로
+      leftPlayerInput = this.playerInputs.get(players[0].id) || 'NONE';
+      rightPlayerInput = this.playerInputs.get(players[1].id) || 'NONE';
+    }
 
     // 엔진 업데이트 (GameEngine의 실제 메서드 호출)
     // 1. 패들 위치 업데이트
@@ -283,6 +269,10 @@ export class GameSession {
 
   public getPlayers(): PlayerResponseDto[] {
     return Array.from(this.players.values());
+  }
+
+  public getMode(): GameMode {
+    return this._mode;
   }
 
   public getGameMode(): GameMode {
