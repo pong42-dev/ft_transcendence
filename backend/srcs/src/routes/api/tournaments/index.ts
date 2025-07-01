@@ -16,7 +16,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 	// history 플러그인 등록
 	await fastify.register(historyPlugin, { prefix: '/' })
 
-	// const { authenticate } = fastify  // TODO: 테스트 완료 후 활성화
+	const { authenticate } = fastify
 
 	// POST /api/tournaments - 토너먼트 생성
 	fastify.post(
@@ -35,8 +35,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				},
 				tags: ["Tournaments"]
 			},
-			// TODO: 테스트 완료 후 인증 재활성화
-			// preHandler: [authenticate]
+			preHandler: [authenticate]
 		},
 		async (request, reply) => {
 			const trx = await fastify.knex.transaction();
@@ -154,8 +153,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				},
 				tags: ["Tournaments"]
 			},
-			// TODO: 테스트 완료 후 인증 재활성화
-			// preHandler: [authenticate]
+			preHandler: [authenticate]
 		},
 		async (request, reply) => {
 			try {
@@ -190,8 +188,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				},
 				tags: ["Tournaments"]
 			},
-			// TODO: 테스트 완료 후 인증 재활성화
-			// preHandler: [authenticate]
+			preHandler: [authenticate]
 		},
 		async (request, reply) => {
 			try {
@@ -240,8 +237,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				},
 				tags: ["Tournaments"]
 			},
-			// TODO: 테스트 완료 후 인증 재활성화
-			// preHandler: [authenticate]
+			preHandler: [authenticate]
 		},
 		async (request, reply) => {
 			try {
@@ -298,8 +294,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				},
 				tags: ["Tournaments"]
 			},
-			// TODO: 테스트 완료 후 인증 재활성화
-			// preHandler: [authenticate]
+			preHandler: [authenticate]
 		},
 		async (request, reply) => {
 			try {

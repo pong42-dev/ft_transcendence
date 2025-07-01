@@ -18,7 +18,7 @@ export interface Tournament {
 
 export interface TournamentWithDetails extends Tournament {
 	participants: any[];
-	games: any[];
+	matches: any[];
 }
 
 export interface TournamentMatchInfo {
@@ -487,6 +487,34 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 				};
 			} catch (err: any) {
 				console.error('Error getting tournament details:', err.message);
+				throw err;
+			}
+		},
+
+		/**
+		 * 특정 토너먼트의 참가자 목록 조회
+		 */
+		async getTournamentParticipants(tournamentId: number): Promise<any[]> {
+			try {
+				// 1. 토너먼트 참가자 조회 (players 테이블에서)
+				const participants = await knex('games as g')
+					.join('game_participants as gp', 'g.id', 'gp.game_id')
+					.join('players as p', 'gp.player_id', 'p.id')
+					.select(
+						'p.id', 
+						'p.type', 
+						'p.user_id',
+						knex.raw('COALESCE(p.display_name) as name')
+					)
+					.where('g.tournament_id', tournamentId)
+					.distinct('p.id');
+				
+				// COALESCE를 사용하여 user의 nickname을 가져오는 로직 추가 필요
+				// 현재는 display_name만 name으로 반환
+
+				return participants;
+			} catch (err: any) {
+				console.error('Error getting tournament participants:', err.message);
 				throw err;
 			}
 		},

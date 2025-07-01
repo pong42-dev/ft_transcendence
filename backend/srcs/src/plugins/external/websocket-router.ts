@@ -1,24 +1,28 @@
+// backend/srcs/plugins/external/websocket-router.ts
+
+import { FastifyInstance, FastifyRequest } from 'fastify';
 import fp from 'fastify-plugin';
-import { FastifyInstance } from 'fastify';
+import { WebSocket } from 'ws';
 import { GameWebSocketHandler } from '../../websocket/GameWebsocketHandler.js';
-// import { TournamentWebSocketHandler } from '../../websocket/TournamentWebsocketHandler.js'; // 추후 구현
+import { TournamentWebSocketHandler } from '../../websocket/TournamentWebsocketHandler.js';
 
-export default fp(async function (fastify: FastifyInstance) {
-  const gameWsHandler = new GameWebSocketHandler();
-  // const tournamentWsHandler = new TournamentWebSocketHandler(); // 추후 구현
+async function websocketRouter(fastify: FastifyInstance) {
+  // 각 핸들러 인스턴스 생성
+  const gameHandler = new GameWebSocketHandler();
+  const tournamentHandler = new TournamentWebSocketHandler(fastify);
 
-  // /ws/game/:gameId → GameWebSocketHandler
-  fastify.get('/ws/game/:gameId', { websocket: true }, (connection, request) => {
-    gameWsHandler.handleConnection(connection, request);
+  // 기존 게임 경로는 GameWebSocketHandler가 처리
+  fastify.get('/ws/game/:gameId', { websocket: true }, (socket: WebSocket, request: FastifyRequest) => {
+    gameHandler.handleConnection(socket, request);
   });
 
-  // /ws/tournament/:tournamentId → TournamentWebSocketHandler (준비)
-  // fastify.get('/ws/tournament/:tournamentId', { websocket: true }, (connection, request) => {
-  //   tournamentWsHandler.handleConnection(connection, request);
-  // });
+  // 새로운 토너먼트 경로는 TournamentWebSocketHandler가 처리
+  fastify.get('/ws/tournament/:tournamentId', { websocket: true }, (socket: WebSocket, request: FastifyRequest) => {
+    tournamentHandler.handleConnection(socket, request);
+  });
+}
 
-  fastify.log.info('WebSocket router plugin registered');
-}, {
+export default fp(websocketRouter, {
   name: 'websocket-router',
   dependencies: ['websocket']
 });

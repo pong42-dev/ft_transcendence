@@ -4,7 +4,7 @@ import {
 } from '../../../schemas/tournaments.js'
 
 const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
-	// const { authenticate } = fastify  // TODO: 테스트 완료 후 활성화
+	const { authenticate } = fastify
 
 	// GET /api/tournaments/user/history - 현재 로그인한 사용자의 토너먼트 기록 조회
 	fastify.get(
@@ -22,12 +22,12 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				},
 				tags: ["Tournaments"]
 			},
-			preHandler: [fastify.authenticate]
+			preHandler: [authenticate]
 		},
 		async (request, reply) => {
 			try {
 				// JWT 토큰에서 사용자 ID 추출
-				const userId = request.user.id;
+				const userId = request.user.user_id;
 
 				// 사용자 토너먼트 기록 조회
 				const history = await fastify.tournamentsRepository.getUserTournamentHistory(userId);
@@ -62,15 +62,14 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				},
 				tags: ["Tournaments"]
 			},
-			// TODO: 테스트 완료 후 인증 재활성화
-			// preHandler: [authenticate]
+			preHandler: [authenticate]
 		},
 		async (request, reply) => {
 			try {
 				const { userId } = request.params as { userId: number };
 
 				// 사용자 존재 여부 확인
-				const user = await fastify.usersRepository.getUserById(userId);
+				const user = await fastify.usersRepository.getRowByColumnValue('id', userId);
 				if (!user) {
 					return reply.status(404).send({ 
 						message: 'User not found' 

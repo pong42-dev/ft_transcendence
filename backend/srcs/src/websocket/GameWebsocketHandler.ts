@@ -30,7 +30,25 @@ export class GameWebSocketHandler {
   }
 
   /**
-   * WebSocket 연결 처리 (Fastify 라우터에서 직접 호출)
+   * Fastify WebSocket 라우트 등록
+   */
+  public registerRoutes(fastify: FastifyInstance): void {
+    // WebSocket 연결: /ws/game/:gameId
+    fastify.get('/ws/game/:gameId', { websocket: true }, (connection, request) => {
+      console.log('[WebSocket] New connection received')
+      console.log('[WebSocket] Connection object:', typeof connection)
+      console.log('[WebSocket] Connection keys:', Object.keys(connection))
+      
+      try {
+        this.handleConnection(connection as WebSocket, request)
+      } catch (error) {
+        console.error('[WebSocket] Error in handleConnection:', error)
+      }
+    })
+  }
+
+  /**
+   * WebSocket 연결 처리
    */
   public handleConnection(socket: WebSocket, request: FastifyRequest): void {
     const { gameId } = request.params as { gameId: string }
