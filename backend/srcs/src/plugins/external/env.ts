@@ -90,6 +90,25 @@ const schema = {
 		// RATE_LIMIT_APIKEY_MAX: { type: 'number', default: 1000 },
 		// RATE_LIMIT_APIKEY_WINDOW: { type: 'string', default: '1 hour' },
 
+		// 개발/테스트 환경: 편하게 테스트하기 위해 제한을 느슨하게
+		RATE_LIMIT_DEV_MAX: { type: 'number', default: 100 },
+		RATE_LIMIT_DEV_WINDOW: { type: 'string', default: '1 minute' },
+		// 일반 사용자 대상 API (비 로그인 상태): 비정상적인 트래픽 차단 목적
+		RATE_LIMIT_PUBLIC_MAX: { type: 'number', default: 100 },
+		RATE_LIMIT_PUBLIC_WINDOW: { type: 'string', default: '1 minute' },
+		// 인증 또는 로그인 시도 API: brute-force 방지
+		RATE_LIMIT_AUTH_MAX: { type: 'number', default: 100 },
+		RATE_LIMIT_AUTH_WINDOW: { type: 'string', default: '1 minutes' },
+		// 로그인된 사용자용 API: 사용자당 충분한 요청 허용
+		RATE_LIMIT_USER_MAX: { type: 'number', default: 100 },
+		RATE_LIMIT_USER_WINDOW: { type: 'string', default: '1 minute' },
+		// 공격 방어가 중요한 민감 API: 챗봇/스크래퍼/공격자 차단
+		RATE_LIMIT_SENSITIVE_MAX: { type: 'number', default: 100 },
+		RATE_LIMIT_SENSITIVE_WINDOW: { type: 'string', default: '1 minute' },
+		// 퍼블릭 API with API Key: 사용량 제한 목적, 과금 기준 사용 가능
+		RATE_LIMIT_APIKEY_MAX: { type: 'number', default: 100 },
+		RATE_LIMIT_APIKEY_WINDOW: { type: 'string', default: '1 minute' },
+
 		// Files
 		PUBLIC_DIRNAME: {
 			type: 'string',
