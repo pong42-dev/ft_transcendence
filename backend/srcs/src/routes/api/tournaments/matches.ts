@@ -4,7 +4,7 @@ import {
 } from '../../../schemas/tournaments.js'
 
 const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
-	// const { authenticate } = fastify  // TODO: 테스트 완료 후 활성화
+	const { authenticate } = fastify
 
 	// GET /api/tournaments/:tournamentId/progress - 토너먼트 진행 상황 조회
 	fastify.get(
@@ -25,8 +25,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				},
 				tags: ["Tournaments"]
 			},
-			// TODO: 테스트 완료 후 인증 재활성화
-			// preHandler: [authenticate]
+			preHandler: [authenticate]
 		},
 		async (request, reply) => {
 			try {
@@ -86,8 +85,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				},
 				tags: ["Tournaments"]
 			},
-			// TODO: 테스트 완료 후 인증 재활성화
-			// preHandler: [authenticate]
+			preHandler: [authenticate]
 		},
 		async (request, reply) => {
 			try {
@@ -164,8 +162,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				},
 				tags: ["Tournaments"]
 			},
-			// TODO: 테스트 완료 후 인증 재활성화
-			// preHandler: [authenticate]
+			preHandler: [authenticate]
 		},
 		async (request, reply) => {
 			try {
@@ -256,8 +253,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				},
 				tags: ["Tournaments"]
 			},
-			// TODO: 테스트 완료 후 인증 재활성화
-			// preHandler: [authenticate]
+			preHandler: [authenticate]
 		},
 		async (request, reply) => {
 			try {
