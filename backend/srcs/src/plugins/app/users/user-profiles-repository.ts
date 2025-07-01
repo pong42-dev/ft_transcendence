@@ -14,7 +14,7 @@ export function createUserProfilesRepository(fastify: FastifyInstance) {
 
 	return {
 		// Insert user profile
-		async insertRow(user_id: number, name: string, avatar: string, status: string) {
+		async insertRow(user_id: number, name: string, avatar: string | undefined, status: string) {
 			try {
 				await knex('user_profiles')
 				.insert({ 

@@ -5,12 +5,20 @@ import { Profiles, UserData, UserFriendSchema } from '../../../../schemas/auth.j
 import { FriendProfileResponseSchema } from '../../../../schemas/profile.js'
 
 const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
-	const { userProfilesRepository, friendsRepository, gameRepository, tournamentsRepository, authenticate, config } = fastify
+	const { config, 
+			userProfilesRepository, friendsRepository, gameRepository, tournamentsRepository, 
+			authenticate } = fastify
 	
 	// GET /api/users/me/friends
 	fastify.get(
 		'/friends',
 		{
+			config: {
+				rateLimit: {
+					max: config.RATE_LIMIT_USER_MAX,
+					timeWindow: config.RATE_LIMIT_USER_WINDOW
+				}
+			},
 			schema: {
 				security: [{ bearerAuth: [] }],
 				response: {
@@ -61,7 +69,13 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 	// POST /api/users/me/friends
 	fastify.post(
 		'/friends',
-		{
+		{		
+			config: {
+				rateLimit: {
+					max: config.RATE_LIMIT_USER_MAX,
+					timeWindow: config.RATE_LIMIT_USER_WINDOW
+				}
+			},
 			schema: {
 				security: [{ bearerAuth: [] }],
 				body: Type.Object({
@@ -113,6 +127,12 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 	fastify.get(
 		'/friends/:id',
 		{
+			config: {
+				rateLimit: {
+					max: config.RATE_LIMIT_USER_MAX,
+					timeWindow: config.RATE_LIMIT_USER_WINDOW
+				}
+			},
 			schema: {
 				security: [{ bearerAuth: [] }],
 				params: Type.Object({ id: IdSchema }),
@@ -195,6 +215,12 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 	fastify.delete(
 		'/friends/:id',
 		{
+			config: {
+				rateLimit: {
+					max: config.RATE_LIMIT_USER_MAX,
+					timeWindow: config.RATE_LIMIT_USER_WINDOW
+				}
+			},
 			schema: {
 				security: [{ bearerAuth: [] }],
 				params: Type.Object({ id: IdSchema }),

@@ -3,11 +3,13 @@ import { FastifyRequest } from 'fastify';
 import { GoogleCallbackQuerySchema } from '../../../../schemas/auth.js'
 
 const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
+	const { config } = fastify;
+
 	fastify.get('/google', {
 		config: {
 			rateLimit: {
-				max: 5,
-				timeWindow: '1 minute'
+				max: config.RATE_LIMIT_AUTH_MAX,
+				timeWindow: config.RATE_LIMIT_AUTH_WINDOW
 			}
 		},
 		schema: {
@@ -32,6 +34,12 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 	});
 
 	fastify.get('/google/callback', {
+		config: {
+			rateLimit: {
+				max: config.RATE_LIMIT_AUTH_MAX,
+				timeWindow: config.RATE_LIMIT_AUTH_WINDOW
+			}
+		},
 		schema: {
 			querystring: GoogleCallbackQuerySchema,
 			response: {

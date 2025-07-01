@@ -2,12 +2,19 @@ import { FastifyPluginAsyncTypebox, Type } from '@fastify/type-provider-typebox'
 import { UserProfileResponseSchema } from '../../../../schemas/profile.js'
 
 const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
-	const { usersRepository, userProfilesRepository, user2FARepository, gameRepository, tournamentsRepository, authenticate, config } = fastify
+	const { config, 
+			usersRepository, userProfilesRepository, user2FARepository, gameRepository, tournamentsRepository, 
+			authenticate } = fastify
 
-	
 	fastify.get(
 		'/',
 		{
+			config: {
+				rateLimit: {
+					max: config.RATE_LIMIT_USER_MAX,
+					timeWindow: config.RATE_LIMIT_USER_WINDOW
+				}
+			},
 			schema: {
 				response: {
 					200: Type.Object({

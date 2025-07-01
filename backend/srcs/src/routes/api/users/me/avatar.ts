@@ -4,19 +4,19 @@ import { UserData } from '../../../../schemas/auth.js'
 // import fs from 'fs';
 
 const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
-	const { 
-		config, userProfilesRepository,
-		formDataManager, fileManager,
-		authenticate, isValidProfileFormData
-	} = fastify;
+	const { config, 
+			userProfilesRepository,
+			authenticate, 
+			isValidProfileFormData,
+			formDataManager, fileManager } = fastify;
 
 	fastify.put(
 		'/avatar',
 		{
 			config: {
 				rateLimit: {
-					max: 5,
-					timeWindow: '1 minute'
+					max: config.RATE_LIMIT_USER_MAX,
+					timeWindow: config.RATE_LIMIT_USER_WINDOW
 				}
 			},
 			schema: {

@@ -2,11 +2,19 @@ import { FastifyPluginAsyncTypebox, Type } from '@fastify/type-provider-typebox'
 import { InitUser2FASchema } from '../../../../schemas/auth.js';
 
 const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
-	const { user2FARepository, authenticate, twoFAManager, loginManager } = fastify
+	const { config, 
+			user2FARepository, 
+			authenticate, loginManager, twoFAManager } = fastify
 
 	fastify.post(
 		'/2fa/enable/init',
 		{
+			config: {
+				rateLimit: {
+					max: config.RATE_LIMIT_SENSITIVE_MAX,
+					timeWindow: config.RATE_LIMIT_SENSITIVE_WINDOW
+				}
+			},
 			schema: {
 			security: [{ bearerAuth: [] }],
 			response: {
@@ -50,6 +58,12 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 	fastify.post(
 		"/2fa/enable",
 		{
+			config: {
+				rateLimit: {
+					max: config.RATE_LIMIT_SENSITIVE_MAX,
+					timeWindow: config.RATE_LIMIT_SENSITIVE_WINDOW
+				}
+			},
 			schema: {
 			security: [{ bearerAuth: [] }],
 			body: Type.Object({
@@ -102,6 +116,12 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 	fastify.post(
 		"/2fa/disable",
 		{
+			config: {
+				rateLimit: {
+					max: config.RATE_LIMIT_SENSITIVE_MAX,
+					timeWindow: config.RATE_LIMIT_SENSITIVE_WINDOW
+				}
+			},
 			schema: {
 			security: [{ bearerAuth: [] }],
 			body: Type.Object({
@@ -152,6 +172,12 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 	fastify.post(
 		"/2fa",
 		{
+			config: {
+				rateLimit: {
+					max: config.RATE_LIMIT_SENSITIVE_MAX,
+					timeWindow: config.RATE_LIMIT_SENSITIVE_WINDOW
+				}
+			},
 			schema: {
 			body: Type.Object({
 				token: Type.String(),
