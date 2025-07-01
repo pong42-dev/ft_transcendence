@@ -31,11 +31,84 @@ Endpoints for retrieving and managing user profile information — change nickna
   "success": true,
   "msg": "User Profile successfully retrieved.",
   "data": {
-    "userInfo": {
-      "email": "user@example.com",
-      "name": "username",
-      "avatar": "http://localhost:3000/public/2345260e-635c-47e5-9648-2597fb864860.png",
-      "twoFA": true
+    {
+    "success": true,
+    "msg": "User Profile successfully retrieved.",
+    "data": {
+        "userInfo": {
+            "email": "1@gmail.com",
+            "name": "1",
+            "avatar": "http://localhost:3000/public/1.png",
+            "twoFA": false,
+            "provider": "local"
+        },
+        "gameStats": {
+            "totalGames": 2,
+            "totalWins": 1,
+            "winRate": 50
+        },
+        "oneOnOneHistory": [
+            {
+                "endedAt": "2025-07-01T03:00:56.890Z",
+                "opponent": {
+                    "id": 3,
+                    "type": "user",
+                    "name": "User 2"
+                },
+                "myScore": 1,
+                "opponentScore": 2,
+                "winnerId": 3
+            },
+            {
+                "endedAt": "2025-07-01T03:00:56.890Z",
+                "opponent": {
+                    "id": 1,
+                    "type": "ai",
+                    "name": "AI"
+                },
+                "myScore": 0,
+                "opponentScore": 3,
+                "winnerId": 1
+            }
+        ],
+        "tournHistory": [
+            {
+                "tournament_id": 1,
+                "tournament_date": "2025-07-01 02:59:56",
+                "participants": [
+                    "User1",
+                    "User2",
+                    "User3",
+                    "User4"
+                ],
+                "rounds": [
+                    {
+                        "endedAt": "2025-07-01T03:00:56.890Z",
+                        "opponent": {
+                            "id": 3,
+                            "type": "user",
+                            "name": "User2"
+                        },
+                        "myScore": 2,
+                        "opponentScore": 1,
+                        "winnerId": 2
+                    },
+                    {
+                        "endedAt": "2025-07-01T03:00:56.890Z",
+                        "opponent": {
+                            "id": 5,
+                            "type": "user",
+                            "name": "User4"
+                        },
+                        "myScore": 2,
+                        "opponentScore": 1,
+                        "winnerId": 2
+                    }
+                ],
+                "final_rank": 1
+            }
+          ]
+       }
     }
   }
 }

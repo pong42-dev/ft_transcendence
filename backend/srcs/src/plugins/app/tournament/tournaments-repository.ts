@@ -735,62 +735,173 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 		 * 사용자의 토너먼트 매치 기록 조회 (프로필용 - 간단한 버전)
 		 */
 		async getTournamentHistoryForProfile(userId: number): Promise<any[]> {
-			try {
-				// 사용자가 참가한 토너먼트 게임들 조회
-				const matches = await knex('games as g')
-					.join('game_participants as gp', 'g.id', 'gp.game_id')
-					.join('players as p', 'gp.player_id', 'p.id')
-					.join('tournaments as t', 'g.tournament_id', 't.id')
-					.select(
-						'g.id', 'g.tournament_id', 'g.round_number', 'g.started_at', 'g.ended_at', 'g.winner_id',
-						'p.id as player_id', 'p.type', 'p.user_id', 'p.display_name',
-						't.winner_player_id as tournament_winner_id'
-					)
-					.where('g.type', 'tournament')
-					.where('g.status', 'finished')
-					.where('p.user_id', userId)
-					.orderBy('g.ended_at', 'desc')
-					.limit(10); // 최근 10개만
+		try {
+			const knex = fastify.knex;
 
-				const history = [];
-				for (const match of matches) {
-					// 상대방 정보 조회
-					const opponent = await knex('game_participants as gp')
-						.join('players as p', 'gp.player_id', 'p.id')
-						.select('p.type', 'p.user_id', 'p.display_name')
-						.where('gp.game_id', match.id)
-						.where('p.id', '!=', match.player_id)
-						.first();
+			// 1. userId로 player_id 조회
+			const player = await knex('players').where('user_id', userId).first('id');
+			if (!player) return [];
 
-					if (opponent) {
-						const opponentName = opponent.type === 'user' 
-							? `User${opponent.user_id}` // 간단한 이름 처리
-							: opponent.display_name;
+			// 2. 내가 참가한 토너먼트 ID 목록 조회 (중복 제거)
+			const tournamentIdsRows = await knex('games as g')
+			.join('game_participants as gp', 'g.id', 'gp.game_id')
+			.where('g.type', 'tournament')
+			.where('gp.player_id', player.id)
+			.distinct('g.tournament_id');
 
-						// 토너먼트에서의 최종 순위 결정
-						let finalRank = 3; // 기본값 (4강 탈락)
-						if (match.round_number === 2) {
-							// 결승전
-							finalRank = match.winner_id === match.player_id ? 1 : 2;
-						}
+			const tournamentIds = tournamentIdsRows.map(r => r.tournament_id);
 
-						history.push({
-							date: match.ended_at,
-							tournament_id: match.tournament_id,
-							round: match.round_number,
-							opponent: opponentName,
-							result: match.winner_id === match.player_id ? 'win' : 'lose',
-							rank: finalRank
-						});
-					}
-				}
+			// 3. 토너먼트별 참가자 정보와 게임 기록 조회
+			const tournHistories = [];
 
-				return history;
-			} catch (err: any) {
-				console.error('Error getting tournament history for profile:', err.message);
-				return [];
+			for (const tournamentId of tournamentIds) {
+			// 토너먼트 기본 정보
+			const tournamentInfo = await knex('tournaments')
+				.where('id', tournamentId)
+				.first('id', 'created_at', 'winner_player_id');
+			if (!tournamentInfo) continue;
+
+			// 참가자 목록 조회
+			const participantsRows = await knex('game_participants as gp')
+				.join('players as p', 'gp.player_id', 'p.id')
+				.join('games as g', 'gp.game_id', 'g.id')
+				.where('g.tournament_id', tournamentId)
+				.distinct('p.id', 'p.type', 'p.user_id', 'p.display_name');
+
+			const participants = participantsRows.map(p => {
+				if (p.type === 'user') return `User${p.user_id}`;
+				return p.display_name || 'Unknown';
+			});
+
+			// rounds 배열 생성 (게임별 1v1 상세)
+			const games = await knex('games as g')
+				.join('game_participants as me', 'g.id', 'me.game_id')
+				.join('players as me_player', 'me.player_id', 'me_player.id')
+				.join('game_participants as op', function () {
+				this.on('g.id', '=', 'op.game_id').andOn('me.player_id', '!=', 'op.player_id');
+				})
+				.join('players as op_player', 'op.player_id', 'op_player.id')
+				.select(
+				'g.round_number',
+				'g.ended_at',
+				'g.winner_id',
+				'me.score as my_score',
+				'op.score as opponent_score',
+				'op_player.id as opponent_id',
+				'op_player.type as opponent_type',
+				'op_player.user_id as opponent_user_id',
+				'op_player.display_name as opponent_display_name',
+				'me_player.id as my_player_id'
+				)
+				.where('g.tournament_id', tournamentId)
+				.where('me_player.user_id', userId)
+				.orderBy('g.round_number', 'asc');
+
+			const rounds = games.map(game => {
+				const opponentName =
+				game.opponent_type === 'user'
+					? `User${game.opponent_user_id}`
+					: game.opponent_display_name || 'Unknown';
+
+				return {
+				round_number: game.round_number,  // round_number 추가
+				endedAt: game.ended_at,
+				opponent: {
+					id: game.opponent_id,
+					type: game.opponent_type,
+					name: opponentName,
+				},
+				myScore: game.my_score,
+				opponentScore: game.opponent_score,
+				winnerId: game.winner_id,
+				my_player_id: game.my_player_id, // 비교용으로 둠
+				};
+			});
+
+			// final_rank 계산 (결승(round_number=2) 승리시 1, 결승 진출 후 패배시 2, 아니면 3)
+			let final_rank = 3;
+			const finalGame = rounds.find(r => r.round_number === 2);
+			if (finalGame) {
+				final_rank = finalGame.winnerId === finalGame.my_player_id ? 1 : 2;
 			}
+
+			// my_player_id는 반환할 필요 없으니 rounds에서 삭제
+			const cleanRounds = rounds.map(({ my_player_id, ...rest }) => rest);
+
+			tournHistories.push({
+				tournament_id: tournamentInfo.id,
+				tournament_date: tournamentInfo.created_at,
+				participants: participants,
+				rounds: cleanRounds,
+				final_rank: final_rank,
+			});
+			}
+
+			return tournHistories;
+		} catch (err: any) {
+			console.error('Error getting tournament history:', err.message);
+			return [];
 		}
+		}
+
+
+		// async getTournamentHistoryForProfile(userId: number): Promise<any[]> {
+		// 	try {
+		// 		// 사용자가 참가한 토너먼트 게임들 조회
+		// 		const matches = await knex('games as g')
+		// 			.join('game_participants as gp', 'g.id', 'gp.game_id')
+		// 			.join('players as p', 'gp.player_id', 'p.id')
+		// 			.join('tournaments as t', 'g.tournament_id', 't.id')
+		// 			.select(
+		// 				'g.id', 'g.tournament_id', 'g.round_number', 'g.started_at', 'g.ended_at', 'g.winner_id',
+		// 				'p.id as player_id', 'p.type', 'p.user_id', 'p.display_name',
+		// 				't.winner_player_id as tournament_winner_id'
+		// 			)
+		// 			.where('g.type', 'tournament')
+		// 			.where('g.status', 'finished')
+		// 			.where('p.user_id', userId)
+		// 			.orderBy('g.ended_at', 'desc')
+		// 			.limit(10); // 최근 10개만
+
+		// 		const history = [];
+		// 		for (const match of matches) {
+		// 			// 상대방 정보 조회
+		// 			const opponent = await knex('game_participants as gp')
+		// 				.join('players as p', 'gp.player_id', 'p.id')
+		// 				.select('p.type', 'p.user_id', 'p.display_name')
+		// 				.where('gp.game_id', match.id)
+		// 				.where('p.id', '!=', match.player_id)
+		// 				.first();
+
+		// 			if (opponent) {
+		// 				const opponentName = opponent.type === 'user' 
+		// 					? `User${opponent.user_id}` // 간단한 이름 처리
+		// 					: opponent.display_name;
+
+		// 				// 토너먼트에서의 최종 순위 결정
+		// 				let finalRank = 3; // 기본값 (4강 탈락)
+		// 				if (match.round_number === 2) {
+		// 					// 결승전
+		// 					finalRank = match.winner_id === match.player_id ? 1 : 2;
+		// 				}
+
+		// 				history.push({
+		// 					date: match.ended_at,
+		// 					tournament_id: match.tournament_id,
+		// 					round: match.round_number,
+		// 					opponent: opponentName,
+		// 					result: match.winner_id === match.player_id ? 'win' : 'lose',
+		// 					rank: finalRank
+		// 				});
+		// 			}
+		// 		}
+
+		// 		return history;
+		// 	} catch (err: any) {
+		// 		console.error('Error getting tournament history for profile:', err.message);
+		// 		return [];
+		// 	}
+		// }
 	};
 }
 

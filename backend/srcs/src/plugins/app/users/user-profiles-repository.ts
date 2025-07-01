@@ -131,7 +131,6 @@ export function createUserProfilesRepository(fastify: FastifyInstance) {
 
 			return `${base}${counter}`;
 		}
-
 	};
 }
 
