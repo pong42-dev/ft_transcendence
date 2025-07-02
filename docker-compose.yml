@@ -1,15 +1,14 @@
 services:
   backend:
-    container_name: fastify
+    pull_policy: build
     build: ./backend
-    image: fastify
+    image: backend
+    container_name: backend
     ports:
       - "${BACKEND_PORT}:3000"
     volumes:
       - fastify_data:/app/database
       - ./backend/srcs/public:/app/public
-
-      
     env_file:
       - ./backend/.env
     networks:

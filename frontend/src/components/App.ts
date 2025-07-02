@@ -14,6 +14,7 @@ import { GameSetupModal } from './GameSetupModal.js';
 import { GameEndModal } from './GameEndModal.js';
 import { FriendModal } from './FriendModal.js';
 import { TwoFAModal } from './TwoFAModal.js';
+import { TournamentTestModal } from './TournamentTestModal.js';
 import { ErrorHandler, ErrorLevel } from '../utils/ErrorHandler.js';
 import { TokenManager } from '../services/core/TokenManager.js';
 
@@ -745,6 +746,9 @@ export class App {
       case 'play':
         await this.handlePlayCommand();
         break;
+      case 'tournament':
+        this.handleTournamentCommand();
+        break;
       case 'clear':
         this.handleClearCommand();
         break;
@@ -765,14 +769,15 @@ export class App {
     
     const helpText = this.state.isLoggedIn
       ? baseHelp + 'Available commands:\n' +
-        '  help     - Display this help message\n' +
-        '  profile  - View user profile (profile <username>)\n' +
-        '  play     - Start a game of Pong\n' +
-        '  logout   - Log out of current session\n' +
-        '  friend   - Manage friends (friend follow|unfollow|list)\n' +
-        '  2fa      - Manage two-factor authentication (2fa enable|disable|status)\n' +
-        '  set      - Update profile settings (set avatar|name)\n' +
-        '  clear    - Clear the terminal screen'
+        '  help       - Display this help message\n' +
+        '  profile    - View user profile (profile <username>)\n' +
+        '  play       - Start a game of Pong\n' +
+        '  tournament - Open tournament test modal\n' +
+        '  logout     - Log out of current session\n' +
+        '  friend     - Manage friends (friend follow|unfollow|list)\n' +
+        '  2fa        - Manage two-factor authentication (2fa enable|disable|status)\n' +
+        '  set        - Update profile settings (set avatar|name)\n' +
+        '  clear      - Clear the terminal screen'
       : baseHelp + 'Available commands:\n' +
         '  help     - Display this help message\n' +
         '  login    - Open login modal\n' +
@@ -1475,5 +1480,11 @@ export class App {
       
       this.mainTerminal.appendOutput(errorMessage);
     }
+  }
+
+  private handleTournamentCommand(): void {
+    this.mainTerminal.appendOutput('Opening tournament test modal...');
+    const tournamentModal = new TournamentTestModal(this.apiClient);
+    tournamentModal.show();
   }
 }

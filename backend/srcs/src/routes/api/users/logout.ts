@@ -3,16 +3,17 @@ import { Type } from '@sinclair/typebox';
 import { UserData } from '../../../schemas/auth.js';
 
 const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
-	const { userProfilesRepository, userTokensRepository, tmpTokenRepository,
-		googleOAuth2Manager, authenticate, passwordManager } = fastify;
+	const { config,
+			userProfilesRepository, userTokensRepository, tmpTokenRepository,
+			googleOAuth2Manager, authenticate, passwordManager } = fastify;
 
 	fastify.post(
 		'/logout',
 		{
 			config: {
 				rateLimit: {
-					max: 5,
-					timeWindow: '1 minute'
+					max: config.RATE_LIMIT_USER_MAX,
+					timeWindow: config.RATE_LIMIT_USER_WINDOW
 				}
 			},
 			schema: {

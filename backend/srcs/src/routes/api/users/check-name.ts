@@ -2,14 +2,17 @@ import { FastifyPluginAsyncTypebox, Type } from '@fastify/type-provider-typebox'
 import { UserName } from '../../../schemas/auth.js'
 
 const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
-	const { userProfilesRepository, isValidName } = fastify
+	const { config,
+			userProfilesRepository,
+			isValidName } = fastify
+
 	fastify.post(
 		'/check-name',
 		{
 			config: {
 				rateLimit: {
-					max: 5,
-					timeWindow: '1 minute'
+					max: config.RATE_LIMIT_PUBLIC_MAX,
+					timeWindow: config.RATE_LIMIT_PUBLIC_WINDOW
 				}
 			},
 			schema: {

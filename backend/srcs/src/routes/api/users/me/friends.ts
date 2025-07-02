@@ -2,14 +2,23 @@ import { FastifyPluginAsyncTypebox, Type } from '@fastify/type-provider-typebox'
 import { UserProfileResponseSchema } from '../../../../schemas/users.js'
 import { IdSchema } from '../../../../schemas/common.js'
 import { Profiles, UserData, UserFriendSchema } from '../../../../schemas/auth.js'
+import { FriendProfileResponseSchema } from '../../../../schemas/profile.js'
 
 const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
-	const { userProfilesRepository, friendsRepository, authenticate } = fastify
+	const { config, 
+			userProfilesRepository, friendsRepository, gameRepository, tournamentsRepository, 
+			authenticate } = fastify
 	
 	// GET /api/users/me/friends
 	fastify.get(
 		'/friends',
 		{
+			config: {
+				rateLimit: {
+					max: config.RATE_LIMIT_USER_MAX,
+					timeWindow: config.RATE_LIMIT_USER_WINDOW
+				}
+			},
 			schema: {
 				security: [{ bearerAuth: [] }],
 				response: {
@@ -60,7 +69,13 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 	// POST /api/users/me/friends
 	fastify.post(
 		'/friends',
-		{
+		{		
+			config: {
+				rateLimit: {
+					max: config.RATE_LIMIT_USER_MAX,
+					timeWindow: config.RATE_LIMIT_USER_WINDOW
+				}
+			},
 			schema: {
 				security: [{ bearerAuth: [] }],
 				body: Type.Object({
@@ -91,8 +106,8 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				const { friend_name: friendName } = request.body;
 				const row = await userProfilesRepository.getRowByColumnValue("name", friendName);
 				const friendId = row?.user_id;
-				if (!friendId)
-					return reply.status(409).send({ msg: 'User does not exist.' });
+				if (!friendId || userId === friendId)
+					return reply.status(409).send({ msg: 'Invalid friend ID.' });
 				const isFollowing = await friendsRepository.isFollowing(Number(userId), Number(friendId));
 				if (isFollowing)
 					return reply.status(409).send({ msg: 'You are already following this user.' });
@@ -112,6 +127,12 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 	fastify.get(
 		'/friends/:id',
 		{
+			config: {
+				rateLimit: {
+					max: config.RATE_LIMIT_USER_MAX,
+					timeWindow: config.RATE_LIMIT_USER_WINDOW
+				}
+			},
 			schema: {
 				security: [{ bearerAuth: [] }],
 				params: Type.Object({ id: IdSchema }),
@@ -119,9 +140,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 					200: Type.Object({
 						success: Type.Literal(true),
 						msg: Type.String(),
-						data: Type.Object({
-							userInfo: UserFriendSchema
-						})
+						data: FriendProfileResponseSchema
 					}),
 					401: Type.Object({
 						msg: Type.String()
@@ -159,32 +178,29 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				console.log(avatarPath);
 				// const avatarUrl = `http://localhost:3000/api/users/me/avatar/${userId}`;
 				const avatarUrl = `http://localhost:3000/${avatarPath}`;
-				const userInfo = {
+				const friendInfo = {
 					name: profileRow.name,
 					avatar : avatarUrl, 
 				}
-				console.log("userInfo", userInfo);
-				// const games = await gamesRepository.getGameStats(userId);
-				// const wins = await gamesRepository.getTotalWins(userId);
-				// const winRate = games > 0 ? wins / games : 0;
-
-				// const gameStats = {
-				// 	games: games,
-				// 	wins: wins,
-				// 	winRate: winRate
-				// };
+				console.log("friendInfo", friendInfo);
+				const gameStats = await gameRepository.getUserGameStats(friendId);
+				const oneOnOneHistory = await gameRepository.getUser1v1History(friendId);
+				console.log("oneOnOneHistory: ", oneOnOneHistory);
+				const tournHistory = await tournamentsRepository.getTournamentHistoryForProfile(friendId);
+				console.log("tournHistory: ", tournHistory);
+				console.log(JSON.stringify(tournHistory[0].rounds, null, 2));
 
 				// const oneOnOneHistory = await gamesRepository.get1v1MatchHistory(userId, profileRow.name);
 				// const tournHistory = await gamesRepository.getTournMatchHistory(userId, profileRow.name);
 
 				reply.status(200).send({
 					success: true,
-					msg: 'User Profile successfully retrieved.',
+					msg: 'Friend Profile successfully retrieved.',
 					data: {
-						userInfo: userInfo,
-						// gameStats: gameStats,
-						// oneOnOneHistory: oneOnOneHistory,
-						// tournHistory: tournHistory
+						friendInfo: friendInfo,
+						gameStats: gameStats,
+						oneOnOneHistory: oneOnOneHistory,
+						tournHistory: tournHistory
 					}
 				});
 
@@ -199,6 +215,12 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 	fastify.delete(
 		'/friends/:id',
 		{
+			config: {
+				rateLimit: {
+					max: config.RATE_LIMIT_USER_MAX,
+					timeWindow: config.RATE_LIMIT_USER_WINDOW
+				}
+			},
 			schema: {
 				security: [{ bearerAuth: [] }],
 				params: Type.Object({ id: IdSchema }),

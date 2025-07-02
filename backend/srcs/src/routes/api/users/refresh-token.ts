@@ -3,14 +3,15 @@ import { FastifyRequest, FastifyReply } from 'fastify'
 import { TokenData } from '../../../schemas/auth.js'
 
 const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
-	
+	const { config } = fastify;
+
 	fastify.post(
 		'/refresh-token',
 		{
 			config: {
 				rateLimit: {
-				max: 5,
-				timeWindow: '1 minute'
+					max: config.RATE_LIMIT_USER_MAX,
+					timeWindow: config.RATE_LIMIT_USER_WINDOW
 				}
 			},
 			schema: {

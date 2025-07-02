@@ -2,14 +2,17 @@ import { FastifyPluginAsyncTypebox, Type } from '@fastify/type-provider-typebox'
 import { Credentials } from '../../../../schemas/auth.js'
 
 const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
-	const { usersRepository, passwordManager, loginManager, twoFAManager } = fastify;
+	const { config,
+			usersRepository, 
+			loginManager, passwordManager, twoFAManager } = fastify;
+
 	fastify.post(
 		'/local',
 		{
 			config: {
 				rateLimit: {
-					max: 5,
-					timeWindow: '1 minute'
+					max: config.RATE_LIMIT_AUTH_MAX,
+					timeWindow: config.RATE_LIMIT_AUTH_WINDOW
 				}
 			},
 			schema: {

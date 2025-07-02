@@ -464,5 +464,21 @@ export interface GameEventDto {
     remainingTime?: number;
     winnerId?: number;
     // 확장 가능
-  };
+  }
+}
+
+export interface TournamentRound {
+  round_number: number;
+  players: string[];
+  winner?: string;
+  result?: string;
+}
+
+export interface UserTournamentHistory {
+  tournament_id: number;
+  tournament_date: string;
+  participants: string[];
+  rounds: TournamentRound[];
+  final_rank: number;
+
 }

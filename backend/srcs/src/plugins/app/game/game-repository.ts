@@ -8,6 +8,7 @@ import {
 	CreatePlayerRequestDto,
 	PlayerResponseDto 
 } from '../../../schemas/games.js';
+import { UserGameStats } from '../../../schemas/profile.js'
 
 declare module 'fastify' {
 	interface FastifyInstance {
@@ -139,6 +140,78 @@ export function createGameRepository(fastify: FastifyInstance) {
 			const guestPlayer = await knex('players').where('id', playerId).first() as DBPlayer;
 
 			return await this.mapDBPlayerToResponseDto(guestPlayer);
+		},
+
+		async getUserGameCount(userId: number): Promise<number> {
+			// local_1v1 게임 수
+			const localCountQuery = knex('games')
+				.count('* as count')
+				.join('game_participants', 'games.id', 'game_participants.game_id')
+				.join('players', 'game_participants.player_id', 'players.id')
+				.where('games.type', 'local_1v1')
+				.andWhere('players.user_id', userId)
+				.first();
+
+			// 참가한 tournament_id 개수 (중복 없이)
+			const tournamentCountQuery = knex('games')
+				.distinct('games.tournament_id')
+				.join('game_participants', 'games.id', 'game_participants.game_id')
+				.join('players', 'game_participants.player_id', 'players.id')
+				.where('games.type', 'tournament')
+				.andWhere('players.user_id', userId)
+				.whereNotNull('games.tournament_id');
+
+			// 병렬로 실행
+			const [localResult, tournamentRows] = await Promise.all([
+				localCountQuery,
+				tournamentCountQuery,
+			]);
+
+			const localCount = Number(localResult?.count) || 0;
+			const tournamentCount = tournamentRows.length;
+
+			return localCount + tournamentCount;
+		},
+
+
+		async getUserWinCount(userId: number) {
+			// 1. local_1v1 또는 ai_1v1 게임 승리 수
+			const localWinResult = await knex('games')
+				.count('* as count')
+				.join('players', 'games.winner_id', 'players.id')
+				.whereIn('games.type', ['local_1v1', 'ai_1v1'])
+				.andWhere('games.status', 'finished')
+				.andWhere('players.user_id', userId)
+				.first();
+
+			const localWinCount = Number(localWinResult?.count) || 0;
+
+			// 2. 사용자가 우승한 토너먼트 수
+			const tournamentWinResult = await knex('tournaments')
+				.countDistinct('tournaments.id as count')
+				.join('players', 'tournaments.winner_player_id', 'players.id')
+				.where('tournaments.status', 'ended')
+				.andWhere('players.user_id', userId)
+				.first();
+
+			const tournamentWinCount = Number(tournamentWinResult?.count) || 0;
+
+			return localWinCount + tournamentWinCount;
+		},
+
+
+		async getUserGameStats(userId: number): Promise<UserGameStats> {
+			const [totalGames, totalWins] = await Promise.all([
+				this.getUserGameCount(userId),
+				this.getUserWinCount(userId),
+			]);
+			const winRate =
+				totalGames > 0 ? parseFloat(((totalWins / totalGames) * 100).toFixed(1)) : 0;
+			return {
+				totalGames,
+				totalWins,
+				winRate,
+			};
 		},
 
 		/**
