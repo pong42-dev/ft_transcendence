@@ -24,58 +24,37 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 		'/',
 		{
 			schema: {
-				body: CreateTournamentRequestDtoSchema,
+				body: Type.Object({
+					participants: Type.Array(Type.Object({
+						type: Type.Literal('guest'),
+						displayName: Type.String(),
+					}), { minItems: 3, maxItems: 3 })
+				}),
 				response: {
 					201: TournamentResponseDtoSchema,
 					400: Type.Object({
-							message: Type.String()
-						}),
+						message: Type.String()
+					}),
 					500: Type.Object({
-							message: Type.String()
-						})
+						message: Type.String()
+					})
 				},
 				tags: ["Tournaments"]
 			},
-			// preHandler: [authenticate]
+			preHandler: [authenticate]
 		},
 		async (request, reply) => {
 			const trx = await fastify.knex.transaction();
-			
 			try {
-				const { participants } = request.body as { participants: Array<{
-					type: 'user' | 'guest';
-					userId?: number;
-					displayName?: string;
-				}> };
-
-				// 참가자 수 검증
-				if (participants.length !== 4) {
+				// 1. 요청 본문에서 3명의 게스트 참가자 정보를 가져옵니다.
+				const { participants: guestParticipants } = request.body as { participants: Array<{ type: 'guest'; displayName: string; }> };
+				if (guestParticipants.length !== 3) {
 					await trx.rollback();
 					return reply.status(400).send({ 
-						message: 'Tournament must have exactly 4 participants' 
+						message: 'Tournament must have exactly 3 guest participants' 
 					});
 				}
-
-				// 유저 타입 참가자 수 검증 (정확히 1명이어야 함)
-				const userParticipants = participants.filter(p => p.type === 'user');
-				const guestParticipants = participants.filter(p => p.type === 'guest');
-
-				if (userParticipants.length !== 1 || guestParticipants.length !== 3) {
-					await trx.rollback();
-					return reply.status(400).send({ 
-						message: 'Tournament must have exactly 1 user and 3 guest participants' 
-					});
-				}
-
-				// 유저 ID 검증
-				if (!userParticipants[0].userId) {
-					await trx.rollback();
-					return reply.status(400).send({ 
-						message: 'userId is required for user type participant' 
-					});
-				}
-
-				// 게스트 닉네임 검증
+				// 게스트 닉네임 유효성 검증
 				for (const guest of guestParticipants) {
 					if (!guest.displayName || guest.displayName.trim().length === 0) {
 						await trx.rollback();
@@ -84,51 +63,64 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 						});
 					}
 				}
-
-				// 1. 토너먼트 생성
+				// 2. 인증된 사용자 정보를 request.user에서 가져옵니다.
+				const loggedInUser = request.user;
+				if (!loggedInUser || !loggedInUser.user_id) {
+					await trx.rollback();
+					return reply.status(400).send({ message: '로그인된 사용자 정보가 필요합니다.' });
+				}
+				// 3. 전체 참가자 목록 (인증된 사용자 1명 + 게스트 3명)을 구성합니다.
+				const allParticipants = [
+					{ type: 'user', userId: loggedInUser.user_id },
+					...guestParticipants.map(g => ({ type: 'guest', displayName: g.displayName }))
+				];
+				// 4. 토너먼트를 생성합니다.
 				const [tournamentId] = await trx('tournaments').insert({
 					status: 'waiting',
 					winner_player_id: null,
 					created_at: new Date().toISOString(),
 					ended_at: null
 				});
-
-				// 2. 참가자들 등록
-				for (const participant of participants) {
-					await fastify.tournamentsRepository.addTournamentParticipantWithTransaction(
-						trx,
-						tournamentId,
-						participant.type,
-						participant.userId,
-						participant.displayName
-					);
+				// 5. 구성된 전체 참가자들을 등록합니다.
+				for (const participant of allParticipants) {
+					if (participant.type === 'user') {
+						await fastify.tournamentsRepository.addTournamentParticipantWithTransaction(
+							trx,
+							tournamentId,
+							'user',
+							(participant as { type: 'user'; userId: number }).userId,
+							undefined
+						);
+					} else {
+						await fastify.tournamentsRepository.addTournamentParticipantWithTransaction(
+							trx,
+							tournamentId,
+							'guest',
+							undefined,
+							(participant as { type: 'guest'; displayName: string }).displayName
+						);
+					}
 				}
-
-				// 3. 대진표 자동 생성
+				// 6. 대진표를 생성합니다.
 				await fastify.tournamentsRepository.generateTournamentBracketWithTransaction(trx, tournamentId);
-
-				// 4. 생성된 토너먼트 정보 조회
+				// 7. 생성된 토너먼트 정보 조회
 				const tournament = await trx('tournaments')
 					.where('id', tournamentId)
 					.first();
-
 				if (!tournament) {
 					await trx.rollback();
 					return reply.status(500).send({ 
 						message: 'Failed to retrieve created tournament' 
 					});
 				}
-
 				await trx.commit();
 				return reply.status(201).send(tournament);
-
 			} catch (error: any) {
 				await trx.rollback();
 				fastify.log.error('Error creating tournament:', error);
 				fastify.log.error('Error stack:', error.stack);
 				fastify.log.error('Error message:', error.message);
 				fastify.log.error('Error details:', JSON.stringify(error, null, 2));
-				
 				if (error?.message?.includes('Invalid') || error?.message?.includes('required')) {
 					return reply.status(400).send({ 
 						message: 'Invalid input data: ' + error.message 

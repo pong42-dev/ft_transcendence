@@ -1,11 +1,10 @@
 import { BaseModal } from './BaseModal.js';
 
 export class TournamentTestModal extends BaseModal {
-  private players: { id: number; name: string; ws?: WebSocket; messages: string[]; latestParsed?: string; type: 'user' | 'guest' }[] = [
-    { id: 1, name: 'user1', type: 'user', messages: [] },
-    { id: 2, name: 'guest3', type: 'guest', messages: [] },
-    { id: 3, name: 'user2', type: 'guest', messages: [] },
-    { id: 4, name: 'user3', type: 'guest', messages: [] },
+  private players: { name: string; messages: string[]; latestParsed?: string; ws?: WebSocket }[] = [
+    { name: 'Guest1', messages: [] },
+    { name: 'Guest2', messages: [] },
+    { name: 'Guest3', messages: [] },
   ];
   private tournamentId: number | null = null;
   private allConnected = false;
@@ -39,25 +38,18 @@ export class TournamentTestModal extends BaseModal {
         <button class="text-terminal-gray hover:text-terminal-green transition-all" id="close-btn">✕</button>
       </div>
       <div class="mb-4">
+        <label class="text-terminal-gray text-sm">Logged-in User: </label>
+        <span class="text-terminal-green font-mono">${this.currentUserInfo.name ?? 'Not Logged In'}</span>
+      </div>
+      <div class="mb-4">
         <label class="text-terminal-gray text-sm">Tournament ID: </label>
         <span class="text-terminal-green font-mono">${this.tournamentId ?? '-'}</span>
       </div>
-      <div class="mb-2">
-        <span class="text-terminal-gray text-xs">[디버깅] 현재 로그인 사용자: </span>
-        <span class="text-terminal-green font-mono">ID: ${this.currentUserInfo.id ?? '-'} / NAME: ${this.currentUserInfo.name ?? '-'}</span>
-      </div>
-      <div class="mb-6 grid grid-cols-2 gap-4">
+      <div class="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
         ${this.players.map((p, i) => `
           <div class="border border-terminal-gray rounded-lg p-3">
-            <label class="text-terminal-gray text-xs">Player ${i + 1} ID</label>
-            <input type="number" class="bg-terminal-black border border-terminal-gray text-terminal-green px-2 py-1 rounded text-sm w-full mb-2" id="player-id-${i}" value="${p.id}" ${i === 0 ? 'readonly' : ''} />
-            <label class="text-terminal-gray text-xs">닉네임</label>
-            <input type="text" class="bg-terminal-black border border-terminal-gray text-terminal-green px-2 py-1 rounded text-sm w-full mb-2" id="player-name-${i}" value="${p.name}" ${i === 0 ? 'readonly disabled' : ''} />
-            <label class="text-terminal-gray text-xs">타입</label>
-            <select id="player-type-${i}" class="bg-terminal-black border border-terminal-gray text-terminal-green px-2 py-1 rounded text-sm w-full mb-2" ${i === 0 ? 'disabled' : ''}>
-              <option value="user" ${p.type === 'user' ? 'selected' : ''}>user</option>
-              <option value="guest" ${p.type === 'guest' ? 'selected' : ''}>guest</option>
-            </select>
+            <label class="text-terminal-gray text-xs">Guest ${i + 1} Nickname</label>
+            <input type="text" class="bg-terminal-black border border-terminal-gray text-terminal-green px-2 py-1 rounded text-sm w-full mb-2" id="player-name-${i}" value="${p.name}" />
             <div class="text-xs text-terminal-gray mt-2">메시지 로그:</div>
             <div id="player-msgs-${i}" class="text-xs text-terminal-green bg-terminal-black border border-terminal-gray rounded p-1 h-16 overflow-y-auto">${p.messages.map(m => `<div>${m}</div>`).join('')}</div>
             <div class="text-xs text-terminal-gray mt-2">최근 응답:</div>
@@ -71,7 +63,7 @@ export class TournamentTestModal extends BaseModal {
         <button id="create-tournament-btn" class="bg-terminal-gray text-terminal-green px-4 py-2 rounded hover:bg-opacity-80 transition-all flex-1">1. 토너먼트 생성</button>
         <button id="start-btn" class="bg-terminal-green text-terminal-black px-4 py-2 rounded hover:bg-opacity-80 transition-all flex-1" ${!this.allConnected || this.started ? 'disabled' : ''}>2. 토너먼트 시작</button>
       </div>
-      <div class="text-terminal-gray text-xs mb-2">* "토너먼트 생성"을 누르면 참가자 정보로 API를 호출해 tournamentId를 받고, 그 id로 WebSocket 연결 후 "토너먼트 시작"이 가능합니다.</div>
+      <div class="text-terminal-gray text-xs mb-2">* "토너먼트 생성"을 누르면 3명의 게스트 닉네임으로 API를 호출해 tournamentId를 받고, 그 id로 WebSocket 연결 후 "토너먼트 시작"이 가능합니다.</div>
       ${this.errorMsg ? `<div class="text-terminal-red text-xs mb-2">${this.errorMsg}</div>` : ''}
     `;
     this.attachEventListeners();
@@ -82,17 +74,8 @@ export class TournamentTestModal extends BaseModal {
     this.contentElement.querySelector('#create-tournament-btn')?.addEventListener('click', () => this.createTournamentAndConnect());
     this.contentElement.querySelector('#start-btn')?.addEventListener('click', () => this.startTournament());
     for (let i = 0; i < this.players.length; i++) {
-      this.contentElement.querySelector(`#player-id-${i}`)?.addEventListener('input', (e: any) => {
-        if (i === 0) return; // user는 id 변경 불가
-        this.players[i].id = parseInt(e.target.value, 10);
-      });
       this.contentElement.querySelector(`#player-name-${i}`)?.addEventListener('input', (e: any) => {
-        if (i === 0) return; // user는 닉네임 변경 불가
         this.players[i].name = e.target.value;
-      });
-      this.contentElement.querySelector(`#player-type-${i}`)?.addEventListener('change', (e: any) => {
-        if (i === 0) return; // user는 타입 변경 불가
-        this.players[i].type = e.target.value;
       });
     }
   }
@@ -103,11 +86,12 @@ export class TournamentTestModal extends BaseModal {
       const res = await fetch(`${apiUrl}/api/users/me`, { credentials: 'include' });
       if (!res.ok) return;
       const data = await res.json();
-      this.players[0].id = data.id;
-      this.players[0].name = data.name || data.nickname || `User${data.id}`;
-      this.currentUserInfo = { id: data.id, name: data.name || data.nickname };
+      if (data && data.success && data.data && data.data.userInfo) {
+        this.currentUserInfo = { name: data.data.userInfo.name, id: data.data.userInfo.user_id };
+      } else {
+        this.currentUserInfo = {};
+      }
     } catch (e) {
-      // 무시 (비로그인 등)
       this.currentUserInfo = {};
     }
   }
@@ -121,15 +105,12 @@ export class TournamentTestModal extends BaseModal {
     this.players.forEach(p => { p.messages = []; p.latestParsed = ''; });
     this.render();
     try {
-      // 참가자 정보 준비
+      // 3명의 게스트 정보만 포함
       const participants = this.players.map(p => ({
-        type: p.type,
-        userId: p.type === 'user' ? p.id : undefined,
-        displayName: p.type === 'guest' ? p.name : undefined
+        type: 'guest',
+        displayName: p.name
       }));
-      // API URL 환경변수 사용
       const apiUrl = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_URL) ? import.meta.env.VITE_API_URL : '';
-      // API 호출
       const res = await fetch(`${apiUrl}/api/tournaments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -154,8 +135,8 @@ export class TournamentTestModal extends BaseModal {
       this.players.forEach((player, idx) => {
         player.messages = [];
         player.latestParsed = '';
-        const ws = new WebSocket(`ws://localhost:3000/ws/tournament/${this.tournamentId}?playerId=${player.id}`);
-        player.ws = ws;
+        const ws = new WebSocket(`ws://localhost:3000/ws/tournament/${this.tournamentId}?playerName=${encodeURIComponent(player.name)}`);
+        (player as any).ws = ws;
         ws.onopen = () => {
           player.messages.push('✅ 연결됨');
           connectedCount++;
@@ -171,7 +152,6 @@ export class TournamentTestModal extends BaseModal {
           let parsedHtml = '';
           try {
             const data = JSON.parse(event.data);
-            console.log(`[WS][${player.name}] 수신:`, data); // 원본 로그
             if (data.type === 'tournament_bracket') {
               msg = '🏆 대진표 수신: ' + JSON.stringify(data.data);
               parsedHtml = this.renderBracket(data.data);
