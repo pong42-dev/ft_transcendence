@@ -1,5 +1,5 @@
 import { Terminal } from './Terminal.js';
-import { PongGameModular as PongGame } from '../game/PongGameModular.js';
+// import { PongGameModular as PongGame } from '../game/PongGameModular.js';
 import { ApiClient, ApiError } from '../services/ApiClient.js';
 import { UserProfile } from './UserProfile.js';
 import { Router } from '../utils/Router.js';
@@ -10,8 +10,8 @@ import {
   Player
 } from '../types/types.js';
 import * as Types from '../types/types.js';
-import { GameSetupModal } from './GameSetupModal.js';
-import { GameEndModal } from './GameEndModal.js';
+// import { GameSetupModal } from './GameSetupModal.js';
+// import { GameEndModal } from './GameEndModal.js';
 import { FriendModal } from './FriendModal.js';
 import { TwoFAModal } from './TwoFAModal.js';
 import { TournamentTestModal } from './TournamentTestModal.js';
@@ -26,7 +26,7 @@ export class App {
   private router: Router;
   private errorHandler: ErrorHandler;
   // Components
-  private pongGame: PongGame;
+  // private pongGame: PongGame;
   private userProfile: UserProfile | null = null;
   private mainTerminal: Terminal;
   
@@ -49,9 +49,9 @@ export class App {
     this.router = new Router();
     this.errorHandler = new ErrorHandler();
     
-    this.pongGame = new PongGame((winner) => {
-      this.handleGameEnd(winner);
-    });
+    // this.pongGame = new PongGame((winner) => {
+    //   this.handleGameEnd(winner);
+    // });
     
     this.mainTerminal = new Terminal(this.handleCommand.bind(this));
   }
@@ -637,9 +637,9 @@ export class App {
     // Now we know the real auth state - safe to proceed
     if (this.state.isLoggedIn && this.state.currentUser) {
       if (this.state.isInGame) {
-        this.pongGame.setGameMode('regular');
-        mainContent.appendChild(this.pongGame.render());
-        this.pongGame.start();
+        // this.pongGame.setGameMode('regular');
+        // mainContent.appendChild(this.pongGame.render());
+        // this.pongGame.start();
       } else if (this.userProfile) {
         mainContent.appendChild(this.userProfile.render());
       } else {
@@ -647,9 +647,9 @@ export class App {
         mainContent.appendChild(this.userProfile.render());
       }
     } else {
-      this.pongGame.setGameMode('demo');
-      mainContent.appendChild(this.pongGame.render());
-      this.pongGame.start();
+      // this.pongGame.setGameMode('demo');
+      // mainContent.appendChild(this.pongGame.render());
+      // this.pongGame.start();
     }
     
     // Update status bar to reflect current state
@@ -690,21 +690,21 @@ export class App {
 
   private handleGameEnd(_winner: 'left' | 'right'): void {
     // Get actual game result from PongGame (should be called before stop() in PongGame)
-    const gameResult = this.pongGame.getGameResult();
+    // const gameResult = this.pongGame.getGameResult();
     
-    // Show game end modal with real data
-    const gameEndModal = new GameEndModal(
-      gameResult,
-      false, // isTournament - TODO: detect actual tournament mode
-      true,  // isFinal
-      () => {
-        // On profile click
-        this.state.isInGame = false;
-        this.router.navigate('/profile');
-      }
-    );
+    // // Show game end modal with real data
+    // const gameEndModal = new GameEndModal(
+    //   // gameResult,
+    //   false, // isTournament - TODO: detect actual tournament mode
+    //   true,  // isFinal
+    //   () => {
+    //     // On profile click
+    //     this.state.isInGame = false;
+    //     this.router.navigate('/profile');
+    //   }
+    // );
     
-    gameEndModal.show();
+    // gameEndModal.show();
   }
 
   // ===== COMMAND HANDLING =====
@@ -1033,67 +1033,67 @@ export class App {
     }
   }
 
-  private async handlePlayCommand(): Promise<void> {
-    if (!this.state.isLoggedIn) {
-      this.mainTerminal.appendOutput('Please login first to play the game.');
-      return;
-    }
+  // private async handlePlayCommand(): Promise<void> {
+  //   if (!this.state.isLoggedIn) {
+  //     this.mainTerminal.appendOutput('Please login first to play the game.');
+  //     return;
+  //   }
 
-    try {
-      // Stop any existing game first
-      this.pongGame.stop();
+  //   try {
+  //     // Stop any existing game first
+  //     this.pongGame.stop();
       
-      const gameSetupModal = new GameSetupModal();
-      const result = await gameSetupModal.open();
+  //     const gameSetupModal = new GameSetupModal();
+  //     const result = await gameSetupModal.open();
 
-      if (result) {
-        const { mode, opponents } = result;
-        this.mainTerminal.appendOutput(`Starting ${mode} game...`);
+  //     if (result) {
+  //       const { mode, opponents } = result;
+  //       this.mainTerminal.appendOutput(`Starting ${mode} game...`);
 
-        if (this.state.currentUser) {
-          const player1: Player = {
-            nickname: this.state.currentUser.nickname || this.state.currentUser.username,
-            avatarUrl: this.state.currentUser.avatarUrl,
-          };
+  //       if (this.state.currentUser) {
+  //         const player1: Player = {
+  //           nickname: this.state.currentUser.nickname || this.state.currentUser.username,
+  //           avatarUrl: this.state.currentUser.avatarUrl,
+  //         };
 
-          // Set up game configuration before navigating
-          if (mode === 'vs ai') {
-            // AI mode: AI (left) vs Player (right)
-            this.pongGame.setPlayers({ nickname: 'AI' }, player1);
-            this.pongGame.setMultiplayerMode(false);
-            this.pongGame.setGameMode('regular');
-          } else if (mode === 'local') {
-            const opponent = opponents[0];
-            this.pongGame.setPlayers(player1, { nickname: opponent.nickname });
-            this.pongGame.setMultiplayerMode(true);
-            this.pongGame.setGameMode('regular');
-          } else if (mode === 'tournament') {
-            const opponent = opponents[0];
-            // TODO: Store full tournament roster and manage bracket
-            this.pongGame.setPlayers(player1, { nickname: opponent.nickname });
-            this.pongGame.setMultiplayerMode(true);
-            this.pongGame.setGameMode('tournament');
-          }
+  //         // Set up game configuration before navigating
+  //         if (mode === 'vs ai') {
+  //           // AI mode: AI (left) vs Player (right)
+  //           this.pongGame.setPlayers({ nickname: 'AI' }, player1);
+  //           this.pongGame.setMultiplayerMode(false);
+  //           this.pongGame.setGameMode('regular');
+  //         } else if (mode === 'local') {
+  //           const opponent = opponents[0];
+  //           this.pongGame.setPlayers(player1, { nickname: opponent.nickname });
+  //           this.pongGame.setMultiplayerMode(true);
+  //           this.pongGame.setGameMode('regular');
+  //         } else if (mode === 'tournament') {
+  //           const opponent = opponents[0];
+  //           // TODO: Store full tournament roster and manage bracket
+  //           this.pongGame.setPlayers(player1, { nickname: opponent.nickname });
+  //           this.pongGame.setMultiplayerMode(true);
+  //           this.pongGame.setGameMode('tournament');
+  //         }
 
-          // Set game state BEFORE navigating
-          this.state.isInGame = true;
+  //         // Set game state BEFORE navigating
+  //         this.state.isInGame = true;
           
-          // Navigate to game route after configuration
-          this.router.navigate('/game');
-        }
-      } else {
-        this.mainTerminal.appendOutput('Game cancelled.');
-      }
-    } catch (error) {
-      this.mainTerminal.appendOutput(
-        'Error: Could not start the game. Please try again.',
-      );
-      this.errorHandler.handleError(
-        error as Error,
-        'handlePlayCommand',
-      );
-    }
-  }
+  //         // Navigate to game route after configuration
+  //         this.router.navigate('/game');
+  //       }
+  //     } else {
+  //       this.mainTerminal.appendOutput('Game cancelled.');
+  //     }
+  //   } catch (error) {
+  //     this.mainTerminal.appendOutput(
+  //       'Error: Could not start the game. Please try again.',
+  //     );
+  //     this.errorHandler.handleError(
+  //       error as Error,
+  //       'handlePlayCommand',
+  //     );
+  //   }
+  // }
 
   private handleClearCommand(): void {
     this.mainTerminal.clearOutput();
