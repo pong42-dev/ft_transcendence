@@ -101,7 +101,7 @@ export type GameResponseDto = Static<typeof GameResponseDtoSchema>;
 
 // --- Client to Server ---
 export const PlayerInputDtoSchema = Type.Object({
-  action: Type.Union([Type.Literal('UP'), Type.Literal('DOWN')]),
+  action: Type.Union([Type.Literal('UP'), Type.Literal('DOWN'), Type.Literal('NONE')]),
 });
 export type PlayerInputDto = Static<typeof PlayerInputDtoSchema>;
 
@@ -116,6 +116,16 @@ export const PaddleStateSchema = Type.Object({
   y: Type.Number(),
 });
 
+export const GameSettingsDtoSchema = Type.Object({
+  canvasWidth: Type.Integer(),
+  canvasHeight: Type.Integer(),
+  paddleWidth: Type.Integer(),
+  paddleHeight: Type.Integer(),
+  ballSize: Type.Integer(),
+  paddleOffset: Type.Integer(),
+});
+export type GameSettingsDto = Static<typeof GameSettingsDtoSchema>;
+
 // For periodic state synchronization
 export const GameStateDtoSchema = Type.Object({
   ball: BallStateSchema,
@@ -127,6 +137,7 @@ export const GameStateDtoSchema = Type.Object({
     player1: Type.Integer(),
     player2: Type.Integer(),
   }),
+  settings: GameSettingsDtoSchema,
 });
 export type GameStateDto = Static<typeof GameStateDtoSchema>;
 

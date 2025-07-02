@@ -1,4 +1,4 @@
-import { FastifyInstance, FastifyRequest } from 'fastify'
+import { FastifyRequest } from 'fastify'
 import { WebSocket } from 'ws'
 import { GameManager } from '../game/GameManager.js'
 import { 
@@ -30,27 +30,9 @@ export class GameWebSocketHandler {
   }
 
   /**
-   * Fastify WebSocket 라우트 등록
+   * WebSocket 연결 처리 (Fastify 라우터에서 직접 호출)
    */
-  public registerRoutes(fastify: FastifyInstance): void {
-    // WebSocket 연결: /ws/game/:gameId
-    fastify.get('/ws/game/:gameId', { websocket: true }, (connection, request) => {
-      console.log('[WebSocket] New connection received')
-      console.log('[WebSocket] Connection object:', typeof connection)
-      console.log('[WebSocket] Connection keys:', Object.keys(connection))
-      
-      try {
-        this.handleConnection(connection as WebSocket, request)
-      } catch (error) {
-        console.error('[WebSocket] Error in handleConnection:', error)
-      }
-    })
-  }
-
-  /**
-   * WebSocket 연결 처리
-   */
-  private handleConnection(socket: WebSocket, request: FastifyRequest): void {
+  public handleConnection(socket: WebSocket, request: FastifyRequest): void {
     const { gameId } = request.params as { gameId: string }
     const query = request.query as { playerId?: string }
     const playerId = parseInt(query.playerId || '0') // URL 쿼리에서 playerId 가져오기
@@ -78,7 +60,7 @@ export class GameWebSocketHandler {
     const players = gameSession.getPlayers()
     const player = players.find(p => p.id === playerId)
     if (!player) {
-      console.log(`[WebSocket] Player ${playerId} not found in game ${gameId}. Available players:`, players.map(p => p.id))
+      console.log(`[WebSocket] Player ${playerId} not found in game ${gameId}`)
       this.sendError(socket, 'Player not found in this game', 'PLAYER_NOT_FOUND')
       socket.close()
       return
@@ -88,7 +70,7 @@ export class GameWebSocketHandler {
     this.addClientToRoom(gameId, playerId, socket)
     
     // 연결 성공 알림
-    console.log(`Player ${playerId} connected to game ${gameId}`)
+    console.log(`[WebSocket] Player ${playerId} connected to game ${gameId}`)
 
     // GameManager에 플레이어 연결 알림
     this.gameManager.handlePlayerConnection(gameId, playerId)
@@ -144,14 +126,28 @@ export class GameWebSocketHandler {
   /**
    * 플레이어 입력 처리
    */
-  private handlePlayerInput(gameId: string, playerId: number, message: WSPlayerInputMessage): void {
+  private handlePlayerInput(gameId: string, connectedPlayerId: number, message: WSPlayerInputMessage): void {
     const gameSession = this.gameManager.getSession(gameId)
     if (!gameSession) return
 
+    const targetPlayerId = message.data.playerId; // 메시지에서 실제 조작할 플레이어 ID
     const playerInput: PlayerInputDto = message.data.input
 
-    // GameManager에 입력 전달
-    this.gameManager.handlePlayerInput(gameId, playerId, playerInput)
+    // 로컬 게임의 경우: 한 연결에서 모든 플레이어 조작 가능
+    // 다른 게임의 경우: 자신의 플레이어만 조작 가능
+    const gameMode = gameSession.getMode();
+    if (gameMode === 'local_1v1') {
+      // 로컬 게임: 어떤 플레이어든 조작 가능
+      this.gameManager.handlePlayerInput(gameId, targetPlayerId, playerInput);
+    } else {
+      // AI/온라인 게임: 연결된 플레이어만 조작 가능
+      if (targetPlayerId === connectedPlayerId) {
+        this.gameManager.handlePlayerInput(gameId, targetPlayerId, playerInput);
+      } else {
+        // 연결된 플레이어가 아닌 다른 플레이어 조작 시도
+        console.log(`[WebSocket] Player ${connectedPlayerId} tried to control player ${targetPlayerId} in ${gameMode} mode`);
+      }
+    }
   }
 
   /**

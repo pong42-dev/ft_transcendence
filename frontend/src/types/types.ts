@@ -383,6 +383,90 @@ export type DeepReadonly<T> = {
     : T[P];
 };
 
+// ===============================
+// Backend API DTOs (for Game)
+// ===============================
+
+export type PlayerType = 'user' | 'guest' | 'ai';
+export type GameMode = 'local_1v1' | 'ai_1v1' | 'tournament';
+export type GameStatus = 'waiting' | 'countdown' | 'playing' | 'finished' | 'canceled';
+
+export interface CreatePlayerRequestDto {
+  type: PlayerType;
+  userId?: number; // user 타입인 경우 필수
+  displayName?: string; // guest 타입인 경우 필수
+}
+
+export interface PlayerResponseDto {
+  id: number;
+  type: PlayerType;
+  name: string; // users.nickname or players.display_name
+}
+
+export interface CreateGameRequestDto {
+  type: GameMode;
+  players: CreatePlayerRequestDto[];
+}
+
+export interface GameResponseDto {
+  gameId: string;
+  status: GameStatus;
+  type: GameMode;
+  players: PlayerResponseDto[];
+}
+
+// WebSocket DTOs
+export interface PlayerInputDto {
+  action: 'UP' | 'DOWN';
+}
+
+export interface BallState {
+  x: number;
+  y: number;
+}
+
+export interface PaddleState {
+  y: number;
+}
+
+export interface GameSettingsDto {
+  canvasWidth: number;
+  canvasHeight: number;
+  paddleWidth: number;
+  paddleHeight: number;
+  ballSize: number;
+  paddleOffset: number;
+}
+
+export interface GameStateDto {
+  ball: BallState;
+  paddles: {
+    player1: PaddleState;
+    player2: PaddleState;
+  };
+  scores: {
+    player1: number;
+    player2: number;
+  };
+  settings: GameSettingsDto;
+}
+
+export type GameEventType =
+  | 'countdown'
+  | 'round_start'
+  | 'round_end'
+  | 'game_end'
+  | 'game_canceled';
+
+export interface GameEventDto {
+  event: GameEventType;
+  data?: {
+    remainingTime?: number;
+    winnerId?: number;
+    // 확장 가능
+  }
+}
+
 export interface TournamentRound {
   round_number: number;
   players: string[];
@@ -396,4 +480,5 @@ export interface UserTournamentHistory {
   participants: string[];
   rounds: TournamentRound[];
   final_rank: number;
+
 }

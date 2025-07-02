@@ -72,6 +72,11 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 
 				// 플레이어 정보로부터 실제 플레이어 생성/조회
 				const players = [];
+				// AI 게임인 경우 AI 플레이어 추가
+				if (type === 'ai_1v1') {
+					const aiPlayer = await fastify.gameRepository.getOrCreateAIPlayer();
+					players.push(aiPlayer);
+				}
 				for (const playerInfo of playerInfos) {
 					try {
 						let player;
@@ -107,11 +112,6 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 					}
 				}
 
-				// AI 게임인 경우 AI 플레이어 추가
-				if (type === 'ai_1v1') {
-					const aiPlayer = await fastify.gameRepository.getOrCreateAIPlayer();
-					players.push(aiPlayer);
-				}
 
 				if (type === 'tournament') {
 					return reply.status(400).send({ 
@@ -119,9 +119,11 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 					});
 				}
 
+				fastify.log.info('[CREATE API] About to create game with players:', players.map(p => ({ id: p.id, type: p.type, name: p.name })));
+
 				// 게임 생성
 				const gameId = await gameManager.createGame(type, players);
-
+				
 				if (!gameId) {
 					return reply.status(500).send({ 
 						message: 'Failed to create game' 

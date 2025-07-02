@@ -1,82 +1,89 @@
-// Game WebSocket Types
-// 백엔드 schemas/games.ts에서 WebSocket 스키마 동기화
+// =================================================================
+// Game WebSocket Types (Frontend Pure TypeScript)
+// =================================================================
+
+// Client → Server
+export interface PlayerInputDto {
+  action: 'UP' | 'DOWN' | 'NONE';
+}
+
+// Server → Client
+export interface BallState {
+  x: number;
+  y: number;
+}
+
+export interface PaddleState {
+  y: number;
+}
+
+export interface GameSettingsDto {
+  canvasWidth: number;
+  canvasHeight: number;
+  paddleWidth: number;
+  paddleHeight: number;
+  ballSize: number;
+  paddleOffset: number;
+}
+
+export interface GameStateDto {
+  ball: BallState;
+  paddles: {
+    player1: PaddleState;
+    player2: PaddleState;
+  };
+  scores: {
+    player1: number;
+    player2: number;
+  };
+  settings: GameSettingsDto;
+}
+
+export type GameEventType =
+  | 'countdown'
+  | 'round_start'
+  | 'round_end'
+  | 'game_end'
+  | 'game_canceled';
+
+export interface GameEventDto {
+  event: GameEventType;
+  data?: {
+    remainingTime?: number;
+    winnerId?: number;
+    // 확장 가능
+  };
+}
 
 // =================================================================
 // WebSocket Message Types
 // =================================================================
 
-export type GameWSMessageType = 
-  | 'player_input'
-  | 'game_state' 
-  | 'game_end'
-  | 'player_joined'
-  | 'player_left'
-  | 'error';
-
-// =================================================================
-// Client → Server Messages  
-// =================================================================
-
-export interface PlayerInput {
-  player_id: string;
-  action: 'UP' | 'DOWN' | 'NONE';
-  timestamp: number;
-}
-
+// Client → Server
 export interface WSPlayerInputMessage {
   type: 'player_input';
-  data: PlayerInput;
-}
-
-// =================================================================
-// Server → Client Messages
-// =================================================================
-
-export interface GameState {
-  game_id: string;
-  ball: { x: number; y: number };
-  paddles: {
-    left: { y: number };
-    right: { y: number };
+  data: {
+    playerId: number;
+    input: PlayerInputDto;
   };
-  score: { left: number; right: number };
-  round: number;
-  status: 'playing' | 'round_end' | 'game_end';
-  timestamp: number;
 }
 
+export interface WSPlayerReadyMessage {
+  type: 'player_ready';
+  data: {
+    playerId: number;
+  };
+}
+
+// Server → Client
 export interface WSGameStateMessage {
   type: 'game_state';
-  data: GameState;
+  data: GameStateDto;
 }
 
-export interface GameResult {
-  game_id: string;
-  winner: string;
-  final_score: { left: number; right: number };
-  duration: number;
-  end_reason: 'normal' | 'disconnect' | 'timeout';
-}
-
-export interface WSGameEndMessage {
-  type: 'game_end';
-  data: GameResult;
-}
-
-export interface Player {
-  id: string;
-  name: string;
-  type: 'user' | 'guest';
-  user_id?: number;
-  guest_name?: string;
-}
-
-export interface WSPlayerJoinedMessage {
-  type: 'player_joined';
-  data: {
-    player: Player;
-    playerCount: number;
-  };
+export interface WSGameEventMessage {
+  type: 'game_event';
+  data: GameEventDto;
 }
 
 export interface WSErrorMessage {
@@ -87,35 +94,22 @@ export interface WSErrorMessage {
   };
 }
 
-// =================================================================
-// Union Types for Type Safety
-// =================================================================
+export type WSConnectionStatus = 'connected' | 'disconnected' | 'reconnected';
 
-export type ClientToServerMessage = WSPlayerInputMessage;
-
-export type ServerToClientMessage = 
-  | WSGameStateMessage 
-  | WSGameEndMessage 
-  | WSPlayerJoinedMessage 
-  | WSErrorMessage;
-
-export type GameWebSocketMessage = ClientToServerMessage | ServerToClientMessage;
-
-// =================================================================
-// WebSocket Connection Helper Types
-// =================================================================
-
-export interface GameWebSocketConfig {
-  gameId: string;
-  playerId: string;
-  serverUrl: string;
-  reconnectAttempts?: number;
-  reconnectDelay?: number;
+export interface WSConnectionStatusMessage {
+  type: 'connection_status';
+  data: {
+    status: WSConnectionStatus;
+    gameId: string;
+    playerId?: number;
+    message?: string;
+  };
 }
 
-export interface GameWebSocketStats {
-  connected: boolean;
-  reconnectCount: number;
-  lastMessageTime: number;
-  latency: number;
-}
+// Union Types
+export type WSClientMessage = WSPlayerInputMessage | WSPlayerReadyMessage;
+export type WSServerMessage =
+  | WSGameStateMessage
+  | WSGameEventMessage
+  | WSErrorMessage
+  | WSConnectionStatusMessage;

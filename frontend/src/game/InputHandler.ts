@@ -1,80 +1,108 @@
+// ./frontend/src/game/InputHandler.ts
+
+type InputAction = 'UP' | 'DOWN' | 'NONE';
+type PlayerSide = 'left' | 'right';
+type InputEventCallback = (action: InputAction, playerSide?: PlayerSide) => void;
+
 /**
- * Input Handler Module
- * 
- * 키보드 입력 및 AI 제어를 담당하는 모듈
- * 원본 PongGame.ts의 입력 처리 로직을 분리
- * 
- * @role 사용자 입력 및 AI 제어
- * @extracted_from PongGame.ts (기존 로직 그대로 유지)
+ * Input Handler Module (Refactored for WebSocket)
+ * * 사용자 키보드 입력을 감지하여 'UP' 또는 'DOWN' 액션 이벤트를 발생시키는 역할만 합니다.
+ * 게임의 종류나 플레이어에 대한 정보를 갖지 않습니다.
  */
 export class InputHandler {
   private keyState: { [key: string]: boolean } = {};
+  private eventListeners: Set<InputEventCallback> = new Set();
+  private isActive: boolean = false;
+  private isLocalMultiplayer: boolean = false; // 로컬 멀티플레이어 모드
 
   constructor() {
-    this.setupEventListeners();
+    this.setupKeyListeners();
   }
 
-  private setupEventListeners(): void {
+  private setupKeyListeners(): void {
     window.addEventListener('keydown', (e) => {
+      if (!this.isActive || this.keyState[e.key]) return; // 중복 입력 방지
       this.keyState[e.key] = true;
+      this.handleKeyPress(e.key, true); // keydown
     });
 
     window.addEventListener('keyup', (e) => {
+      if (!this.isActive || !this.keyState[e.key]) return;
       this.keyState[e.key] = false;
+      this.handleKeyPress(e.key, false); // keyup
     });
   }
-  
-  public cleanup(): void {
-    // Remove event listeners if needed for cleanup
-    // For now, we'll keep it simple like the original
-  }
 
-  public activate(): void {
-    // Clear any existing key states
-    this.keyState = {};
-  }
-
-  public deactivate(): void {
-    this.keyState = {};
-  }
-
-  public isKeyPressed(key: string): boolean {
-    return !!this.keyState[key];
-  }
-
-  public getPlayerInputs(isMultiplayer: boolean): { leftInput: 'UP' | 'DOWN' | 'NONE', rightInput: 'UP' | 'DOWN' | 'NONE' } {
-    let leftInput: 'UP' | 'DOWN' | 'NONE' = 'NONE';
-    let rightInput: 'UP' | 'DOWN' | 'NONE' = 'NONE';
-
-    if (isMultiplayer) {
-      // Local multiplayer mode: Player1 (W/S) controls left paddle, Player2 (Arrow keys) controls right paddle
-      
-      // Player1 controls (W/S for left paddle) - optimized direct access
-      if (this.keyState['w'] || this.keyState['W']) {
-        leftInput = 'UP';
-      } else if (this.keyState['s'] || this.keyState['S']) {
-        leftInput = 'DOWN';
-      }
-      
-      // Player2 controls (Arrow keys for right paddle) - optimized direct access
-      if (this.keyState['ArrowUp']) {
-        rightInput = 'UP';
-      } else if (this.keyState['ArrowDown']) {
-        rightInput = 'DOWN';
-      }
-    } else {
-      // VS AI mode: Player (Arrow keys) controls right paddle, AI controls left paddle
-      
-      // Player controls (Arrow keys for right paddle) - optimized direct access
-      if (this.keyState['ArrowUp']) {
-        rightInput = 'UP';
-      } else if (this.keyState['ArrowDown']) {
-        rightInput = 'DOWN';
-      }
-      
-      // Left input is handled by AI in GameLogic
+  private handleKeyPress(key: string, isKeyDown: boolean): void {
+    let action: InputAction | null = null;
+    let playerSide: PlayerSide | null = null;
+    switch (key.toLowerCase()) {
+      case 'w':
+      case 'ㅈ':
+        action = isKeyDown ? 'UP' : 'NONE';
+        playerSide = 'left';
+        break;
+      case 's':
+      case 'ㄴ':
+        action = isKeyDown ? 'DOWN' : 'NONE';
+        playerSide = 'left';
+        break;
+      case 'arrowup':
+        action = isKeyDown ? 'UP' : 'NONE';
+        playerSide = 'right';
+        break;
+      case 'arrowdown':
+        action = isKeyDown ? 'DOWN' : 'NONE';
+        playerSide = 'right';
+        break;
     }
+    
+    if (action && playerSide) {
+      if (this.isLocalMultiplayer) {
+        // 로컬 멀티플레이어: 플레이어 구분해서 전송
+        this.emit(action, playerSide);
+      } else {
+        // AI 게임: 위아래 방향키(오른쪽)만 처리 - 사용자가 오른쪽 패들 조작
+        if (playerSide === 'right') {
+          this.emit(action);
+        }
+      }
+    }
+  }
 
-    return { leftInput, rightInput };
+  /**
+   * [핵심 변경] GameClient가 입력을 구독할 수 있도록 이벤트 리스너를 등록합니다.
+   * @param event - 'input' 이벤트 타입
+   * @param callback - 실행할 콜백 함수
+   */
+  public on(event: 'input', callback: InputEventCallback): void {
+    if (event === 'input') {
+      this.eventListeners.add(callback);
+    }
+  }
+
+  public off(event: 'input', callback: InputEventCallback): void {
+    if (event === 'input') {
+      this.eventListeners.delete(callback);
+    }
+  }
+
+  // 등록된 콜백들에게 이벤트를 전달
+  private emit(action: InputAction, playerSide?: PlayerSide): void {
+    this.eventListeners.forEach(callback => callback(action, playerSide));
+  }
+  
+  // 게임 시작 시 호출하여 입력을 받기 시작
+  public activate(isLocalMultiplayer: boolean = false): void {
+    this.isActive = true;
+    this.isLocalMultiplayer = isLocalMultiplayer;
+    this.keyState = {};
+    console.log(`[InputHandler] Activated - Local Multiplayer: ${isLocalMultiplayer}`);
+  }
+
+  // 게임 종료 시 호출하여 입력을 중단
+  public deactivate(): void {
+    this.isActive = false;
+    this.keyState = {};
   }
 }
