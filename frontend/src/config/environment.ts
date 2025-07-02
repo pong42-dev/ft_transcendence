@@ -9,7 +9,8 @@ export interface Config {
 const getEnvVar = (key: string, fallback?: string): string => {
   // Vite 사용 시 - 타입 안전한 방식으로 접근
   const viteKey = `VITE_${key}` as keyof ImportMetaEnv;
-  return import.meta.env[viteKey] || fallback || '';
+  const value = import.meta.env[viteKey];
+  return (typeof value === 'string' ? value : String(value || '')) || fallback || '';
   
   // Vite 제거 후 (Node.js 환경)
   // return process.env[key] || fallback || '';

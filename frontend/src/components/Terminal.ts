@@ -1,4 +1,5 @@
 // Removed unused import
+import { DOMUpdater } from './modals/DOMUpdater.js';
 
 export class Terminal {
   private terminalElement: HTMLElement;
@@ -79,6 +80,8 @@ Please login to continue.`;
       messageElement.className += ' opacity-75';
     }
     messageElement.textContent = text;
+    
+    // Use DOMUpdater to add list item with animation
     this.outputElement.appendChild(messageElement);
     this.outputContent = this.outputElement.innerHTML;
     
@@ -87,7 +90,7 @@ Please login to continue.`;
   }
 
   public clearOutput(): void {
-    this.outputElement.innerHTML = '';
+    DOMUpdater.updateHTML(this.outputElement, '');
     this.outputContent = '';
   }
 
@@ -104,9 +107,12 @@ Please login to continue.`;
     
     // 현재 터미널이 초기 상태라면 메시지 업데이트
     if (this.outputContent === this.initialMessage || this.outputContent.includes('Please login to continue') || this.outputContent.includes('Welcome back')) {
-      this.outputElement.innerHTML = welcomeMessage;
+      DOMUpdater.updateHTML(this.outputElement, welcomeMessage, {
+        animate: true,
+        duration: 300,
+        onComplete: () => this.scrollToBottom()
+      });
       this.outputContent = welcomeMessage;
-      this.scrollToBottom();
     }
   }
 
@@ -114,10 +120,12 @@ Please login to continue.`;
     this.clearOutput();
     this.commandHistory = [];
     this.historyIndex = -1;
-    this.outputElement.innerHTML = this.initialMessage;
+    DOMUpdater.updateHTML(this.outputElement, this.initialMessage, {
+      animate: true,
+      duration: 200,
+      onComplete: () => this.scrollToBottom()
+    });
     this.outputContent = this.initialMessage;
-    // Ensure scroll to bottom after reset
-    requestAnimationFrame(() => this.scrollToBottom());
   }
 
   public focus(): void {

@@ -35,8 +35,8 @@ export const transformGame = (backendGame: Types.BackendGameMatch, userId?: numb
     opponent: backendGame.player2 ? backendGame.player2.username : 'AI',
     rank: backendGame.winner === userId ? 1 : 2,
     type: backendGame.gameMode === 'tournament' ? 'tournament' : '1v1',
-    my_score: isPlayer1 ? backendGame.player1Score : backendGame.player2Score,
-    opponent_score: isPlayer1 ? backendGame.player2Score : backendGame.player1Score
+    myScore: isPlayer1 ? backendGame.player1Score : backendGame.player2Score,
+    opponentScore: isPlayer1 ? backendGame.player2Score : backendGame.player1Score
   };
 };
 

@@ -3,15 +3,12 @@
  * 프로덕션 빌드에서 동적 임포트로만 로드됨
  */
 
-import * as Types from '../../types/types';
-
 // Mock 2FA 상태 저장 (메모리에서만 유지)
 let mock2FAEnabled = false;
 let mockTmpTokens = new Set<string>();
 
 // Mock Google OAuth 상태 저장
 let mockGoogleOAuthCompleted = false;
-let mockIsNewGoogleUser = true;
 let mockGoogleUser = {
   name: 'gogglechu_master',
   avatar: 'https://digi-api.com/images/digimon/w/Gabumon.png',
@@ -151,7 +148,8 @@ export const getAuthApiServiceMockResponse = async <T>(
   if (endpoint.includes('/api/users/logout') && method === 'POST') {
     // OAuth 상태 초기화
     mockGoogleOAuthCompleted = false;
-    mockIsNewGoogleUser = true; // 다음 로그인 시 신규 사용자로 처리
+    // TODO: 향후 신규 사용자 상태 관리 구현 예정
+    // mockIsNewGoogleUser = true; // 다음 로그인 시 신규 사용자로 처리
     
     return {
       success: true,

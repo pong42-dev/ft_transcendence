@@ -11,6 +11,7 @@ interface Route {
 
 export class Router {
   private routes: Route[] = [];
+  private currentPath: string = '/';
 
   constructor() {
     // Listen for hash changes instead of popstate

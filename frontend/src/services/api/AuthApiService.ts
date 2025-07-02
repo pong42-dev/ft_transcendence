@@ -1,6 +1,7 @@
 import { BaseApiService, ApiError } from './BaseApiService';
 import { TokenManager } from '../core/TokenManager';
 import { ErrorLevel } from '../../utils/ErrorHandler';
+import { getConfig } from '../../config/environment';
 import * as Types from '../../types/types';
 
 export class AuthApiService extends BaseApiService {
@@ -26,8 +27,17 @@ export class AuthApiService extends BaseApiService {
       credentials: 'include'
     });
     
+    // 디버깅을 위한 응답 구조 로그
+    console.log('[Auth] Login response analysis:', {
+      requires2FA: response.requires2FA,
+      hasData: !!response.data,
+      dataKeys: response.data ? Object.keys(response.data) : [],
+      dataContent: response.data
+    });
+    
     // 2FA가 필요한 경우
-    if (response.requires2FA && response.data.token) {
+    if (response.requires2FA && response.data?.token) {
+      console.log('[Auth] 2FA required, tmpToken:', response.data.token);
       return {
         requires2FA: true,
         tmpToken: response.data.token
@@ -44,7 +54,7 @@ export class AuthApiService extends BaseApiService {
       console.info('[Auth] Login successful - tokens managed securely', {
         tokenLength: accessToken.length,
         tokenManagerHasToken: !!TokenManager.getAccessToken(),
-        apiClientHasToken: !!this.getToken()
+        apiClientHasToken: !!TokenManager.getAccessToken()
       });
       
       // 로그인 후 사용자 정보 가져오기 (2FA 없이 로그인했으므로 2FA 비활성화 상태)
@@ -79,7 +89,7 @@ export class AuthApiService extends BaseApiService {
     console.info('[Auth] 2FA Login successful - tokens managed securely', {
       tokenLength: response.token.length,
       tokenManagerHasToken: !!TokenManager.getAccessToken(),
-      apiClientHasToken: !!this.getToken()
+      apiClientHasToken: !!TokenManager.getAccessToken()
     });
     
     // 사용자 정보 가져오기 (2FA 완료 상태)
@@ -148,19 +158,25 @@ export class AuthApiService extends BaseApiService {
         });
         console.info('[Auth] Server logout successful');
       } catch (error) {
-        // 서버 로그아웃 실패는 경고로만 처리
-        console.warn('[Auth] Server logout failed:', error);
-        
-        this.errorHandler.handleError(
-          error as Error,
-          'AuthApiService.logout',
-          ErrorLevel.INFO,
-          {
-            component: 'AuthApiService',
-            action: 'serverLogoutFailed',
-            additionalData: { note: 'Server cleanup failed, proceeding with client logout' }
-          }
-        );
+        // 404나 401 에러는 이미 로그아웃된 상태이므로 INFO 레벨로 처리
+        const apiError = error as ApiError;
+        if (apiError.status === 404 || apiError.status === 401) {
+          console.info('[Auth] User already logged out on server');
+        } else {
+          // 다른 에러는 경고로 처리
+          console.warn('[Auth] Server logout failed:', error);
+          
+          this.errorHandler.handleError(
+            error as Error,
+            'AuthApiService.logout',
+            ErrorLevel.INFO,
+            {
+              component: 'AuthApiService',
+              action: 'serverLogoutFailed',
+              additionalData: { note: 'Server cleanup failed, proceeding with client logout' }
+            }
+          );
+        }
       }
     } else {
       console.info('[Auth] No token available, skipping server logout');
@@ -188,7 +204,8 @@ export class AuthApiService extends BaseApiService {
     sessionStorage.setItem('oauth_login_attempt', 'true');
     
     // 실제 환경에서는 전체 페이지 리다이렉트
-    window.location.href = 'http://localhost:3000/api/users/login/google';
+    const config = getConfig();
+    window.location.href = `${config.apiUrl}/api/users/login/google`;
     
     // 리다이렉트가 완료될 때까지 대기하는 Promise (실제로는 페이지가 바뀜)
     return new Promise(() => {
@@ -231,7 +248,7 @@ export class AuthApiService extends BaseApiService {
   // 토큰 검증 및 사용자 정보 조회 - /api/users/me
   async verifyToken(): Promise<Types.User> {
     // 현재 토큰 상태 디버깅
-    const currentToken = this.getToken();
+    const currentToken = TokenManager.getAccessToken();
     console.log('[Auth] Token verification state:', {
       hasToken: !!currentToken,
       tokenLength: currentToken?.length
@@ -320,7 +337,7 @@ export class AuthApiService extends BaseApiService {
   // 2FA 설정 초기화 - /api/users/auth/2fa/enable/init
   async initTwoFA(): Promise<Types.TwoFAInitResponse> {
     // 토큰이 있는지 확인
-    const token = this.getToken();
+    const token = TokenManager.getAccessToken();
     const tokenManagerToken = TokenManager.getAccessToken();
     
     console.log('[Auth] 2FA initialization - detailed token check:', {
@@ -357,12 +374,19 @@ export class AuthApiService extends BaseApiService {
   // 2FA 활성화 - /api/users/auth/2fa/enable
   async enableTwoFA(request: Types.TwoFAEnableRequest): Promise<void> {
     // 토큰이 있는지 확인
-    const token = this.getToken();
+    const token = TokenManager.getAccessToken();
     if (!token) {
       throw new ApiError(401, 'Authentication required', { message: 'No access token available for 2FA activation' });
     }
     
-    console.log('[Auth] Enabling 2FA with token present:', !!token);
+    console.log('[Auth] Enabling 2FA:', {
+      hasAccessToken: !!token,
+      accessTokenLength: token?.length,
+      hasTmpToken: !!request.tmpToken,
+      tmpTokenLength: request.tmpToken?.length,
+      hasCode: !!request.token,
+      codeLength: request.token?.length
+    });
     
     await this.post<{
       success: boolean;
@@ -417,7 +441,7 @@ export class AuthApiService extends BaseApiService {
   // 2FA 비활성화 - /api/users/auth/2fa/disable
   async disableTwoFA(request: Types.TwoFADisableRequest): Promise<void> {
     // 토큰이 있는지 확인
-    const token = this.getToken();
+    const token = TokenManager.getAccessToken();
     if (!token) {
       throw new ApiError(401, 'Authentication required', { message: 'No access token available for 2FA deactivation' });
     }

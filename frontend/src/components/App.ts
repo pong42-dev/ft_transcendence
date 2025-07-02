@@ -4,19 +4,20 @@ import { ApiClient, ApiError } from '../services/ApiClient.js';
 import { UserProfile } from './UserProfile.js';
 import { Router } from '../utils/Router.js';
 import {
-  AppState,
   User,
   // Friend,
   Player
 } from '../types/types.js';
 import * as Types from '../types/types.js';
-// import { GameSetupModal } from './GameSetupModal.js';
-// import { GameEndModal } from './GameEndModal.js';
-import { FriendModal } from './FriendModal.js';
-import { TwoFAModal } from './TwoFAModal.js';
-import { TournamentTestModal } from './TournamentTestModal.js';
+import { GameSetupModal } from './modals/GameSetupModal.js';
+import { GameEndModal } from './modals/GameEndModal.js';
+import { TwoFAModal } from './modals/TwoFAModal.js';
+import { FileModal } from './modals/FileModal.js';
+import { TournamentTestModal } from './modals/TournamentTestModal.js';
 import { ErrorHandler, ErrorLevel } from '../utils/ErrorHandler.js';
 import { TokenManager } from '../services/core/TokenManager.js';
+import { authStore, userProfileStore } from '../store/index.js';
+import { CommandHandler } from '../commands/CommandHandler.js';
 
 export class App {
   // UI Elements References
@@ -25,21 +26,24 @@ export class App {
   private apiClient: ApiClient;
   private router: Router;
   private errorHandler: ErrorHandler;
+  private commandHandler: CommandHandler;
   // Components
   // private pongGame: PongGame;
   private userProfile: UserProfile | null = null;
   private mainTerminal: Terminal;
   
-  private state: AppState = {
-    isLoggedIn: null, // Start in checking state
-    currentUser: null,
-    isInGame: false,
-  };
+  // Store subscriptions cleanup functions
+  private unsubscribeAuth: (() => void) | null = null;
+  private unsubscribeUserProfile: (() => void) | null = null;
   
-  // 인증 상태 확인 중복 방지
-  private isCheckingAuth = false;
+  // Game state (keeping this local as it's UI-specific)
+  private isInGame = false;
+  
   // 렌더링 중복 방지
   private isRendering = false;
+  
+  // 회원가입 시 선택한 아바타 파일 (로그인 후 업로드)
+  private pendingAvatarFile: File | null = null;
 
   // ===== INITIALIZATION METHODS =====
   
@@ -53,7 +57,39 @@ export class App {
     //   this.handleGameEnd(winner);
     // });
     
-    this.mainTerminal = new Terminal(this.handleCommand.bind(this));
+    // Initialize CommandHandler with dependencies
+    this.commandHandler = new CommandHandler({
+      apiClient: this.apiClient,
+      router: this.router,
+      terminal: null as any, // Will be set after terminal creation
+      errorHandler: this.errorHandler,
+      onGameStart: (gameConfig: any) => this.handlePlayGame(gameConfig),
+      onShowModal: (modalType: string, options?: any) => this.handleShowModal(modalType, options),
+      onUserStateUpdate: (user: User) => this.handleUserStateUpdate(user),
+      onCacheUserState: (user: User) => this.cacheUserState(user),
+      onClearUserStateCache: () => this.clearUserStateCache()
+    });
+    
+    // Create terminal with command handler
+    this.mainTerminal = new Terminal((command: string) => this.commandHandler.execute(command));
+    
+    // Set terminal reference in command handler
+    (this.commandHandler as any).deps.terminal = this.mainTerminal;
+    
+    // Subscribe to store changes
+    this.setupStoreSubscriptions();
+  }
+
+  private setupStoreSubscriptions(): void {
+    // Subscribe to auth store changes
+    this.unsubscribeAuth = authStore.subscribe(() => {
+      this.render();
+    });
+
+    // Subscribe to user profile store changes
+    this.unsubscribeUserProfile = userProfileStore.subscribe(() => {
+      this.render();
+    });
   }
 
   public init(): void {
@@ -77,17 +113,15 @@ export class App {
     const sessionToken = TokenManager.getAccessToken(); // 이제 세션에서 자동 복원됨
     if (sessionToken) {
       console.log('🔄 Session token restored, setting preliminary auth state');
-      // 토큰이 있으면 일단 인증된 상태로 설정 (백그라운드에서 검증 예정)
-      this.state.isLoggedIn = true;
       
       // 기본 사용자 정보만 복원 (2FA 상태는 API에서만 가져옴)
       const cachedUser = this.restoreCachedUserState();
       if (cachedUser) {
-        // 2FA 상태를 제외한 기본 정보만 사용
-        this.state.currentUser = {
+        // 사용자 정보를 authStore에 저장
+        authStore.login({
           ...cachedUser,
           twoFactorEnabled: false // 기본값, API 검증 후 실제 값으로 업데이트
-        };
+        });
         console.log('👤 Cached user state restored (excluding 2FA):', cachedUser.username);
         
       } else {
@@ -103,12 +137,12 @@ export class App {
 
   private async checkAuthStateWithTimeout(): Promise<void> {
     // 이미 인증 확인 중이면 무시
-    if (this.isCheckingAuth) {
+    if (authStore.getIsCheckingAuth()) {
       console.log('⏸️ Auth check already in progress, skipping...');
       return;
     }
     
-    this.isCheckingAuth = true;
+    authStore.setCheckingAuth(true);
     console.log('⏱️ Starting auth check with timeout...');
     
     let isResolved = false;
@@ -117,8 +151,7 @@ export class App {
       setTimeout(() => {
         if (!isResolved) {
           console.warn('⏰ Auth check timeout (8s) - setting logged out state');
-          this.state.isLoggedIn = false;
-          this.render();
+          authStore.setLoggedOut();
           isResolved = true;
         }
         resolve();
@@ -135,11 +168,10 @@ export class App {
     } catch (error) {
       console.error('💥 Auth check with timeout failed:', error);
       if (!isResolved) {
-        this.state.isLoggedIn = false;
-        this.render();
+        authStore.setLoggedOut();
       }
     } finally {
-      this.isCheckingAuth = false;
+      authStore.setCheckingAuth(false);
     }
   }
 
@@ -157,8 +189,7 @@ export class App {
         const user = await this.handleOAuthCallback();
         
         if (user) {
-          this.state.isLoggedIn = true;
-          this.state.currentUser = user;
+          authStore.login(user);
           this.cacheUserState(user);
           this.mainTerminal.reset();
           this.mainTerminal.appendOutput(`Welcome back, ${user.username}!`);
@@ -187,10 +218,13 @@ export class App {
       
       if (hasToken) {
         // 이미 세션 복원으로 상태가 설정되어 있다면 토큰 검증만 실행
-        if (this.state.isLoggedIn && this.state.currentUser) {
+        const currentUser = authStore.getCurrentUser();
+        const isLoggedIn = authStore.getIsLoggedIn();
+        
+        if (isLoggedIn && currentUser) {
           console.log('🔍 Verifying restored session token...', {
-            username: this.state.currentUser.username,
-            twoFactorEnabled: this.state.currentUser.twoFactorEnabled
+            username: currentUser.username,
+            twoFactorEnabled: currentUser.twoFactorEnabled
           });
           try {
             // 토큰이 여전히 유효한지만 확인 (사용자 정보는 이미 캐시에서 복원됨)
@@ -201,7 +235,7 @@ export class App {
             });
             
             // 항상 백엔드 API 응답을 사용 (2FA 상태는 캐시하지 않음)
-            this.state.currentUser = verifiedUser;
+            authStore.updateUser(verifiedUser);
             
             // 2FA 상태를 제외한 사용자 정보만 캐시
             const userToCache = { ...verifiedUser };
@@ -223,8 +257,7 @@ export class App {
           console.log('🔍 Verifying token and fetching user info...');
           try {
             const user = await this.apiClient.auth.verifyToken();
-            this.state.isLoggedIn = true;
-            this.state.currentUser = user;
+            authStore.login(user);
             this.cacheUserState(user); // 사용자 상태 캐시
             console.log('✅ Token verified, user authenticated:', user.username);
             return;
@@ -239,17 +272,17 @@ export class App {
                 console.warn('⚠️ Temporary error during token verification - trying to restore cached state');
                 
                 // 기존 사용자 정보가 있으면 상태 유지
-                if (this.state.currentUser) {
-                  this.state.isLoggedIn = true;
-                  console.log('✅ Maintaining existing user state due to temporary error:', this.state.currentUser.username);
+                const currentUser = authStore.getCurrentUser();
+                if (currentUser) {
+                  authStore.login(currentUser);
+                  console.log('✅ Maintaining existing user state due to temporary error:', currentUser.username);
                   return;
                 }
                 
                 // 캐시된 사용자 정보 복원 시도
                 const cachedUser = this.restoreCachedUserState();
                 if (cachedUser) {
-                  this.state.isLoggedIn = true;
-                  this.state.currentUser = cachedUser;
+                  authStore.login(cachedUser);
                   console.log('✅ Restored cached user state due to temporary error:', cachedUser.username);
                   return;
                 }
@@ -272,21 +305,20 @@ export class App {
         await this.tryTokenRefresh();
       } else {
         console.log('❌ No refresh token indicators, setting logged out state');
-        this.state.isLoggedIn = false;
-        this.state.currentUser = null;
+        authStore.logout();
         this.clearUserStateCache();
       }
       
     } catch (error) {
       console.error('💥 Auth check failed:', error);
-      this.state.isLoggedIn = false;
-      this.state.currentUser = null;
+      authStore.logout();
     } finally {
-      console.log('🎨 Auth check complete, rendering...', this.state.isLoggedIn);
+      const isLoggedIn = authStore.getIsLoggedIn();
+      console.log('🎨 Auth check complete, rendering...', isLoggedIn);
       this.render();
       
       // 인증 확인 완료 후 터미널에 포커스 (로그인 상태이고 게임 중이 아닌 경우)
-      if (this.state.isLoggedIn && !this.state.isInGame) {
+      if (isLoggedIn && !this.isInGame) {
         setTimeout(() => {
           this.mainTerminal.focus();
         }, 300);
@@ -311,37 +343,37 @@ export class App {
           const user = await this.apiClient.auth.verifyTokenWithoutTwoFACheck();
           
           // 기존 사용자 정보가 있다면 2FA 상태 보호
-          if (this.state.currentUser && this.state.currentUser.twoFactorEnabled !== user.twoFactorEnabled) {
+          const currentUser = authStore.getCurrentUser();
+          if (currentUser && currentUser.twoFactorEnabled !== user.twoFactorEnabled) {
             console.warn('⚠️ 2FA state mismatch after token refresh!', {
-              existing: this.state.currentUser.twoFactorEnabled,
+              existing: currentUser.twoFactorEnabled,
               fromAPI: user.twoFactorEnabled
             });
             
             // 기존 2FA 상태를 유지
-            const preservedTwoFAState = this.state.currentUser.twoFactorEnabled;
-            this.state.currentUser = { ...user, twoFactorEnabled: preservedTwoFAState };
+            const preservedTwoFAState = currentUser.twoFactorEnabled;
+            const updatedUser = { ...user, twoFactorEnabled: preservedTwoFAState };
+            authStore.updateUser(updatedUser);
             
             console.log('🔄 Preserved existing 2FA state after token refresh:', preservedTwoFAState);
           } else {
-            this.state.currentUser = user;
+            authStore.login(user);
           }
           
-          this.state.isLoggedIn = true;
-          this.cacheUserState(this.state.currentUser); // 사용자 상태 캐시
-          console.log('✅ User authenticated after token refresh:', this.state.currentUser.username, '2FA:', this.state.currentUser.twoFactorEnabled);
+          this.cacheUserState(user); // 사용자 상태 캐시
+          console.log('✅ User authenticated after token refresh:', user.username, '2FA:', user.twoFactorEnabled);
         } catch (verifyError) {
           console.error('❌ User verification failed after token refresh:', verifyError);
           
           // 사용자 검증 실패하더라도 기존 사용자 정보가 있으면 유지
-          if (this.state.currentUser) {
+          const currentUser = authStore.getCurrentUser();
+          if (currentUser) {
             console.warn('⚠️ Keeping existing user state despite verification failure');
-            this.state.isLoggedIn = true;
             return;
           }
           
-          // 기존 사용자 정보도 없으면 로그아웃 처리
-          this.state.isLoggedIn = false;
-          this.state.currentUser = null;
+          // 기존 사용자 정보가 없으면 로그아웃 처리
+          authStore.logout();
           // 토큰이 유효하지 않으면 모든 곳에서 정리
           TokenManager.clearTokens();
           this.apiClient.clearToken();
@@ -355,12 +387,12 @@ export class App {
           console.info('ℹ️ Token refresh failed but existing token available - keeping current state');
           
           // 기존 사용자 정보가 없으면 토큰으로 사용자 정보 가져오기 시도
-          if (!this.state.currentUser) {
+          const currentUser = authStore.getCurrentUser();
+          if (!currentUser) {
             try {
               console.log('🔍 Attempting to verify existing token...');
               const user = await this.apiClient.auth.verifyTokenWithoutTwoFACheck();
-              this.state.isLoggedIn = true;
-              this.state.currentUser = user;
+              authStore.login(user);
               this.cacheUserState(user); // 사용자 상태 캐시
               console.log('✅ User authenticated with existing token:', user.username);
               return;
@@ -373,7 +405,7 @@ export class App {
                 if (errorMessage.includes('429') || errorMessage.includes('rate limit') || 
                     errorMessage.includes('network') || errorMessage.includes('fetch')) {
                   console.warn('⚠️ Temporary error - maintaining logged out state but keeping token');
-                  this.state.isLoggedIn = false;
+                  authStore.logout();
                   return; // 토큰은 유지하되 로그아웃 상태로
                 }
               }
@@ -381,15 +413,16 @@ export class App {
               // 토큰이 실제로 유효하지 않으면 로그아웃 처리
             }
           } else {
-            console.log('✅ Maintaining existing user state:', this.state.currentUser.username);
-            this.state.isLoggedIn = true;
-            return;
+            const currentUser = authStore.getCurrentUser();
+            if (currentUser) {
+              console.log('✅ Maintaining existing user state:', currentUser.username);
+              return;
+            }
           }
         }
         
         console.info('ℹ️ No valid refresh token or token verification failed - user not logged in');
-        this.state.isLoggedIn = false;
-        this.state.currentUser = null;
+        authStore.logout();
         this.clearUserStateCache(); // 사용자 상태 캐시 클리어
         // 토큰이 없거나 유효하지 않으면 모든 곳에서 정리
         TokenManager.clearTokens();
@@ -409,22 +442,19 @@ export class App {
          error.message.toLowerCase().includes('fetch') ||
          error.message.toLowerCase().includes('timeout'));
       
-      if (hasExistingToken && (this.state.currentUser || isTemporaryError)) {
+      const currentUser = authStore.getCurrentUser();
+      if (hasExistingToken && (currentUser || isTemporaryError)) {
         console.warn('⚠️ Token refresh failed but maintaining existing session due to temporary error');
-        // 기존 사용자 정보가 있으면 상태 유지
-        if (this.state.currentUser) {
-          this.state.isLoggedIn = true;
-        } else {
-          // 사용자 정보는 없지만 토큰은 유지 (다음 시도를 위해)
-          this.state.isLoggedIn = false;
+        // 기존 사용자 정보가 있으면 상태 유지, 아니면 로그아웃 상태로 설정
+        if (!currentUser) {
+          authStore.logout();
         }
         return;
       }
       
       // 토큰도 없고 사용자 정보도 없으면 로그아웃 처리
       console.error('💥 Complete authentication failure - logging out');
-      this.state.isLoggedIn = false;
-      this.state.currentUser = null;
+      authStore.logout();
       this.clearUserStateCache(); // 사용자 상태 캐시 클리어
       // 에러 발생 시 모든 토큰 정리
       TokenManager.clearTokens();
@@ -490,9 +520,11 @@ export class App {
   // ===== ROUTING & NAVIGATION =====
 
   private showMainView(): void {
-    this.state.isInGame = false;
+    this.isInGame = false;
     // If user is logged in, redirect to their profile instead of showing it at root
-    if (this.state.isLoggedIn && this.state.currentUser) {
+    const isLoggedIn = authStore.getIsLoggedIn();
+    const currentUser = authStore.getCurrentUser();
+    if (isLoggedIn && currentUser) {
       this.router.navigate('/profile');
       return;
     }
@@ -500,24 +532,28 @@ export class App {
   }
 
   private showCurrentUserProfile(): void {
-    if (!this.state.isLoggedIn) {
+    if (!authStore.getIsLoggedIn()) {
       this.router.navigate('/');
       return;
     }
-    this.state.isInGame = false; // Explicitly set game state to false
-    this.userProfile = new UserProfile(this.state.currentUser!, true);
-    this.updateMainContent();
+    this.isInGame = false; // Explicitly set game state to false
+    const currentUser = authStore.getCurrentUser();
+    if (currentUser) {
+      this.userProfile = new UserProfile(currentUser, true);
+      this.updateMainContent();
+    }
   }
 
   private async showUserProfile(username: string): Promise<void> {
-    if (!this.state.isLoggedIn) {
+    if (!authStore.getIsLoggedIn()) {
       this.router.navigate('/');
       return;
     }
     
     // 다른 사용자 프로필 조회 기능이 백엔드에 구현되지 않았으므로
     // 현재 사용자 프로필로 리다이렉트
-    if (username !== this.state.currentUser?.username) {
+    const currentUser = authStore.getCurrentUser();
+    if (username !== currentUser?.username) {
       this.mainTerminal.appendOutput(`User profile search not available. Showing your profile instead.`);
       this.router.navigate('/profile');
       return;
@@ -528,12 +564,12 @@ export class App {
   }
 
   private showGameView(): void {
-    this.state.isInGame = true;
+    this.isInGame = true;
     this.updateMainContent();
   }
 
   private showGameMode(_mode: string): void {
-    this.state.isInGame = true;
+    this.isInGame = true;
     this.updateMainContent();
   }
 
@@ -623,27 +659,30 @@ export class App {
     const mainContent = document.querySelector('.main-content') as HTMLElement;
     if (!mainContent) return;
     
+    const isLoggedIn = authStore.getIsLoggedIn();
+    const currentUser = authStore.getCurrentUser();
+    
     // Don't update content until auth is resolved
-    if (this.state.isLoggedIn === null) {
+    if (isLoggedIn === null) {
       mainContent.innerHTML = `<div class="flex items-center justify-center h-full text-terminal-lightGreen">Authenticating...</div>`;
       return;
     }
     
     // 터미널 메시지 업데이트 (로그인 상태에 따라)
-    this.mainTerminal.updateWelcomeMessage(this.state.isLoggedIn, this.state.currentUser?.username);
+    this.mainTerminal.updateWelcomeMessage(isLoggedIn, currentUser?.username);
     
     mainContent.innerHTML = '';
     
     // Now we know the real auth state - safe to proceed
-    if (this.state.isLoggedIn && this.state.currentUser) {
-      if (this.state.isInGame) {
+    if (isLoggedIn && currentUser) {
+      if (this.isInGame) {
         // this.pongGame.setGameMode('regular');
         // mainContent.appendChild(this.pongGame.render());
         // this.pongGame.start();
       } else if (this.userProfile) {
         mainContent.appendChild(this.userProfile.render());
       } else {
-        this.userProfile = new UserProfile(this.state.currentUser, true);
+        this.userProfile = new UserProfile(currentUser, true);
         mainContent.appendChild(this.userProfile.render());
       }
     } else {
@@ -656,7 +695,7 @@ export class App {
     this.updateStatusBar();
     
     // 로그인 상태일 때 터미널에 자동 포커스 (게임 중이 아닌 경우)
-    if (this.state.isLoggedIn && !this.state.isInGame) {
+    if (isLoggedIn && !this.isInGame) {
       setTimeout(() => {
         this.mainTerminal.focus();
       }, 200);
@@ -668,9 +707,11 @@ export class App {
     const statusElement = this.appElement.querySelector('.status-text') as HTMLElement;
     const routeElement = this.appElement.querySelector('.route-text') as HTMLElement;
     
+    const isLoggedIn = authStore.getIsLoggedIn();
+    
     if (statusIndicator) {
-      statusIndicator.textContent = this.state.isLoggedIn ? '●' : '○';
-      statusIndicator.className = `text-sm ${this.state.isLoggedIn ? 'text-terminal-lightGreen' : 'text-terminal-gray'}`;
+      statusIndicator.textContent = isLoggedIn ? '●' : '○';
+      statusIndicator.className = `text-sm ${isLoggedIn ? 'text-terminal-lightGreen' : 'text-terminal-gray'}`;
     }
     if (statusElement) {
       statusElement.textContent = this.getStatusText();
@@ -681,8 +722,11 @@ export class App {
   }
 
   private getStatusText(): string {
-    if (this.state.isLoggedIn === null) return 'Authenticating...';
-    if (this.state.isLoggedIn) return this.state.currentUser?.username || '';
+    const isLoggedIn = authStore.getIsLoggedIn();
+    const currentUser = authStore.getCurrentUser();
+    
+    if (isLoggedIn === null) return 'Authenticating...';
+    if (isLoggedIn) return currentUser?.username || '';
     return 'Not logged in';
   }
 
@@ -707,452 +751,374 @@ export class App {
     // gameEndModal.show();
   }
 
-  // ===== COMMAND HANDLING =====
+  // ===== COMMAND HANDLER HELPERS =====
 
-  private async handleCommand(command: string): Promise<void> {
-    const parts = command.trim().split(' ');
-    const commandName = parts[0].toLowerCase();
-    const args = parts.slice(1);
+  /**
+   * CommandHandler에서 사용할 게임 시작 헬퍼
+   */
+  private async handlePlayGame(gameConfig: any): Promise<void> {
+    if (!gameConfig) {
+      try {
+        // Stop any existing game first
+        this.pongGame.stop();
+        
+        const gameSetupModal = new GameSetupModal();
+        const result = await gameSetupModal.open();
 
-    switch (commandName) {
-      case 'help':
-        this.handleHelpCommand();
-        break;
-      case 'login':
-        // Show login modal instead of terminal command
-        if (!this.state.isLoggedIn) {
-          this.showLoginModal();
+        if (result) {
+          const { mode, opponents } = result;
+          this.mainTerminal.appendOutput(`Starting ${mode} game...`);
+
+          const currentUser = authStore.getCurrentUser();
+          if (currentUser) {
+            const player1: Player = {
+              nickname: currentUser.nickname || currentUser.username,
+              avatarUrl: currentUser.avatarUrl,
+            };
+
+            // Set up game configuration before navigating
+            if (mode === 'vs ai') {
+              // AI mode: AI (left) vs Player (right)
+              this.pongGame.setPlayers({ nickname: 'AI' }, player1);
+              this.pongGame.setMultiplayerMode(false);
+              this.pongGame.setGameMode('regular');
+            } else if (mode === 'local') {
+              const opponent = opponents[0];
+              this.pongGame.setPlayers(player1, { nickname: opponent.nickname });
+              this.pongGame.setMultiplayerMode(true);
+              this.pongGame.setGameMode('regular');
+            } else if (mode === 'tournament') {
+              const opponent = opponents[0];
+              // TODO: Store full tournament roster and manage bracket
+              this.pongGame.setPlayers(player1, { nickname: opponent.nickname });
+              this.pongGame.setMultiplayerMode(true);
+              this.pongGame.setGameMode('tournament');
+            }
+
+            // Set game state BEFORE navigating
+            this.isInGame = true;
+            
+            // Navigate to game route after configuration
+            this.router.navigate('/game');
+          }
         } else {
-          this.mainTerminal.appendOutput('You are already logged in.');
+          this.mainTerminal.appendOutput('Game cancelled.');
         }
-        break;
-      case 'register':
-        // Show register modal instead of terminal command
-        if (!this.state.isLoggedIn) {
-          this.showRegisterModal();
-        } else {
-          this.mainTerminal.appendOutput('Please logout first to register a new account.');
-        }
-        break;
-      case 'logout':
-        await this.handleLogoutCommand();
-        break;
-      case 'friend':
-        await this.handleFriendCommand(args);
-        break;
-      case 'profile':
-        this.handleProfileCommand(args);
-        break;
-      case 'play':
-        await this.handlePlayCommand();
-        break;
-      case 'tournament':
-        this.handleTournamentCommand();
-        break;
-      case 'clear':
-        this.handleClearCommand();
-        break;
-      case '2fa':
-        await this.handle2FACommand(args);
-        break;
-      case 'set':
-        await this.handleSetCommand(args);
-        break;
-      default:
-        this.mainTerminal.appendOutput(`Unknown command: ${commandName}. Type "help" for available commands.`);
+      } catch (error) {
+        this.mainTerminal.appendOutput(
+          'Error: Could not start the game. Please try again.',
+        );
+        this.errorHandler.handleError(
+          error as Error,
+          'handlePlayGame',
+        );
+      }
     }
   }
 
-  private handleHelpCommand(): void {
-    const apiStatus = this.apiClient.shouldUseMockData() ? 'MOCK DATA' : 'LIVE API';
-    const baseHelp = `API Status: ${apiStatus}\n\n`;
-    
-    const helpText = this.state.isLoggedIn
-      ? baseHelp + 'Available commands:\n' +
-        '  help       - Display this help message\n' +
-        '  profile    - View user profile (profile <username>)\n' +
-        '  play       - Start a game of Pong\n' +
-        '  tournament - Open tournament test modal\n' +
-        '  logout     - Log out of current session\n' +
-        '  friend     - Manage friends (friend follow|unfollow|list)\n' +
-        '  2fa        - Manage two-factor authentication (2fa enable|disable|status)\n' +
-        '  set        - Update profile settings (set avatar|name)\n' +
-        '  clear      - Clear the terminal screen'
-      : baseHelp + 'Available commands:\n' +
-        '  help     - Display this help message\n' +
-        '  login    - Open login modal\n' +
-        '  register - Open registration modal\n' +
-        '  clear    - Clear the terminal screen';
-    
-    this.mainTerminal.appendOutput(helpText);
+  /**
+   * CommandHandler에서 사용할 모달 표시 헬퍼
+   */
+  private async handleShowModal(modalType: string, options?: any): Promise<any> {
+    switch (modalType) {
+      case 'login':
+        return this.showLoginModal();
+      case 'register':
+        return this.showRegisterModal();
+      case '2fa':
+        return this.handle2FAModal(options);
+      case 'file':
+        return this.showFileModal();
+      case 'tournament':
+        const tournamentModal = new TournamentTestModal(this.apiClient);
+        return tournamentModal.show();
+      case 'friend':
+        // Could be extended for friend modal
+        break;
+      default:
+        console.warn(`Unknown modal type: ${modalType}`);
+    }
+  }
+
+  /**
+   * CommandHandler에서 사용할 사용자 상태 업데이트 헬퍼
+   */
+  private handleUserStateUpdate(user: User): void {
+    authStore.updateUser(user);
+    this.cacheUserState(user);
   }
 
 
 
   private async handle2FALogin(tmpToken: string): Promise<void> {
+    console.log('[App] handle2FALogin called with tmpToken:', tmpToken);
     this.mainTerminal.appendOutput('Two-factor authentication required. Please enter your verification code.');
     
+    console.log('[App] Creating TwoFAModal for login');
     const twoFAModal = new TwoFAModal(
       this.apiClient,
       'login',
-      async (code?: string) => {
-        if (!code) {
-          this.mainTerminal.appendOutput('2FA verification cancelled.');
-          return;
-        }
+      {
+        onComplete: async (code?: string) => {
+          if (!code) {
+            this.mainTerminal.appendOutput('2FA verification cancelled.');
+            return;
+          }
 
-        try {
-          this.mainTerminal.appendOutput('Verifying 2FA code...');
-          const user = await this.apiClient.auth.completeTwoFALogin(tmpToken, code);
-          
-          // 2FA 완료 후 상태 업데이트 및 UI 갱신
-          this.state.isLoggedIn = true;
-          this.state.currentUser = user;
-          this.cacheUserState(user); // 사용자 상태 캐시
-          this.mainTerminal.reset();
-          this.mainTerminal.updateWelcomeMessage(this.state.isLoggedIn, this.state.currentUser?.username);
-          this.mainTerminal.appendOutput(`Welcome back, ${user.username}!`);
-          this.mainTerminal.appendOutput('Type "help" to see available commands.');
-          
-          // UI 강제 새로고침 후 라우팅
-          this.render();
-          setTimeout(() => {
-            this.router.navigate('/profile');
-            // 터미널에 포커스 설정
-            this.mainTerminal.focus();
-          }, 100); // 100ms 지연으로 렌더링 완료 보장
-          
-          // 모달을 성공으로 표시하고 닫기
-          twoFAModal.markAsCompleted();
-          twoFAModal.close();
-        } catch (error) {
-          this.errorHandler.handleError(
-            error as Error,
-            'App.handle2FALogin',
-            ErrorLevel.ERROR,
-            {
-              component: 'App',
-              action: 'twoFAVerificationFailed'
+          try {
+            this.mainTerminal.appendOutput('Verifying 2FA code...');
+            const user = await this.apiClient.auth.completeTwoFALogin(tmpToken, code);
+            
+            // 2FA 완료 후 상태 업데이트 및 UI 갱신
+            authStore.login(user);
+            this.cacheUserState(user); // 사용자 상태 캐시
+            this.mainTerminal.reset();
+            this.mainTerminal.updateWelcomeMessage(true, user.username);
+            this.mainTerminal.appendOutput(`Welcome back, ${user.username}!`);
+            this.mainTerminal.appendOutput('Type "help" to see available commands.');
+            
+            // UI 강제 새로고침 후 라우팅
+            this.render();
+            setTimeout(() => {
+              this.router.navigate('/profile');
+              // 터미널에 포커스 설정
+              this.mainTerminal.focus();
+            }, 100); // 100ms 지연으로 렌더링 완료 보장
+            
+            // 모달들 닫기
+            twoFAModal.hide();
+            if (this.currentLoginModal) {
+              console.log('[App] Closing LoginModal after 2FA completion');
+              this.currentLoginModal.hide();
+              this.currentLoginModal = null;
             }
-          );
-          
-          const message = error instanceof ApiError
-            ? `2FA verification failed: ${error.data?.message || 'Invalid code'}`
-            : '2FA verification failed. Please try again.';
-          this.mainTerminal.appendOutput(message);
-          
-          // Keep the modal open for retry
+          } catch (error) {
+            this.errorHandler.handleError(
+              error as Error,
+              'App.handle2FALogin',
+              ErrorLevel.ERROR,
+              {
+                component: 'App',
+                action: 'twoFAVerificationFailed'
+              }
+            );
+            
+            const message = error instanceof ApiError
+              ? `2FA verification failed: ${error.data?.message || 'Invalid code'}`
+              : '2FA verification failed. Please try again.';
+            this.mainTerminal.appendOutput(message);
+            
+            // Keep the modal open for retry
+          }
+        },
+        onCancel: () => {
+          this.mainTerminal.appendOutput('2FA verification cancelled.');
+          if (this.currentLoginModal) {
+            console.log('[App] Closing LoginModal after 2FA cancellation');
+            this.currentLoginModal.hide();
+            this.currentLoginModal = null;
+          }
         }
-      },
-      () => {
-        this.mainTerminal.appendOutput('2FA verification cancelled.');
+      }
+    );
+
+    console.log('[App] Showing TwoFAModal');
+    twoFAModal.show();
+  }
+
+  /**
+   * 2FA 모달 표시 (CommandHandler에서 전달받은 옵션 사용)
+   */
+  private async handle2FAModal(options?: any): Promise<void> {
+    const { onComplete, onCancel, mode = 'enable' } = options || {};
+    
+    const twoFAModal = new TwoFAModal(
+      this.apiClient,
+      mode,
+      {
+        onComplete: async (code?: string) => {
+          if (!code) {
+            if (onCancel) onCancel();
+            return;
+          }
+
+          try {
+            if (onComplete) {
+              await onComplete(code);
+            }
+            // 성공 시 모달 닫기
+            twoFAModal.hide();
+          } catch (error) {
+            // 에러는 CommandHandler에서 이미 처리했으므로 모달은 열린 채로 유지
+            // (사용자가 다시 시도할 수 있도록)
+          }
+        },
+        onCancel: () => {
+          if (onCancel) onCancel();
+        }
       }
     );
 
     twoFAModal.show();
   }
 
-
-  private async handleLogoutCommand(): Promise<void> {
-    if (!this.state.isLoggedIn) {
-      return;
-    }
-
-    try {
-      await this.apiClient.auth.logout();
-    } catch (error) {
-      this.errorHandler.handleError(
-        error as Error,
-        'App.handleLogoutCommand',
-        ErrorLevel.WARNING,
-        {
-          component: 'App',
-          action: 'logoutFailed'
-        }
-      );
-      // Logout locally even if server request fails
-    }
-
-    this.state.isLoggedIn = false;
-    this.state.currentUser = null;
-    this.state.isInGame = false;
-    this.userProfile = null;
-    this.clearUserStateCache(); // 로그아웃 시 사용자 상태 캐시 클리어
-    this.mainTerminal.reset();
-    
-    // 강제로 렌더링 업데이트
-    this.render();
-    
-    // 루트 경로로 이동
-    this.router.navigate('/');
-  }
-
-  private async handleFriendCommand(args?: string[]): Promise<void> {
-    if (!this.state.isLoggedIn) {
-      this.mainTerminal.appendOutput('Please login first to manage friends.');
-      return;
-    }
-
-    // If no arguments provided, show help
-    if (!args || args.length === 0) {
-      this.mainTerminal.appendOutput('Usage: friend <follow|unfollow|list> [username]');
-      this.mainTerminal.appendOutput('  friend follow <username>   - Follow a user');
-      this.mainTerminal.appendOutput('  friend unfollow <username> - Unfollow a user');
-      this.mainTerminal.appendOutput('  friend list                - Show friends list');
-      return;
-    }
-
-    const subCommand = args[0].toLowerCase();
-
-    switch (subCommand) {
-      case 'follow':
-        await this.handleFriendFollow(args.slice(1));
-        break;
-      case 'unfollow':
-        await this.handleFriendUnfollow(args.slice(1));
-        break;
-      case 'list':
-        await this.handleFriendList();
-        break;
-      default:
-        this.mainTerminal.appendOutput(`Unknown friend command: ${subCommand}`);
-        this.mainTerminal.appendOutput('Usage: friend <follow|unfollow|list> [username]');
-    }
-  }
-
-  private async handleFriendFollow(args: string[]): Promise<void> {
-    if (args.length === 0) {
-      this.mainTerminal.appendOutput('Usage: friend follow <username>');
-      return;
-    }
-
-    const username = args.join(' ').trim();
-    if (!username) {
-      this.mainTerminal.appendOutput('Please provide a username to follow.');
-      return;
-    }
-
-    try {
-      this.mainTerminal.appendOutput(`Following ${username}...`);
-      await this.apiClient.friend.addFriend(username);
-      this.mainTerminal.appendOutput(`✅ Successfully followed ${username}`);
-    } catch (error) {
-      let errorMessage = `❌ Failed to follow ${username}.`;
-      if (error instanceof Error) {
-        if (error.message.includes('already following')) {
-          errorMessage = `You are already following ${username}.`;
-        } else if (error.message.includes('User not found')) {
-          errorMessage = `User ${username} not found.`;
-        } else if (error.message.includes('cannot follow yourself')) {
-          errorMessage = 'You cannot follow yourself.';
-        }
-      }
-      this.mainTerminal.appendOutput(errorMessage);
-    }
-  }
-
-  private async handleFriendUnfollow(args: string[]): Promise<void> {
-    if (args.length === 0) {
-      this.mainTerminal.appendOutput('Usage: friend unfollow <username>');
-      return;
-    }
-
-    const username = args.join(' ').trim();
-    if (!username) {
-      this.mainTerminal.appendOutput('Please provide a username to unfollow.');
-      return;
-    }
-
-    try {
-      this.mainTerminal.appendOutput(`Unfollowing ${username}...`);
-      
-      // Get friend list to find the friend ID
-      const friends = await this.apiClient.friend.getFriends();
-      const friend = friends.find(f => f.username === username);
-      
-      if (!friend || !friend.id) {
-        this.mainTerminal.appendOutput(`You are not following ${username}.`);
-        return;
-      }
-
-      await this.apiClient.friend.removeFriend(friend.id);
-      this.mainTerminal.appendOutput(`✅ Successfully unfollowed ${username}`);
-    } catch (error) {
-      let errorMessage = `❌ Failed to unfollow ${username}.`;
-      if (error instanceof Error) {
-        if (error.message.includes('not following')) {
-          errorMessage = `You are not following ${username}.`;
-        } else if (error.message.includes('User not found')) {
-          errorMessage = `User ${username} not found.`;
-        }
-      }
-      this.mainTerminal.appendOutput(errorMessage);
-    }
-  }
-
-  private async handleFriendList(): Promise<void> {
-    try {
-      this.mainTerminal.appendOutput('Loading friends list...');
-      const friends = await this.apiClient.friend.getFriends();
-      
-      if (friends.length === 0) {
-        this.mainTerminal.appendOutput('You have no friends yet. Use "friend follow <username>" to follow someone.');
-        return;
-      }
-
-      this.mainTerminal.appendOutput(`\nFriends (${friends.length}):`);
-      this.mainTerminal.appendOutput('─'.repeat(50));
-      
-      friends.forEach((friend, index) => {
-        const statusIcon = friend.status === 'online' ? '🟢' : 
-                          friend.status === 'inGame' ? '🎮' : '⚫';
-        const blockedText = friend.blocked ? ' [BLOCKED]' : '';
-        this.mainTerminal.appendOutput(
-          `${(index + 1).toString().padStart(2)}. ${statusIcon} ${friend.username} (${friend.nickname})${blockedText}`
-        );
-      });
-      
-      this.mainTerminal.appendOutput('─'.repeat(50));
-    } catch (error) {
-      this.mainTerminal.appendOutput('❌ Failed to load friends list. Please try again.');
-      console.error('Friend list error:', error);
-    }
-  }
-
-  private handleProfileCommand(args: string[]): void {
-    if (!this.state.isLoggedIn) {
-      this.mainTerminal.appendOutput('Please login first to view profiles.');
-      return;
-    }
-
-    if (args.length > 0) {
-      const username = args.join(' ');
-      this.router.navigate(`/profile/${username}`);
-    } else {
-      this.router.navigate('/profile');
-    }
-  }
-
-  // private async handlePlayCommand(): Promise<void> {
-  //   if (!this.state.isLoggedIn) {
-  //     this.mainTerminal.appendOutput('Please login first to play the game.');
-  //     return;
-  //   }
-
-  //   try {
-  //     // Stop any existing game first
-  //     this.pongGame.stop();
-      
-  //     const gameSetupModal = new GameSetupModal();
-  //     const result = await gameSetupModal.open();
-
-  //     if (result) {
-  //       const { mode, opponents } = result;
-  //       this.mainTerminal.appendOutput(`Starting ${mode} game...`);
-
-  //       if (this.state.currentUser) {
-  //         const player1: Player = {
-  //           nickname: this.state.currentUser.nickname || this.state.currentUser.username,
-  //           avatarUrl: this.state.currentUser.avatarUrl,
-  //         };
-
-  //         // Set up game configuration before navigating
-  //         if (mode === 'vs ai') {
-  //           // AI mode: AI (left) vs Player (right)
-  //           this.pongGame.setPlayers({ nickname: 'AI' }, player1);
-  //           this.pongGame.setMultiplayerMode(false);
-  //           this.pongGame.setGameMode('regular');
-  //         } else if (mode === 'local') {
-  //           const opponent = opponents[0];
-  //           this.pongGame.setPlayers(player1, { nickname: opponent.nickname });
-  //           this.pongGame.setMultiplayerMode(true);
-  //           this.pongGame.setGameMode('regular');
-  //         } else if (mode === 'tournament') {
-  //           const opponent = opponents[0];
-  //           // TODO: Store full tournament roster and manage bracket
-  //           this.pongGame.setPlayers(player1, { nickname: opponent.nickname });
-  //           this.pongGame.setMultiplayerMode(true);
-  //           this.pongGame.setGameMode('tournament');
-  //         }
-
-  //         // Set game state BEFORE navigating
-  //         this.state.isInGame = true;
-          
-  //         // Navigate to game route after configuration
-  //         this.router.navigate('/game');
-  //       }
-  //     } else {
-  //       this.mainTerminal.appendOutput('Game cancelled.');
-  //     }
-  //   } catch (error) {
-  //     this.mainTerminal.appendOutput(
-  //       'Error: Could not start the game. Please try again.',
-  //     );
-  //     this.errorHandler.handleError(
-  //       error as Error,
-  //       'handlePlayCommand',
-  //     );
-  //   }
-  // }
-
-  private handleClearCommand(): void {
-    this.mainTerminal.clearOutput();
-  }
-
   // ===== MODAL MANAGEMENT =====
 
+  private currentLoginModal: any = null; // LoginModal 참조 저장
+
   private async showLoginModal(): Promise<void> {
-    const { LoginModal } = await import('./LoginModal.js');
+    const { LoginModal } = await import('./modals/LoginModal.js');
     
-    const loginModal = new LoginModal(
+    this.currentLoginModal = new LoginModal(
       this.apiClient,
-      (user: Types.User) => {
-        // Login success - 상태 업데이트 후 렌더링과 라우팅을 순차적으로 실행
-        this.state.isLoggedIn = true;
-        this.state.currentUser = user;
-        this.cacheUserState(user); // 사용자 상태 캐시
-        this.mainTerminal.reset();
-        this.mainTerminal.appendOutput(`Welcome back, ${user.username}!`);
-        this.mainTerminal.appendOutput('Type "help" to see available commands.');
-        
-        // 강제 렌더링 후 라우팅
-        this.render();
-        setTimeout(() => {
-          this.router.navigate('/profile');
-          // 터미널에 포커스 설정
-          this.mainTerminal.focus();
-        }, 100); // 100ms 지연으로 렌더링 완료 보장
-      },
-      () => {
-        // Switch to register
-        this.showRegisterModal();
-      },
-      (tmpToken: string) => {
-        // 2FA required
-        this.handle2FALogin(tmpToken);
+      {
+        onLoginSuccess: async (user: Types.User) => {
+          // Login success - 상태 업데이트 후 렌더링과 라우팅을 순차적으로 실행
+          authStore.login(user);
+          this.cacheUserState(user); // 사용자 상태 캐시
+          this.mainTerminal.reset();
+          this.mainTerminal.appendOutput(`Welcome back, ${user.username}!`);
+          
+          // 펜딩 중인 아바타 파일 업로드
+          if (this.pendingAvatarFile) {
+            try {
+              this.mainTerminal.appendOutput('Uploading your profile picture...');
+              await this.apiClient.user.uploadAvatar(this.pendingAvatarFile);
+              this.mainTerminal.appendOutput('Profile picture uploaded successfully!');
+              this.pendingAvatarFile = null; // 업로드 완료 후 제거
+            } catch (error) {
+              console.error('Avatar upload failed:', error);
+              this.mainTerminal.appendOutput('Failed to upload profile picture. You can try again later with "set avatar" command.');
+              this.pendingAvatarFile = null; // 실패해도 제거
+            }
+          }
+          
+          this.mainTerminal.appendOutput('Type "help" to see available commands.');
+          
+          // 강제 렌더링 후 라우팅
+          this.render();
+          setTimeout(() => {
+            this.router.navigate('/profile');
+            // 터미널에 포커스 설정
+            this.mainTerminal.focus();
+          }, 100); // 100ms 지연으로 렌더링 완료 보장
+        },
+        onSwitchToRegister: () => {
+          // Switch to register
+          this.showRegisterModal();
+        },
+        on2FARequired: (tmpToken: string) => {
+          // 2FA required
+          console.log('[App] on2FARequired called with tmpToken:', tmpToken);
+          this.handle2FALogin(tmpToken);
+        }
       }
     );
     
-    loginModal.show();
+    this.currentLoginModal.show();
   }
 
   private async showRegisterModal(): Promise<void> {
-    const { RegisterModal } = await import('./RegisterModal.js');
+    const { RegisterModal } = await import('./modals/RegisterModal.js');
     
     const registerModal = new RegisterModal(
       this.apiClient,
-      (user: Types.User) => {
-        // Register success - show success message only (no auto-login)
-        this.mainTerminal.appendOutput(`Account created successfully for ${user.username}!`);
-        this.mainTerminal.appendOutput('Please use the "login" command to sign in to your new account.');
-      },
-      () => {
-        // Switch to login
-        this.showLoginModal();
+      {
+        onRegisterSuccess: (user: Types.User, avatarFile?: File) => {
+          // 아바타 파일이 있으면 저장해두기
+          if (avatarFile) {
+            this.pendingAvatarFile = avatarFile;
+            this.mainTerminal.appendOutput(`Account created successfully for ${user.username}!`);
+            this.mainTerminal.appendOutput('Profile picture will be uploaded after you log in.');
+            this.mainTerminal.appendOutput('Please use the "login" command to sign in to your new account.');
+          } else {
+            this.mainTerminal.appendOutput(`Account created successfully for ${user.username}!`);
+            this.mainTerminal.appendOutput('Please use the "login" command to sign in to your new account.');
+          }
+        },
+        onSwitchToLogin: () => {
+          // Switch to login
+          this.showLoginModal();
+        },
+        on2FARequired: (tmpToken: string) => {
+          // 2FA required (if needed for registration)
+          this.handle2FALogin(tmpToken);
+        }
       }
     );
     
     registerModal.show();
+  }
+
+  private async showFileModal(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const fileModal = new FileModal(
+        'Select Avatar',
+        'image/*',
+        5 * 1024 * 1024, // 5MB
+        async (file: File) => {
+          try {
+            this.mainTerminal.appendOutput('Uploading avatar...');
+            
+            // API를 통해 아바타 업로드
+            const updatedUser = await this.apiClient.user.uploadAvatar(file);
+            console.log('Avatar upload successful, updated user:', updatedUser.nickname, 'avatarUrl:', updatedUser.avatarUrl);
+            
+            // 사용자 상태 업데이트
+            authStore.updateUser(updatedUser);
+            this.cacheUserState(updatedUser);
+            console.log('authStore updated with new user data');
+            
+            // UserProfile이 현재 표시되고 있으면 새로고침
+            if (this.userProfile) {
+              console.log('UserProfile exists, calling refreshUserProfile...');
+              this.refreshUserProfile(updatedUser);
+            } else {
+              console.log('UserProfile is null, not refreshing');
+            }
+            
+            this.mainTerminal.appendOutput('✅ Avatar updated successfully!');
+            resolve();
+          } catch (error) {
+            const errorMsg = error instanceof Error ? error.message : 'Failed to upload avatar';
+            this.mainTerminal.appendOutput(`❌ Avatar upload failed: ${errorMsg}`);
+            this.errorHandler.handleError(
+              error as Error,
+              'App.showFileModal',
+              ErrorLevel.ERROR
+            );
+            reject(error);
+          }
+        }
+      );
+      
+      fileModal.show();
+    });
+  }
+
+  /**
+   * Refresh UserProfile with updated user data
+   */
+  private refreshUserProfile(updatedUser: User): void {
+    console.log('refreshUserProfile called with user:', updatedUser.nickname, 'avatarUrl:', updatedUser.avatarUrl);
+    
+    // Check if we're currently on the profile page
+    const currentRoute = window.location.hash.replace('#', '') || '/';
+    console.log('Current route:', currentRoute);
+    
+    if (currentRoute === '/profile' || currentRoute.startsWith('/profile/')) {
+      console.log('On profile page, refreshing UserProfile...');
+      
+      // Update the user profile instance with new data
+      this.userProfile = new UserProfile(updatedUser, true);
+      
+      // Force re-render the current view
+      this.updateMainContent();
+      
+      console.log('UserProfile refreshed');
+    } else {
+      console.log('Not on profile page, skipping refresh');
+    }
   }
 
   // ===== USER STATE CACHING METHODS =====
@@ -1218,273 +1184,14 @@ export class App {
     }
   }
 
-  /**
-   * 2FA 관련 명령어 처리
-   */
-  private async handle2FACommand(args: string[]): Promise<void> {
-    if (!this.state.isLoggedIn) {
-      this.mainTerminal.appendOutput('Please login first to manage 2FA settings.');
-      return;
+  // Cleanup method for proper store unsubscription
+  public cleanup(): void {
+    if (this.unsubscribeAuth) {
+      this.unsubscribeAuth();
     }
-
-    const subCommand = args[0]?.toLowerCase();
-
-    switch (subCommand) {
-      case 'enable':
-        await this.handle2FAEnable();
-        break;
-      case 'disable':
-        await this.handle2FADisable();
-        break;
-      case 'status':
-        this.handle2FAStatus();
-        break;
-      default:
-        this.mainTerminal.appendOutput('Usage: 2fa <enable|disable|status>');
-        this.mainTerminal.appendOutput('  2fa enable  - Enable two-factor authentication');
-        this.mainTerminal.appendOutput('  2fa disable - Disable two-factor authentication');
-        this.mainTerminal.appendOutput('  2fa status  - Check current 2FA status');
+    if (this.unsubscribeUserProfile) {
+      this.unsubscribeUserProfile();
     }
-  }
-
-  /**
-   * 2FA 활성화 처리
-   */
-  private async handle2FAEnable(): Promise<void> {
-    if (this.state.currentUser?.twoFactorEnabled) {
-      this.mainTerminal.appendOutput('2FA is already enabled. Use "2fa disable" to disable it first.');
-      return;
-    }
-
-    this.mainTerminal.appendOutput('Starting 2FA setup process...');
-    
-    try {
-      const { TwoFAModal } = await import('./TwoFAModal.js');
-      const twoFAModal = new TwoFAModal(
-        this.apiClient,
-        'enable',
-        async () => {
-          // Success callback
-          if (this.state.currentUser) {
-            this.state.currentUser.twoFactorEnabled = true;
-            // Update cached user data (excluding 2FA state as per our earlier fix)
-            const userToCache = { ...this.state.currentUser };
-            delete (userToCache as any).twoFactorEnabled;
-            this.cacheUserState(userToCache);
-          }
-          this.mainTerminal.appendOutput('✅ 2FA has been successfully enabled.');
-        },
-        () => {
-          // Cancel callback
-          this.mainTerminal.appendOutput('2FA setup cancelled.');
-        }
-      );
-      await twoFAModal.show();
-    } catch (error) {
-      this.mainTerminal.appendOutput('❌ Failed to start 2FA setup. Please try again.');
-      console.error('2FA enable error:', error);
-    }
-  }
-
-  /**
-   * 2FA 비활성화 처리
-   */
-  private async handle2FADisable(): Promise<void> {
-    if (!this.state.currentUser?.twoFactorEnabled) {
-      this.mainTerminal.appendOutput('2FA is already disabled.');
-      return;
-    }
-
-    this.mainTerminal.appendOutput('Starting 2FA disable process...');
-    
-    try {
-      const { TwoFAModal } = await import('./TwoFAModal.js');
-      const twoFAModal = new TwoFAModal(
-        this.apiClient,
-        'disable',
-        async () => {
-          // Success callback
-          if (this.state.currentUser) {
-            this.state.currentUser.twoFactorEnabled = false;
-            // Update cached user data (excluding 2FA state as per our earlier fix)
-            const userToCache = { ...this.state.currentUser };
-            delete (userToCache as any).twoFactorEnabled;
-            this.cacheUserState(userToCache);
-          }
-          this.mainTerminal.appendOutput('✅ 2FA has been successfully disabled.');
-        },
-        () => {
-          // Cancel callback
-          this.mainTerminal.appendOutput('2FA disable cancelled.');
-        }
-      );
-      await twoFAModal.show();
-    } catch (error) {
-      this.mainTerminal.appendOutput('❌ Failed to disable 2FA. Please try again.');
-      console.error('2FA disable error:', error);
-    }
-  }
-
-  /**
-   * 2FA 상태 확인
-   */
-  private handle2FAStatus(): void {
-    if (!this.state.currentUser) {
-      this.mainTerminal.appendOutput('Unable to check 2FA status - user data not available.');
-      return;
-    }
-
-    const status = this.state.currentUser.twoFactorEnabled ? 'Enabled' : 'Disabled';
-    const statusIcon = this.state.currentUser.twoFactorEnabled ? '🔒' : '🔓';
-    
-    this.mainTerminal.appendOutput(`${statusIcon} Two-Factor Authentication: ${status}`);
-    
-    if (this.state.currentUser.twoFactorEnabled) {
-      this.mainTerminal.appendOutput('Your account is protected with 2FA.');
-    } else {
-      this.mainTerminal.appendOutput('Consider enabling 2FA for better security. Use "2fa enable" to set it up.');
-    }
-  }
-
-  /**
-   * set 명령어 처리 (profile settings)
-   */
-  private async handleSetCommand(args: string[]): Promise<void> {
-    if (!this.state.isLoggedIn) {
-      this.mainTerminal.appendOutput('Please login first to update profile settings.');
-      return;
-    }
-
-    const subCommand = args[0]?.toLowerCase();
-
-    switch (subCommand) {
-      case 'avatar':
-        await this.handleSetAvatar();
-        break;
-      case 'name':
-        await this.handleSetName(args.slice(1));
-        break;
-      default:
-        this.mainTerminal.appendOutput('Usage: set <avatar|name> [value]');
-        this.mainTerminal.appendOutput('  set avatar     - Upload new avatar image');
-        this.mainTerminal.appendOutput('  set name <new> - Change display name');
-    }
-  }
-
-  /**
-   * 아바타 업데이트 처리
-   */
-  private async handleSetAvatar(): Promise<void> {
-    this.mainTerminal.appendOutput('Opening file selector for avatar upload...');
-    
-    try {
-      const { FileModal } = await import('./FileModal.js');
-      const fileModal = new FileModal(async (file: File) => {
-        try {
-          this.mainTerminal.appendOutput(`Uploading avatar: ${file.name} (${(file.size / 1024).toFixed(1)}KB)...`);
-          
-          // Call API to update avatar
-          const updatedUser = await this.apiClient.user.uploadAvatar(file);
-          
-          // Update current user state
-          if (this.state.currentUser) {
-            this.state.currentUser.avatarUrl = updatedUser.avatarUrl;
-            this.state.currentUser.nickname = updatedUser.nickname;
-            
-            // Update cached user data (excluding 2FA state)
-            const userToCache = { ...this.state.currentUser };
-            delete (userToCache as any).twoFactorEnabled;
-            this.cacheUserState(userToCache);
-          }
-          
-          this.mainTerminal.appendOutput('✅ Avatar updated successfully!');
-          
-          // Re-render profile if currently viewing
-          if (this.userProfile) {
-            this.userProfile = new UserProfile(this.state.currentUser!, true);
-            this.updateMainContent();
-          }
-          
-        } catch (error) {
-          this.mainTerminal.appendOutput('❌ Failed to update avatar. Please try again.');
-          console.error('Avatar update error:', error);
-        }
-      });
-      
-      fileModal.show();
-    } catch (error) {
-      this.mainTerminal.appendOutput('❌ Failed to open file selector. Please try again.');
-      console.error('FileModal error:', error);
-    }
-  }
-
-  /**
-   * 이름 업데이트 처리
-   */
-  private async handleSetName(args: string[]): Promise<void> {
-    const newName = args.join(' ').trim();
-    
-    if (!newName) {
-      this.mainTerminal.appendOutput('Usage: set name <new_name>');
-      this.mainTerminal.appendOutput('Example: set name John or set name "John Doe"');
-      return;
-    }
-    
-    if (newName.length < 2 || newName.length > 20) {
-      this.mainTerminal.appendOutput('Name must be between 2 and 20 characters.');
-      return;
-    }
-    
-    try {
-      this.mainTerminal.appendOutput(`Updating name to: "${newName}"...`);
-      
-      // Call API to update name
-      const updatedUser = await this.apiClient.user.updateName(newName);
-      
-      console.log('Name update response:', updatedUser);
-      
-      // Update current user state
-      if (this.state.currentUser) {
-        this.state.currentUser.nickname = updatedUser.nickname;
-        this.state.currentUser.username = updatedUser.username;
-        
-        // Update cached user data (excluding 2FA state)
-        const userToCache = { ...this.state.currentUser };
-        delete (userToCache as any).twoFactorEnabled;
-        this.cacheUserState(userToCache);
-      }
-      
-      this.mainTerminal.appendOutput(`✅ Name updated successfully to: "${updatedUser.nickname}"`);
-      
-      // Re-render profile if currently viewing
-      if (this.userProfile) {
-        this.userProfile = new UserProfile(this.state.currentUser!, true);
-        this.updateMainContent();
-      }
-      
-    } catch (error) {
-      console.error('Name update error:', error);
-      let errorMessage = '❌ Failed to update name. Please try again.';
-      
-      if (error instanceof Error) {
-        if (error.message.includes('already registered')) {
-          errorMessage = '❌ This name is already taken. Please choose a different name.';
-        } else if (error.message.includes('2 characters')) {
-          errorMessage = '❌ Name must be at least 2 characters long.';
-        } else if (error.message.includes('20 characters')) {
-          errorMessage = '❌ Name must be 20 characters or less.';
-        } else if (error.message.includes('Name update failed')) {
-          errorMessage = `❌ ${error.message}`;
-        }
-      }
-      
-      this.mainTerminal.appendOutput(errorMessage);
-    }
-  }
-
-  private handleTournamentCommand(): void {
-    this.mainTerminal.appendOutput('Opening tournament test modal...');
-    const tournamentModal = new TournamentTestModal(this.apiClient);
-    tournamentModal.show();
+    // UserProfile cleanup is not needed as it doesn't have subscriptions
   }
 }

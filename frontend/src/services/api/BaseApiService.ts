@@ -1,6 +1,7 @@
 import { getConfig } from '../../config/environment';
 import { SimpleInterceptorManager } from '../core/Interceptors';
 import { TokenManager } from '../core/TokenManager';
+import { MockInterceptor } from '../mocks/MockInterceptor';
 import { log } from '../../utils/Logger';
 import { ErrorHandler, ErrorLevel } from '../../utils/ErrorHandler';
 import { 
@@ -127,36 +128,12 @@ export abstract class BaseApiService {
     }
   }
 
-  // 토큰 가져오기 (TokenManager를 유일한 소스로 사용)
-  public getToken(): string | null {
-    return TokenManager.getAccessToken();
-  }
-
-  // 인증된 사용자인지 확인
-  public isAuthenticated(): boolean {
-    return !!this.getToken();
-  }
-
-  // 레거시 호환성을 위한 메소드들 (실제로는 TokenManager에 위임)
-  public setToken(token: string | null): void {
-    if (token) {
-      TokenManager.setTokens(token, 'cookie-managed');
-    } else {
-      TokenManager.clearTokens();
-    }
-  }
-
-  // 토큰 제거 (TokenManager에 위임)
-  public clearToken(): void {
-    TokenManager.clearTokens();
-  }
-
-  // Mock 데이터 사용 여부 확인
+  // Mock 데이터 사용 여부 확인 (환경 설정 위임)
   public shouldUseMockData(): boolean {
     return this.config.useMockData;
   }
 
-  // HTTP 요청 메서드 (환경설정 기반)
+  // HTTP 요청 메서드 (Mock 처리는 MockInterceptor에서 담당)
   protected async request<T>(
     endpoint: string,
     options: RequestInit = {},
@@ -167,44 +144,17 @@ export abstract class BaseApiService {
     if (this.isDisposed) {
       throw new Error(`Cannot make request from disposed service: ${this.serviceName}`);
     }
-    // Mock 데이터 사용 시 동적 임포트로 Mock 핸들러 로드
+
+    // Mock 데이터 사용 시 MockInterceptor로 처리
     if (this.config.useMockData) {
-      // Log mock usage for debugging
       if (this.config.enableLogging) {
         console.info(`[${this.serviceName}] Using mock data for endpoint: ${endpoint}`);
       }
+      
       try {
-        // Vite 호환성을 위한 명시적 임포트 방식
-        let mockHandler: Function | undefined;
-
-        switch (this.serviceName) {
-          case 'AuthApiService': {
-            const module = await import('../mocks/AuthApiServiceMock');
-            mockHandler = module.getAuthApiServiceMockResponse;
-            break;
-          }
-          case 'UserApiService': {
-            const module = await import('../mocks/UserApiServiceMock');
-            mockHandler = module.getUserApiServiceMockResponse;
-            break;
-          }
-          case 'GameApiService': {
-            const module = await import('../mocks/GameApiServiceMock');
-            mockHandler = module.getGameApiServiceMockResponse;
-            break;
-          }
-          case 'FriendApiService': {
-            const module = await import('../mocks/FriendApiServiceMock');
-            mockHandler = module.getFriendApiServiceMockResponse;
-            break;
-          }
-          default:
-            throw new Error(`Mock handler not configured for service: ${this.serviceName}`);
-        }
-        if (mockHandler) {
-          return await mockHandler(endpoint, options) as T;
-        }
-        throw new Error(`Mock handler not found for ${this.serviceName}`);
+        const mockInterceptor = MockInterceptor.getInstance();
+        const mockResponse = await mockInterceptor.getMockResponse(this.serviceName, endpoint, options);
+        return mockResponse as T;
       } catch (error) {
         this.errorHandler.handleError(
           error as Error,
@@ -223,11 +173,11 @@ export abstract class BaseApiService {
           message: `Failed to load mock data for ${this.serviceName}`
         } as T;
       }
-    } else {
-      // Log real API usage for debugging
-      if (this.config.enableLogging) {
-        console.info(`[${this.serviceName}] Using real API for endpoint: ${endpoint}`);
-      }
+    }
+
+    // Real API 요청 처리
+    if (this.config.enableLogging) {
+      console.info(`[${this.serviceName}] Using real API for endpoint: ${endpoint}`);
     }
 
     // 캐시 확인 (GET 요청만)
@@ -366,7 +316,7 @@ export abstract class BaseApiService {
 
   // 인증 실패 처리
   private handleUnauthorized(): void {
-    this.clearToken();
+    TokenManager.clearTokens();
     this.errorHandler.handleError(
       new Error('Authentication failed'),
       'BaseApiService.handleUnauthorized',
@@ -644,9 +594,9 @@ export abstract class BaseApiService {
     window.addEventListener('beforeunload', cleanupHandler);
     window.addEventListener('unload', cleanupHandler);
     
-    // 개발 환경에서 HMR 지원
-    if (import.meta.hot) {
-      import.meta.hot.dispose(cleanupHandler);
+    // 개발 환경에서 HMR 지원 (타입 안전성 확보)
+    if (typeof window !== 'undefined' && 'hot' in (import.meta as any)) {
+      (import.meta as any).hot.dispose(cleanupHandler);
     }
   }
   

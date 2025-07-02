@@ -11,6 +11,7 @@ import {
 } from './DataTransformers';
 import { ApiError } from '../api/BaseApiService';
 import { TokenManager } from './TokenManager';
+import { MockInterceptor } from '../mocks/MockInterceptor';
 import { ErrorHandler, ErrorLevel } from '../../utils/ErrorHandler';
 
 // URL 패턴 매칭을 위한 간단한 헬퍼
@@ -32,6 +33,9 @@ export const createInterceptors = (options?: {
 }) => {
   const environment = options?.environment || 'development';
   const showNotification = options?.showNotification;
+
+  // 🎭 Mock 인터셉터 (Mock 환경에서만)
+  const mockInterceptor = MockInterceptor.getInstance().createRequestInterceptor();
 
   // 🔐 인증 인터셉터
   const authInterceptor: RequestInterceptor = {
@@ -209,6 +213,15 @@ export const createInterceptors = (options?: {
         return data;
       },
       onResponseError: async (error: Error) => {
+        // 로그아웃 관련 404/401 에러는 조용히 처리
+        if (error instanceof Error && error.message.includes('/api/users/logout')) {
+          const apiError = error as any;
+          if (apiError.status === 404 || apiError.status === 401) {
+            console.info('Logout request - user already logged out on server');
+            return error;
+          }
+        }
+        
         console.group(`❌ API Error`);
         console.error(error);
         console.groupEnd();
@@ -220,6 +233,7 @@ export const createInterceptors = (options?: {
   // 인터셉터 반환
   return {
     request: [
+      mockInterceptor,
       authInterceptor,
       ...(loggingInterceptor ? [loggingInterceptor.request] : [])
     ],

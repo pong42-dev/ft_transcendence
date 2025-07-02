@@ -3,8 +3,6 @@
  * 사용자 정보 관련 API Mock 응답 제공
  */
 
-import * as Types from '../../types/types';
-
 // Mock 사용자 상태 관리 (메모리에 저장)
 let mockUserState = {
   name: 'pong_champion',

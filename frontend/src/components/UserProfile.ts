@@ -40,7 +40,9 @@ export class UserProfile {
     
     if (this.user.avatarUrl) {
       const avatarImg = document.createElement('img');
-      avatarImg.src = this.user.avatarUrl;
+      // Add cache buster to ensure fresh image load
+      const cacheBuster = `?t=${Date.now()}`;
+      avatarImg.src = this.user.avatarUrl + cacheBuster;
       avatarImg.className = 'w-full h-full rounded-full object-cover';
       avatar.appendChild(avatarImg);
     } else {
