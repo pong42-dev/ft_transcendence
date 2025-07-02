@@ -6,6 +6,7 @@ import { ApiClient } from '../../services/ApiClient.js';
 import { TwoFAInitResponse } from '../../types/types.js';
 import { ModalManager, ModalContent } from './ModalManager.js';
 import { DOMUpdater } from './DOMUpdater.js';
+import { authStore } from '../../store/index.js';
 
 export interface TwoFAModalCallbacks {
   onComplete: (code?: string) => void;
@@ -65,6 +66,14 @@ export class TwoFAModal {
   private async initializeTwoFA(): Promise<void> {
     try {
       this.twoFAData = await this.apiClient.auth.initTwoFA();
+      console.log('[TwoFAModal] 2FA initialized:', {
+        hasQrCode: !!this.twoFAData?.qrCodeUrl,
+        hasSecret: !!this.twoFAData?.secret,
+        hasToken: !!this.twoFAData?.token,
+        secretLength: this.twoFAData?.secret?.length,
+        tokenLength: this.twoFAData?.token?.length,
+        secretPreview: this.twoFAData?.secret?.substring(0, 8) + '...'
+      });
     } catch (error) {
       console.error('TwoFA initialization error:', error);
     }
@@ -333,6 +342,9 @@ export class TwoFAModal {
     if (!this.isCompleted) {
       this.callbacks.onCancel();
     }
+    
+    // 터미널 포커스 복원
+    this.restoreTerminalFocus();
   }
 
   private handleCodeInput(event: Event): void {
@@ -382,6 +394,12 @@ export class TwoFAModal {
       return;
     }
 
+    console.log('[TwoFAModal] Attempting to enable 2FA:', {
+      codeLength: code.length,
+      tmpTokenLength: this.twoFAData.token.length,
+      tmpToken: this.twoFAData.token.substring(0, 10) + '...'
+    });
+
     DOMUpdater.toggleLoading('#enable-btn', true, 'Enabling...');
     
     try {
@@ -389,14 +407,55 @@ export class TwoFAModal {
         token: code,
         tmpToken: this.twoFAData.token
       });
+      
+      // 2FA 활성화 성공 시 사용자 데이터 새로고침
+      await this.refreshUserData();
+      
       this.isCompleted = true;
       this.callbacks.onComplete(code);
       this.hide();
+      
+      // onClose에서 이미 포커스 복원하므로 여기서는 중복 호출하지 않음
     } catch (error: any) {
       console.error('2FA enable error:', error);
-      DOMUpdater.showError('#verification-error', 
-        error.message || 'Invalid code. Please try again.'
-      );
+      console.log('[TwoFAModal] Error details:', {
+        status: error.status,
+        message: error.message,
+        data: error.data,
+        isTokenError: error.message?.includes('token'),
+        is2FAError: error.message?.includes('2FA')
+      });
+      
+      // tmpToken 관련 오류인 경우 자동 재초기화 시도
+      if (error.message?.includes('tmp token') || error.message?.includes('Invalid tmp token')) {
+        console.log('[TwoFAModal] tmpToken expired, attempting to reinitialize...');
+        
+        try {
+          // QR 코드 재생성
+          await this.initializeTwoFA();
+          
+          // 컨텐츠를 다시 렌더링 (새로운 QR코드와 tmpToken으로)
+          const container = document.querySelector('.modal-content');
+          if (container) {
+            const newContent = this.createContent();
+            container.innerHTML = '';
+            container.appendChild(newContent);
+          }
+          
+          DOMUpdater.showError('#verification-error', 
+            'Session refreshed. Please scan the new QR code and try again.'
+          );
+        } catch (reinitError) {
+          console.error('Failed to reinitialize 2FA:', reinitError);
+          DOMUpdater.showError('#verification-error', 
+            'Setup session expired. Please close and reopen 2FA setup.'
+          );
+        }
+      } else {
+        DOMUpdater.showError('#verification-error', 
+          error.message || 'Invalid code. Please try again.'
+        );
+      }
     } finally {
       DOMUpdater.toggleLoading('#enable-btn', false);
     }
@@ -442,9 +501,15 @@ export class TwoFAModal {
     
     try {
       await this.apiClient.auth.disableTwoFA({ token: code });
+      
+      // 2FA 비활성화 성공 시 사용자 데이터 새로고침
+      await this.refreshUserData();
+      
       this.isCompleted = true;
       this.callbacks.onComplete(code);
       this.hide();
+      
+      // onClose에서 이미 포커스 복원하므로 여기서는 중복 호출하지 않음
     } catch (error: any) {
       console.error('2FA disable error:', error);
       DOMUpdater.showError('#verification-error', 
@@ -459,5 +524,109 @@ export class TwoFAModal {
     this.isCompleted = true; // 명시적 취소이므로 onClose에서 중복 호출 방지
     this.callbacks.onCancel();
     this.hide();
+  }
+
+  /**
+   * 사용자 데이터 새로고침 (2FA 상태 변경 후 UI 업데이트용)
+   */
+  private async refreshUserData(): Promise<void> {
+    try {
+      console.log('[TwoFAModal] Refreshing user data after 2FA status change...');
+      const currentUserBefore = authStore.getCurrentUser();
+      console.log('[TwoFAModal] User 2FA status before refresh:', currentUserBefore?.twoFactorEnabled);
+      
+      const updatedUser = await this.apiClient.user.getProfile();
+      console.log('[TwoFAModal] Fetched updated user data, 2FA status:', updatedUser.twoFactorEnabled);
+      
+      authStore.updateUser(updatedUser);
+      
+      const currentUserAfter = authStore.getCurrentUser();
+      console.log('[TwoFAModal] User 2FA status after authStore update:', currentUserAfter?.twoFactorEnabled);
+      
+      // 강제 UI 업데이트 트리거 (여러 방법 시도)
+      setTimeout(() => {
+        console.log('[TwoFAModal] Triggering UI updates...');
+        
+        // 방법 1: 커스텀 이벤트 (안전한 방법)
+        const event = new CustomEvent('userDataUpdated', { detail: { user: updatedUser } });
+        window.dispatchEvent(event);
+        
+        // 직접 DOM 조작은 부작용이 클 수 있으므로 비활성화
+        // authStore 업데이트와 커스텀 이벤트로 충분함
+      }, 100);
+      
+      console.log('[TwoFAModal] User data refreshed successfully');
+    } catch (error) {
+      console.error('[TwoFAModal] Failed to refresh user data:', error);
+      // 사용자 데이터 새로고침 실패해도 2FA 작업 자체는 성공한 상태이므로 에러를 throw하지 않음
+    }
+  }
+
+  /**
+   * UI의 2FA 상태를 직접 업데이트 (fallback 메커니즘)
+   */
+  private updateUI2FAStatus(isEnabled: boolean): void {
+    try {
+      console.log('[TwoFAModal] Updating UI 2FA status directly:', isEnabled);
+      
+      // UserProfile 영역으로 범위를 제한하여 더 정확하게 찾기
+      const mainContent = document.querySelector('.main-content');
+      if (!mainContent) {
+        console.warn('[TwoFAModal] Main content not found');
+        return;
+      }
+      
+      // 2FA 상태 텍스트를 더 정확하게 찾기
+      const statusElements = mainContent.querySelectorAll('*');
+      statusElements.forEach(element => {
+        const textContent = element.textContent?.trim();
+        
+        // 정확히 "2FA Enabled" 또는 "2FA Disabled" 패턴만 매치
+        if (textContent && /^2FA (Enabled|Disabled)(\s|$)/.test(textContent)) {
+          const newText = `2FA ${isEnabled ? 'Enabled' : 'Disabled'}`;
+          if (element.innerHTML && element.children.length === 0) { // 텍스트 노드만 있는 요소
+            element.textContent = newText;
+            console.log('[TwoFAModal] Updated 2FA text in element');
+          }
+        }
+      });
+      
+      // 2FA 상태 표시 점(dot) 업데이트 - 더 정확한 선택자 사용
+      const statusSection = mainContent.querySelector('*[class*="items-center"]:has(*[class*="bg-terminal-"]):has(*:contains("2FA"))');
+      if (statusSection) {
+        const statusDot = statusSection.querySelector('.bg-terminal-green, .bg-terminal-red');
+        if (statusDot) {
+          statusDot.classList.remove('bg-terminal-green', 'bg-terminal-red');
+          statusDot.classList.add(isEnabled ? 'bg-terminal-green' : 'bg-terminal-red');
+          console.log('[TwoFAModal] Updated 2FA status dot');
+        }
+      }
+      
+    } catch (error) {
+      console.error('[TwoFAModal] Failed to update UI 2FA status directly:', error);
+    }
+  }
+
+  /**
+   * 터미널 포커스 복원
+   */
+  private restoreTerminalFocus(): void {
+    try {
+      console.log('[TwoFAModal] Restoring terminal focus...');
+      
+      // 터미널 입력 필드를 찾아서 포커스
+      setTimeout(() => {
+        const terminalInput = document.querySelector('input[type="text"]:not([id])') as HTMLInputElement;
+        if (terminalInput) {
+          terminalInput.focus();
+          console.log('[TwoFAModal] Terminal focus restored');
+        } else {
+          console.warn('[TwoFAModal] Terminal input not found');
+        }
+      }, 250); // 모달 애니메이션 완료 후
+      
+    } catch (error) {
+      console.error('[TwoFAModal] Failed to restore terminal focus:', error);
+    }
   }
 }

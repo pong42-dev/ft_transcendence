@@ -12,19 +12,11 @@ export class UserProfile {
   }
 
   public render(): HTMLElement {
-    
     this.profileElement.className = 'w-full h-full bg-terminal-black text-terminal-green overflow-y-auto scrollbar-hide';
 
-    const contentWrapper = document.createElement('div');
-    contentWrapper.className = 'p-3 space-y-3';
-
-    contentWrapper.appendChild(this.renderUserInfo());
-    contentWrapper.appendChild(this.renderStatsSection());
-    contentWrapper.appendChild(this.renderMatchHistorySection());
-    
     // Clear and update profile element
     this.profileElement.innerHTML = '';
-    this.profileElement.appendChild(contentWrapper);
+    this.profileElement.appendChild(this.createProfileContent());
     
     // Note: 2FA is now managed through terminal commands
     
@@ -337,4 +329,24 @@ export class UserProfile {
     return item;
   }
 
+  /**
+   * 프로필 콘텐츠 생성 (render 메서드에서 분리)
+   */
+  private createProfileContent(): HTMLElement {
+    const contentWrapper = document.createElement('div');
+    contentWrapper.className = 'p-3 space-y-3';
+
+    contentWrapper.appendChild(this.renderUserInfo());
+    contentWrapper.appendChild(this.renderStatsSection());
+    contentWrapper.appendChild(this.renderMatchHistorySection());
+    
+    return contentWrapper;
+  }
+
+  /**
+   * 컴포넌트 정리 (메모리 누수 방지)
+   */
+  public destroy(): void {
+    // 현재는 정리할 리소스가 없지만 향후 확장을 위해 유지
+  }
 }

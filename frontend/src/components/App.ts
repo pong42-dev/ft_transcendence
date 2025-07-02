@@ -44,6 +44,9 @@ export class App {
   
   // 회원가입 시 선택한 아바타 파일 (로그인 후 업로드)
   private pendingAvatarFile: File | null = null;
+  
+  // UserProfile 재생성 여부 판단을 위한 마지막 사용자 상태 저장
+  private lastUserProfileData: { id: number; twoFactorEnabled: boolean; username: string } | null = null;
 
   // ===== INITIALIZATION METHODS =====
   
@@ -78,6 +81,9 @@ export class App {
     
     // Subscribe to store changes
     this.setupStoreSubscriptions();
+    
+    // Listen for custom user data update events
+    this.setupCustomEventListeners();
   }
 
   private setupStoreSubscriptions(): void {
@@ -89,6 +95,22 @@ export class App {
     // Subscribe to user profile store changes
     this.unsubscribeUserProfile = userProfileStore.subscribe(() => {
       this.render();
+    });
+  }
+
+  private setupCustomEventListeners(): void {
+    // Listen for custom user data update events (fallback for 2FA updates)
+    window.addEventListener('userDataUpdated', (event: any) => {
+      console.log('[App] Received userDataUpdated event');
+      // Force UserProfile recreation by clearing the cache
+      this.lastUserProfileData = null;
+      this.render();
+      
+      // 터미널 포커스 복원
+      setTimeout(() => {
+        this.mainTerminal.focus();
+        console.log('[App] Terminal focus restored after user data update');
+      }, 300);
     });
   }
 
@@ -679,13 +701,34 @@ export class App {
         // this.pongGame.setGameMode('regular');
         // mainContent.appendChild(this.pongGame.render());
         // this.pongGame.start();
-      } else if (this.userProfile) {
-        mainContent.appendChild(this.userProfile.render());
       } else {
-        this.userProfile = new UserProfile(currentUser, true);
+        // UserProfile이 없거나 사용자 데이터가 변경된 경우 새로 생성
+        const shouldRecreate = !this.userProfile || this.shouldRecreateUserProfile(currentUser);
+        console.log('[App] UserProfile recreation check:', {
+          hasUserProfile: !!this.userProfile,
+          shouldRecreate,
+          currentUser2FA: currentUser.twoFactorEnabled
+        });
+        
+        if (shouldRecreate) {
+          if (this.userProfile) {
+            console.log('[App] Destroying existing UserProfile');
+            this.userProfile.destroy();
+          }
+          console.log('[App] Creating new UserProfile with 2FA status:', currentUser.twoFactorEnabled);
+          this.userProfile = new UserProfile(currentUser, true);
+        }
         mainContent.appendChild(this.userProfile.render());
       }
     } else {
+      // 로그아웃 상태일 때 기존 UserProfile 정리
+      if (this.userProfile) {
+        this.userProfile.destroy();
+        this.userProfile = null;
+      }
+      // 사용자 프로필 데이터 초기화
+      this.lastUserProfileData = null;
+      
       // this.pongGame.setGameMode('demo');
       // mainContent.appendChild(this.pongGame.render());
       // this.pongGame.start();
@@ -729,6 +772,63 @@ export class App {
     if (isLoggedIn) return currentUser?.username || '';
     return 'Not logged in';
   }
+
+  /**
+   * UserProfile 재생성이 필요한지 확인
+   */
+  private shouldRecreateUserProfile(currentUser: User): boolean {
+    console.log('[App] Checking if UserProfile should be recreated:', {
+      hasLastData: !!this.lastUserProfileData,
+      currentUser2FA: currentUser.twoFactorEnabled,
+      lastData2FA: this.lastUserProfileData?.twoFactorEnabled
+    });
+
+    if (!this.lastUserProfileData) {
+      // 처음 생성하는 경우
+      console.log('[App] First time creating UserProfile');
+      this.lastUserProfileData = {
+        id: currentUser.id,
+        twoFactorEnabled: currentUser.twoFactorEnabled,
+        username: currentUser.username
+      };
+      return true;
+    }
+
+    // 중요한 사용자 데이터가 변경되었는지 확인
+    const hasChanged = 
+      this.lastUserProfileData.id !== currentUser.id ||
+      this.lastUserProfileData.twoFactorEnabled !== currentUser.twoFactorEnabled ||
+      this.lastUserProfileData.username !== currentUser.username;
+
+    console.log('[App] UserProfile data comparison:', {
+      hasChanged,
+      changes: {
+        id: this.lastUserProfileData.id !== currentUser.id,
+        twoFactorEnabled: this.lastUserProfileData.twoFactorEnabled !== currentUser.twoFactorEnabled,
+        username: this.lastUserProfileData.username !== currentUser.username
+      },
+      old: this.lastUserProfileData,
+      new: {
+        id: currentUser.id,
+        twoFactorEnabled: currentUser.twoFactorEnabled,
+        username: currentUser.username
+      }
+    });
+
+    if (hasChanged) {
+      console.log('[App] User data changed, recreating UserProfile');
+      
+      // 새로운 상태 저장
+      this.lastUserProfileData = {
+        id: currentUser.id,
+        twoFactorEnabled: currentUser.twoFactorEnabled,
+        username: currentUser.username
+      };
+    }
+
+    return hasChanged;
+  }
+
 
   // ===== GAME MANAGEMENT =====
 
@@ -946,15 +1046,23 @@ export class App {
             if (onComplete) {
               await onComplete(code);
             }
-            // 성공 시 모달 닫기
-            twoFAModal.hide();
+            // TwoFAModal에서 이미 hide()를 호출하므로 여기서는 중복 호출하지 않음
+            console.log('[App] 2FA modal completed successfully');
           } catch (error) {
-            // 에러는 CommandHandler에서 이미 처리했으므로 모달은 열린 채로 유지
-            // (사용자가 다시 시도할 수 있도록)
+            console.error('[App] Error in 2FA completion callback:', error);
+            // 에러 발생 시에도 터미널 포커스 복원
+            setTimeout(() => {
+              this.mainTerminal.focus();
+            }, 100);
           }
         },
         onCancel: () => {
+          console.log('[App] 2FA modal cancelled');
           if (onCancel) onCancel();
+          // 취소 시에도 터미널 포커스 복원
+          setTimeout(() => {
+            this.mainTerminal.focus();
+          }, 100);
         }
       }
     );
@@ -1192,6 +1300,11 @@ export class App {
     if (this.unsubscribeUserProfile) {
       this.unsubscribeUserProfile();
     }
-    // UserProfile cleanup is not needed as it doesn't have subscriptions
+    // UserProfile cleanup
+    if (this.userProfile) {
+      this.userProfile.destroy();
+      this.userProfile = null;
+    }
+    this.lastUserProfileData = null;
   }
 }

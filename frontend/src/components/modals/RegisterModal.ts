@@ -59,7 +59,7 @@ export class RegisterModal {
    */
   private createContent(): HTMLElement {
     const container = document.createElement('div');
-    container.className = 'overflow-y-auto max-h-[calc(90vh-8rem)] px-1';
+    container.className = 'overflow-y-auto scrollbar-hide max-h-[calc(90vh-8rem)] px-1';
     container.innerHTML = `
       <div class="flex items-center justify-between mb-8">
         <div class="text-center flex-1">

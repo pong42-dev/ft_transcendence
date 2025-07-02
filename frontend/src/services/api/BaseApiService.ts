@@ -233,19 +233,31 @@ export abstract class BaseApiService {
           const errorData = await response.json().catch(() => ({})) as ApiErrorResponse;
           const apiError = ApiError.fromResponse(response, errorData);
           
-          // 401 Unauthorized - 토큰 새로고침 시도
-          if (response.status === 401 && tokenRefreshAttempts < this.maxTokenRefreshRetries) {
-            const refreshed = await this.attemptTokenRefresh(endpoint);
-            if (refreshed) {
-              // 토큰 새로고침 성공 시 원래 요청 재시도
-              console.info('[BaseApiService] Token refreshed, retrying original request');
-              return this.request<T>(endpoint, options, cacheConfig, tokenRefreshAttempts + 1);
+          // 401 Unauthorized - 2FA 관련 엔드포인트는 토큰을 지우지 않음
+          if (response.status === 401) {
+            const is2FAEndpoint = endpoint.includes('/2fa/');
+            const is2FAError = errorData?.msg?.includes('2FA') || errorData?.msg?.includes('tmp token');
+            
+            if (is2FAEndpoint && is2FAError) {
+              console.log('[BaseApiService] 2FA validation error - keeping access token');
+              // 2FA 토큰 검증 실패는 사용자 입력 오류이므로 토큰을 지우지 않음
+              throw apiError;
+            }
+            
+            // 일반적인 401 처리 - 토큰 새로고침 시도
+            if (tokenRefreshAttempts < this.maxTokenRefreshRetries) {
+              const refreshed = await this.attemptTokenRefresh(endpoint);
+              if (refreshed) {
+                // 토큰 새로고침 성공 시 원래 요청 재시도
+                console.info('[BaseApiService] Token refreshed, retrying original request');
+                return this.request<T>(endpoint, options, cacheConfig, tokenRefreshAttempts + 1);
+              } else {
+                this.handleUnauthorized();
+              }
             } else {
+              // 토큰 새로고침 재시도 횟수 초과
               this.handleUnauthorized();
             }
-          } else if (response.status === 401) {
-            // 토큰 새로고침 재시도 횟수 초과
-            this.handleUnauthorized();
           }
           
           throw apiError;

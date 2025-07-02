@@ -181,6 +181,15 @@ export class ModalManager {
     }
     this.isVisible = false;
     this.currentContent = null;
+    
+    // 모달 제거 후 터미널 포커스 복원
+    setTimeout(() => {
+      const terminalInput = document.querySelector('input[type="text"]:not([id])') as HTMLInputElement;
+      if (terminalInput) {
+        terminalInput.focus();
+        console.log('[ModalManager] Terminal focus restored after modal removal');
+      }
+    }, 50);
   }
 
   /**

@@ -400,7 +400,17 @@ export class CommandHandler {
     this.deps.terminal.appendOutput('Starting 2FA disable process...');
     
     try {
-      await this.deps.onShowModal('2fa', { mode: 'disable' });
+      await this.deps.onShowModal('2fa', { 
+        mode: 'disable',
+        onComplete: async (_code: string) => {
+          this.deps.terminal.appendOutput('✅ 2FA has been successfully disabled!');
+          this.deps.terminal.appendOutput('Your account security has been updated.');
+          return true;
+        },
+        onCancel: () => {
+          this.deps.terminal.appendOutput('2FA disable cancelled.');
+        }
+      });
     } catch (error) {
       this.deps.terminal.appendOutput('❌ Failed to start 2FA disable process. Please try again.');
       console.error('2FA disable error:', error);
