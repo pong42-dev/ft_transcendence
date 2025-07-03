@@ -82,8 +82,8 @@ export type PlayerResponseDto = Static<typeof PlayerResponseDtoSchema>;
 
 // --- Game DTOs ---
 export const CreateGameRequestDtoSchema = Type.Object({
-  type: GameModeSchema,
-  players: Type.Array(CreatePlayerRequestDtoSchema), // 플레이어 정보 배열
+  type: GameModeSchema, // 'ai_1v1', 'local_1v1', 'tournament'
+  opponents: Type.Optional(Type.Array(Type.String())), // 게스트들의 닉네임만 담는 배열
 });
 export type CreateGameRequestDto = Static<typeof CreateGameRequestDtoSchema>;
 
