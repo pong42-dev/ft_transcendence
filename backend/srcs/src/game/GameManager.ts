@@ -3,7 +3,13 @@ import {
   GameMode,
   PlayerResponseDto,
   PlayerInputDto,
+  GameStateDto,
+  GameEventDto,
 } from '../schemas/games.js';
+
+// GameSession에서 사용할 콜백 타입을 명확히 정의합니다.
+type GameStateUpdateCallback = (gameState: GameStateDto) => void;
+type GameEventCallback = (gameEvent: GameEventDto) => void;
 // import { randomUUID } from 'crypto'; // 더 이상 사용하지 않음
 
 /**
@@ -40,7 +46,11 @@ export class GameManager {
   // Public API - Called by API Routes & WebSocket Handlers
   // =================================================================
 
-  public async createGame(mode: GameMode, players: PlayerResponseDto[]): Promise<string> {
+  public async createGame(
+    mode: GameMode, 
+    players: PlayerResponseDto[],
+    customCallbacks?: {onStateUpdate: GameStateUpdateCallback; onEvent: GameEventCallback}
+  ): Promise<string> {
     try {
       console.log(`[GameManager] Creating game - Mode: ${mode}, Players: ${players.length}`);
       
@@ -52,23 +62,27 @@ export class GameManager {
 
       // 2. 게임 세션 생성 (DB ID를 문자열로 변환해서 gameId로 사용)
       const gameId = dbGameId.toString();
+
+      // 3. customCallbacks가 있으면 그것을 사용하고, 없으면 기존의 webSocketHandler를 사용합니다.
+      const onStateUpdate = customCallbacks ? customCallbacks.onStateUpdate : (gameState) => {
+        this.webSocketHandler?.broadcastGameState(gameId, gameState);
+      };
       
+      const onEvent = customCallbacks ? customCallbacks.onEvent : (gameEvent) => {
+        this.webSocketHandler?.broadcastGameEvent(gameId, gameEvent);
+        if (gameEvent.event === 'game_end') {
+          this._handleGameEnd(gameId, gameEvent.data?.winnerId);
+        }
+      };
+      
+      // 4. GameSession 인스턴스 생성
       const session = new GameSession(
         gameId,
         dbGameId,
         mode,
         this.gameRepository,
-        // GameStateDto 콜백
-        (gameState) => {
-          this.webSocketHandler?.broadcastGameState(gameId, gameState);
-        },
-        // GameEventDto 콜백
-        (gameEvent) => {
-          this.webSocketHandler?.broadcastGameEvent(gameId, gameEvent);
-          if (gameEvent.event === 'game_end') {
-            this._handleGameEnd(gameId, gameEvent.data?.winnerId);
-          }
-        },
+        onStateUpdate,
+        onEvent
       );
 
       players.forEach((p) => {
