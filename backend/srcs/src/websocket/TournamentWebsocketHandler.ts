@@ -9,15 +9,14 @@ export class TournamentWebSocketHandler {
 
   constructor(private fastify: FastifyInstance) {}
 
-  public handleConnection(socket: WebSocket, request: FastifyRequest) {
-    // URL에서 tournamentId와 playerId 가져옴 (playerId는 쿼리 파라미터로 받는다고 가정)
-    // ex ) 클라이언트가 ws://.../ws/tournament/123?playerId=456처럼 쿼리 스트링으로 자신의 ID를 보내준다고 가정
+  public async handleConnection(socket: WebSocket, request: FastifyRequest) {
+    // URL에서 tournamentId와 userId 가져옴 (userId는 쿼리 파라미터로 받음)
     const { tournamentId } = request.params as { tournamentId: string };
-    const { playerId } = request.query as { playerId?: string };
+    const { userId } = request.query as { userId?: string };
 
-    if (!playerId) {
-      this.fastify.log.error('Player ID is missing.');
-      socket.close(1008, 'Player ID is required');
+    if (!userId) {
+      this.fastify.log.error('User ID is missing.');
+      socket.close(1008, 'User ID is required');
       return;
     }
 
@@ -29,8 +28,18 @@ export class TournamentWebSocketHandler {
       this.fastify.log.info(`[Handler] New session created for tournament: ${tournamentId}`);
     }
 
-    // 2. 플레이어를 세션에 추가하는 것은 세션 객체의 책임입니다.
-    session.addPlayer(parseInt(playerId, 10), socket);
+    // 2. userId로 playerId를 찾는다 (DB 조회)
+    const participants = await (this.fastify as any).tournamentsRepository.getTournamentParticipants(Number(tournamentId));
+    const participant = participants.find((p: any) => p.user_id === Number(userId));
+    if (!participant) {
+      this.fastify.log.error(`User ${userId} is not a participant of tournament ${tournamentId}`);
+      socket.close(1008, 'User is not a participant of this tournament');
+      return;
+    }
+    const playerId = participant.id;
+
+    // 3. 플레이어를 세션에 추가
+    session.addPlayer(playerId, socket);
 
     // 연결이 끊어졌을 때 세션이 비면 맵에서 제거
     socket.on('close', () => {

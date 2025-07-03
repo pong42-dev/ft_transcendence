@@ -71,3 +71,47 @@ export default fp(
 		dependencies: ['@fastify/multipart'],
 	}
 );
+
+/**
+ * 토너먼트 매치 배열을 프론트엔드에서 요구하는 rounds 구조로 변환
+ */
+export function makeBracketFromMatches(matches: any[]): { rounds: any[][] } {
+	const roundsMap = new Map<number, any[]>();
+	for (const match of matches) {
+		if (
+			!match.participants ||
+			match.participants.length < 2 ||
+			!match.participants[0] ||
+			!match.participants[1]
+		) continue;
+		if (!roundsMap.has(match.round_number)) {
+			roundsMap.set(match.round_number, []);
+		}
+		const getNickname = (p: any) => {
+			if (p.type === 'user') {
+				return p.name || `User${p.user_id}`;
+			} else {
+				return p.display_name || `Player${p.id}`;
+			}
+		};
+		roundsMap.get(match.round_number)!.push({
+			matchId: String(match.id),
+			player1: {
+				id: match.participants[0].id,
+				nickname: getNickname(match.participants[0]),
+			},
+			player2: {
+				id: match.participants[1].id,
+				nickname: getNickname(match.participants[1]),
+			},
+			winnerId: match.winner_id ?? undefined,
+		});
+	}
+	const sortedKeys = Array.from(roundsMap.keys()).sort((a, b) => a - b);
+	const rounds = sortedKeys.reduce<any[][]>((acc, rn) => {
+		const arr = roundsMap.get(rn);
+		if (arr && Array.isArray(arr)) acc.push(arr);
+		return acc;
+	}, []);
+	return { rounds };
+}
