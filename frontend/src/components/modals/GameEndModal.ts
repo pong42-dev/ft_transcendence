@@ -71,10 +71,12 @@ export class GameEndModal extends BaseModal {
           <div class="text-sm opacity-50">${i18n.t('gameEndModal.final_score')}</div>
         </div>
         
-        <div class="grid grid-cols-3 gap-4 text-center">
-          <div>
-            <div class="text-2xl font-bold text-terminal-green">${this.gameResult.leftPlayer.score}</div>
-            <div class="text-sm opacity-70">${this.gameResult.leftPlayer.nickname}</div>
+        <div class="flex justify-between items-center mb-4">
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-lg ${this.gameResult.winner === 'left' ? 'bg-terminal-green bg-opacity-20' : 'bg-terminal-gray bg-opacity-20'} flex items-center justify-center font-bold text-sm">
+              ${this.gameResult.leftPlayer.nickname ? this.gameResult.leftPlayer.nickname.substring(0, 2) : 'L'}
+            </div>
+            <div class="text-xl font-bold">${this.gameResult.leftPlayer.score}</div>
           </div>
           <div class="flex items-center justify-center">
             <div class="text-terminal-gray">${i18n.t('common.vs')}</div>
@@ -133,11 +135,11 @@ export class GameEndModal extends BaseModal {
       }
     }
 
-    // Common buttons
+    // Common buttons - Back to Profile을 메인 버튼으로
     buttons += `
       <button 
         id="profile-btn"
-        class="w-full border border-terminal-gray text-terminal-green py-3 rounded-lg font-medium hover:bg-terminal-gray hover:bg-opacity-10 transition-all"
+        class="w-full bg-terminal-green text-terminal-black py-3 rounded-lg font-medium hover:bg-opacity-80 transition-all"
       >
         ${i18n.t('gameEndModal.view_profile')}
       </button>

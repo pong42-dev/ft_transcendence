@@ -3,7 +3,8 @@
 import { WebSocketService } from '../services/websocket/WebSocketService';
 import { GameRenderer } from './GameRenderer';
 import { InputHandler } from './InputHandler';
-import { GameResponseDto, GameStateDto, GameEventDto, PlayerInputDto, WSPlayerInputMessage, GameResult } from '../types/types'; // 필요한 타입 import
+import { GameResponseDto, GameResult } from '../types/types';
+import { GameStateDto, GameEventDto, WSPlayerInputMessage } from '../types/game-websocket';
 import { GameEndModal } from '../components/modals/GameEndModal';
 
 export class GameClient {
@@ -16,6 +17,7 @@ export class GameClient {
   private player2Id: number | null = null;  // 로컬 2P의 ID
   
   private isLocalMultiplayer: boolean = false;
+  private playerInfoUpdated: boolean = false; // 플레이어 정보 업데이트 여부
   private onFinishCallback: () => void;
   
   // 게임 상태 추적
@@ -113,8 +115,67 @@ export class GameClient {
     this.inputHandler.activate(this.isLocalMultiplayer);
   }
 
+  /**
+   * GameInfo에서 플레이어 정보를 추출하여 렌더러에 업데이트
+   */
+  private updatePlayerInfoFromGameInfo(): void {
+    console.log('updatePlayerInfoFromGameInfo called');
+    console.log('Game info:', this.gameInfo);
+    
+    const players = this.gameInfo.players;
+    const userPlayer = players.find(p => p.type === 'user');
+    const guestPlayer = players.find(p => p.type === 'guest');
+
+    let leftPlayerName: string;
+    let rightPlayerName: string;
+    let leftPlayerAvatar: string | undefined;
+    let rightPlayerAvatar: string | undefined;
+
+    if (this.gameMode === 'ai_1v1') {
+      // AI 모드: AI가 왼쪽, 유저가 오른쪽
+      leftPlayerName = 'AI';
+      rightPlayerName = userPlayer?.name || 'Player';
+      leftPlayerAvatar = undefined; // AI는 아바타 없음
+      rightPlayerAvatar = undefined; // 현재 PlayerResponseDto에 avatarUrl 없음
+      
+    } else if (this.gameMode === 'local_1v1') {
+      // 로컬 모드: 유저가 왼쪽, 게스트가 오른쪽
+      leftPlayerName = userPlayer?.name || 'Player 1';
+      rightPlayerName = guestPlayer?.name || 'Player 2';
+      leftPlayerAvatar = undefined;
+      rightPlayerAvatar = undefined;
+      
+    } else {
+      // 기본값 (다른 모드들)
+      leftPlayerName = players[0]?.name || 'Player 1';
+      rightPlayerName = players[1]?.name || 'Player 2';
+      leftPlayerAvatar = undefined;
+      rightPlayerAvatar = undefined;
+    }
+
+    console.log('Player info:', {
+      leftPlayerName,
+      rightPlayerName,
+      leftPlayerAvatar,
+      rightPlayerAvatar
+    });
+
+    // 렌더러에 플레이어 정보 업데이트 (아바타 포함)
+    this.renderer.updatePlayerInfoWithAvatar(
+      { name: leftPlayerName, avatarUrl: leftPlayerAvatar },
+      { name: rightPlayerName, avatarUrl: rightPlayerAvatar }
+    );
+  }
+
   private handleGameState = (gameState: GameStateDto) => {
     this.renderer.update(gameState);
+    
+    // 첫 번째 게임 상태에서 플레이어 정보 업데이트
+    if (!this.playerInfoUpdated) {
+      console.log('Updating player info from game info...');
+      this.updatePlayerInfoFromGameInfo();
+      this.playerInfoUpdated = true;
+    }
     
     // 점수 업데이트
     this.currentScores.left = gameState.scores.player1;
