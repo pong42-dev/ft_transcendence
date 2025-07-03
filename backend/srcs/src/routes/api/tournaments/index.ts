@@ -17,7 +17,6 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 	await fastify.register(historyPlugin, { prefix: '/' })
 
 	const { authenticate } = fastify
-	const { authenticate } = fastify
 
 	// POST /api/tournaments - 토너먼트 생성
 	fastify.post(

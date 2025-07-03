@@ -457,6 +457,26 @@ export function createMatchesRepository(fastify: FastifyInstance) {
 				console.error('Error starting match:', err.message);
 				throw err;
 			}
+		},
+
+		/**
+		 * 다음 경기의 참가자(플레이어) 정보를 업데이트 (player1, player2)
+		 */
+		async updateNextMatchPlayers(matchId: number, player1Id?: number, player2Id?: number): Promise<void> {
+			try {
+				// 기존 참가자 삭제
+				await knex('game_participants').where('game_id', matchId).del();
+				const inserts = [];
+				if (player1Id) inserts.push({ game_id: matchId, player_id: player1Id, score: 0 });
+				if (player2Id) inserts.push({ game_id: matchId, player_id: player2Id, score: 0 });
+				if (inserts.length > 0) {
+					await knex('game_participants').insert(inserts);
+				}
+				console.log(`Next match ${matchId} players updated:`, inserts);
+			} catch (err: any) {
+				console.error('Error updating next match players:', err.message);
+				throw err;
+			}
 		}
 	};
 }

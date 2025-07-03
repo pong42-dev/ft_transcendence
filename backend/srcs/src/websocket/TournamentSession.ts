@@ -2,12 +2,20 @@
 import { WebSocket } from 'ws';
 import { FastifyInstance } from 'fastify';
 import { WSTournamentStartMessage, WSTournamentBracketMessage, TournamentBracket } from '../schemas/tournament-websocket';
+// 추가: 게임 관련 타입 import
+import { Match } from '../schemas/games';
+import { BracketUpdateDto, MatchStartingDto } from '../schemas/game-websocket';
+// 수정: TournamentMatchInfo import
+import { TournamentMatchInfo } from '../plugins/app/tournament/tournaments-repository';
+import { WSMatchStartingMessage } from '../schemas/game-websocket';
 
 type PlayerId = number; // 실제 프로젝트에 맞는 타입으로 변경 가능
 
 export class TournamentSession {
   private players = new Map<PlayerId, WebSocket>();
   public status: 'waiting' | 'in_progress' | 'finished' = 'waiting';
+  // 수정: 대진표를 세션 상태로 저장
+  private matches: TournamentMatchInfo[] = [];
 
   constructor(
     public readonly tournamentId: string,
@@ -122,6 +130,173 @@ export class TournamentSession {
     this.broadcast(bracketMessage);
     this.status = 'in_progress';
     this.fastify.log.info(`[Session ${this.tournamentId}] Tournament started and bracket sent (from DB).`);
+
+    // 추가: matches 배열을 세션에 저장
+    this.matches = tournamentDetails.matches;
+    // 추가: 첫 경기 시작
+    this.startNextMatch();
+  }
+
+  /**
+   * 특정 매치를 시작하는 메소드 (TestModal에서 호출)
+   */
+  private async startMatch(matchId: number) {
+    const match = this.matches.find(m => m.id === matchId);
+    if (!match) {
+      this.fastify.log.error(`[Session ${this.tournamentId}] Match ${matchId} not found.`);
+      return;
+    }
+
+    if (match.status !== 'pending') {
+      this.fastify.log.warn(`[Session ${this.tournamentId}] Match ${matchId} is not in pending status.`);
+      return;
+    }
+
+    // 매치 상태를 'in_progress'로 변경
+    match.status = 'in_progress';
+    const bracketUpdateMessage: BracketUpdateDto = { type: 'bracket_update', data: { matches: this.matches } };
+    this.broadcast(bracketUpdateMessage);
+    this.fastify.log.info(`[Session ${this.tournamentId}] Match ${matchId} started manually.`);
+  }
+
+  /**
+   * 다음 경기를 찾아 시작시키는 메소드
+   */
+  private async startNextMatch() {
+    // 1. 'pending' 상태이면서 두 플레이어가 모두 배정된 다음 경기를 찾습니다.
+    const nextMatch = this.matches.find(match => match.status === 'pending' && match.participants[0] && match.participants[1]);
+
+    if (!nextMatch) {
+      // 진행할 경기가 없으면 토너먼트 종료 여부 확인
+      const isTournamentFinished = !this.matches.some(m => m.status !== 'finished');
+      if (isTournamentFinished) {
+        // 모든 경기가 끝났으므로 토너먼트 종료 로직 호출
+        await this.endTournament();
+      } else {
+        this.fastify.log?.info?.(`[Session ${this.tournamentId}] Waiting for other matches to finish...`);
+      }
+      return;
+    }
+
+    // 2. 해당 경기의 상태를 'in_progress'로 변경하고 모두에게 브로드캐스트합니다.
+    nextMatch.status = 'in_progress';
+    const bracketUpdateMessage: BracketUpdateDto = { type: 'bracket_update', data: { matches: this.matches } };
+    this.broadcast(bracketUpdateMessage);
+    this.fastify.log?.info?.(`[Session ${this.tournamentId}] Starting match ${nextMatch.id}`);
+
+    try {
+      // GameManager가 두 플레이어 ID를 받아 게임을 생성하고, 생성된 '게임 ID'를 반환하는 함수 호출 필요
+      // const gameId = await this.fastify.gameManager.createGame(
+      //   nextMatch.participants[0].id,
+      //   nextMatch.participants[1].id
+      // );
+      const mockGameId = `game_session_${nextMatch.id}`; // 실제 gameId로 대체될 임시 ID
+      this.fastify.log.info(`[Session ${this.tournamentId}] Game session created by GameManager: ${mockGameId}`);
+
+      // 3. 해당 경기의 두 플레이어에게만 경기 시작 메시지를 전송합니다.
+      const player1Socket = this.players.get(nextMatch.participants[0].id);
+      const player2Socket = this.players.get(nextMatch.participants[1].id);
+
+      if (player1Socket && player2Socket) {
+        const message: MatchStartingDto = {
+          type: 'match_starting',
+          data: {
+            matchId: nextMatch.id,
+            gameId: mockGameId, // GameManager가 반환한 실제 gameId
+          },
+        };
+        const messageString = JSON.stringify(message);
+        player1Socket.send(messageString);
+        player2Socket.send(messageString);
+      } else {
+        // TODO: 플레이어 중 한 명이라도 없는 경우의 처리 (부전승 등)
+        this.fastify.log.error(`[Session ${this.tournamentId}] Player not found for match ${nextMatch.id}.`);
+      }
+    } catch (error) {
+      this.fastify.log?.error?.(`[Session ${this.tournamentId}] Failed to create game session for match ${nextMatch.id}`, error);
+      // TODO: 게임 생성 실패 시 에러 처리
+    }
+  }
+
+  /**
+   * 특정 경기 종료를 처리하고 승자를 다음 경기에 진출시키는 메서드
+   */
+  private async handleMatchEnd(matchId: number, winnerId: PlayerId) {
+    this.fastify.log?.info?.(`[Session ${this.tournamentId}] Match ${matchId} ended. Winner: ${winnerId}`);
+
+    // 1. 해당 매치 찾기
+    const finishedMatch = this.matches.find(m => m.id === matchId);
+    if (!finishedMatch) return;
+
+    // 2. DB에 경기 결과 기록 (winner_id, status 등)
+    const tournamentsRepository = (this.fastify as any).tournamentsRepository;
+    const matchesRepository = (this.fastify as any).matchesRepository;
+    await matchesRepository.updateMatchStatus(matchId, 'finished', winnerId);
+
+    finishedMatch.status = 'finished';
+    finishedMatch.winner_id = winnerId;
+
+    // 3. 승자를 다음 경기(nextMatchId)에 배정 (nextMatchId가 있다고 가정)
+    const nextMatchId = (finishedMatch as any).nextMatchId;
+    if (nextMatchId) {
+      const nextMatch = this.matches.find(m => m.id === nextMatchId);
+      if (nextMatch) {
+        // player1, player2 중 빈 자리에 승자 배정 (구조에 따라 수정)
+        let updatedPlayer1 = nextMatch.participants[0]?.id;
+        let updatedPlayer2 = nextMatch.participants[1]?.id;
+        if (!updatedPlayer1) {
+          nextMatch.participants[0] = { id: winnerId, display_name: `User${winnerId}` };
+          updatedPlayer1 = winnerId;
+        } else if (!updatedPlayer2) {
+          nextMatch.participants[1] = { id: winnerId, display_name: `User${winnerId}` };
+          updatedPlayer2 = winnerId;
+        }
+        // DB에도 반영
+        await matchesRepository.updateNextMatchPlayers(nextMatchId, updatedPlayer1, updatedPlayer2);
+      }
+    }
+
+    // 4. 브래킷 업데이트 브로드캐스트
+    const bracketUpdateMessage = {
+      type: 'bracket_update',
+      data: { matches: this.matches },
+    };
+    this.broadcast(bracketUpdateMessage);
+
+    // 5. 다음 경기 시작
+    this.startNextMatch();
+  }
+
+  /**
+   * 토너먼트를 종료하고 최종 결과를 모든 참가자에게 알립니다.
+   */
+  private async endTournament() {
+    if (this.status === 'finished') return; // 중복 실행 방지
+    this.status = 'finished';
+
+    // 결승전(nextMatchId가 null 또는 undefined인 경기)을 찾아 최종 우승자를 확인
+    const finalMatch = this.matches.find(m => !('nextMatchId' in m) || m.nextMatchId == null);
+    const finalWinner = (finalMatch as any)?.winner_id;
+
+    this.fastify.log?.info?.(`[Session ${this.tournamentId}] Tournament has officially ended. Winner: Player ${finalWinner}`);
+
+    // 모든 참가자에게 토너먼트 종료와 최종 우승자 정보를 브로드캐스트
+    this.broadcast({
+      type: 'tournament_end',
+      data: {
+        winner: finalWinner,
+        finalMatches: this.matches
+      }
+    });
+
+    // DB에 토너먼트의 최종 상태를 'finished'로 업데이트
+    const tournamentsRepository = (this.fastify as any).tournamentsRepository;
+    await tournamentsRepository.updateTournamentStatus(Number(this.tournamentId), 'ended', finalWinner);
+
+    // (선택) 모든 웹소켓 연결을 닫거나, 결과 화면을 보여준 뒤 닫도록 처리할 수 있음
+    // for (const socket of this.players.values()) {
+    //   socket.close();
+    // }
   }
 
   /**
