@@ -80,7 +80,6 @@ export abstract class BaseModal {
    */
   protected getModalConfig(): ModalConfig {
     return {
-      closable: this.canCloseOnOutsideClick(),
       closeOnOutsideClick: this.canCloseOnOutsideClick(),
       sizeClass: this.getSizeClass(),
       animated: true,

@@ -14,13 +14,15 @@ export class GameEndModal extends BaseModal {
   private isTournament: boolean;
   private isFinal: boolean;
   private gameResult: GameResult;
+  private onGameFinish?: () => void;
 
   constructor(
     gameResult: GameResult, 
     isTournament: boolean, 
     isFinal: boolean, 
     onProfileClick: () => void, 
-    onNextMatch?: () => void
+    onNextMatch?: () => void,
+    onGameFinish?: () => void
   ) {
     super();
     this.gameResult = gameResult;
@@ -28,6 +30,7 @@ export class GameEndModal extends BaseModal {
     this.onNextMatch = onNextMatch;
     this.isTournament = isTournament;
     this.isFinal = isFinal;
+    this.onGameFinish = onGameFinish;
   }
 
   protected onShow(): void {
@@ -35,11 +38,15 @@ export class GameEndModal extends BaseModal {
   }
 
   protected onClose(): void {
-    // 정리 작업
+    // 정리 작업만 수행, 자동 콜백 호출하지 않음
   }
 
   protected canCloseOnOutsideClick(): boolean {
     return false; // 중요한 결과이므로 외부 클릭으로 닫지 않음
+  }
+
+  protected canClose(): boolean {
+    return false; // ESC 키로도 닫지 않음
   }
 
   protected render(): void {
@@ -176,6 +183,9 @@ export class GameEndModal extends BaseModal {
     // Close button
     closeBtn?.addEventListener('click', () => {
       this.close();
+      if (this.onGameFinish) {
+        this.onGameFinish();
+      }
     });
   }
 }
