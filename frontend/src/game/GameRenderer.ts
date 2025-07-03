@@ -36,73 +36,25 @@ export class GameRenderer {
 
   private setupGameArea(): void {
   
-    // Set up the main game element with proper styles
-    this.gameElement.style.position = 'relative';
-    this.gameElement.style.width = '800px';
-    this.gameElement.style.height = '500px';
-    this.gameElement.style.backgroundColor = '#0a0a0a';
-    this.gameElement.style.border = '2px solid #00ff00';
-    this.gameElement.style.overflow = 'hidden';
-    this.gameElement.style.margin = '0 auto';
+    // Set up the main game element with proper styles - 동적 사이징
+    this.gameElement.className = 'relative w-full h-full bg-terminal-black overflow-hidden';
     
     // Set up UI elements with proper absolute positioning
-    this.leftPlayerInfo.style.position = 'absolute';
-    this.leftPlayerInfo.style.top = '16px';
-    this.leftPlayerInfo.style.left = '16px';
-    this.leftPlayerInfo.style.display = 'flex';
-    this.leftPlayerInfo.style.alignItems = 'center';
-    this.leftPlayerInfo.style.gap = '12px';
-    this.leftPlayerInfo.style.color = '#00ff00';
+    this.leftPlayerInfo.className = 'absolute top-4 left-4 flex items-center gap-3 text-terminal-green z-10';
     
-    this.rightPlayerInfo.style.position = 'absolute';
-    this.rightPlayerInfo.style.top = '16px';
-    this.rightPlayerInfo.style.right = '16px';
-    this.rightPlayerInfo.style.display = 'flex';
-    this.rightPlayerInfo.style.alignItems = 'center';
-    this.rightPlayerInfo.style.gap = '12px';
-    this.rightPlayerInfo.style.color = '#00ff00';
+    this.rightPlayerInfo.className = 'absolute top-4 right-4 flex items-center gap-3 text-terminal-green z-10';
     
-    this.countdownElement.style.position = 'absolute';
-    this.countdownElement.style.top = '50%';
-    this.countdownElement.style.left = '50%';
-    this.countdownElement.style.transform = 'translate(-50%, -50%)';
-    this.countdownElement.style.color = '#00ff00';
-    this.countdownElement.style.fontSize = '48px';
-    this.countdownElement.style.fontWeight = 'bold';
-    this.countdownElement.style.textAlign = 'center';
-    this.countdownElement.style.opacity = '0';
-    this.countdownElement.style.transition = 'opacity 0.3s ease';
+    this.countdownElement.className = 'absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-6xl font-bold opacity-0 transition-opacity duration-300';
     
     // Set up score element
-    this.scoreElement.style.position = 'absolute';
-    this.scoreElement.style.top = '16px';
-    this.scoreElement.style.left = '50%';
-    this.scoreElement.style.transform = 'translateX(-50%)';
-    this.scoreElement.style.color = '#00ff00';
-    this.scoreElement.style.fontSize = '24px';
-    this.scoreElement.style.fontWeight = 'bold';
-    this.scoreElement.style.textAlign = 'center';
+    this.scoreElement.className = 'absolute top-4 left-1/2 transform -translate-x-1/2 flex items-center gap-4 text-2xl font-bold';
     
     // Set up round element
-    this.roundElement.style.position = 'absolute';
-    this.roundElement.style.top = '64px';
-    this.roundElement.style.left = '50%';
-    this.roundElement.style.transform = 'translateX(-50%)';
-    this.roundElement.style.color = '#00ff00';
-    this.roundElement.style.fontSize = '14px';
-    this.roundElement.style.opacity = '0.7';
-    this.roundElement.style.textAlign = 'center';
+    this.roundElement.className = 'absolute top-16 left-1/2 transform -translate-x-1/2 text-sm opacity-70';
     
     // Create the net
     const net = document.createElement('div');
-    net.style.position = 'absolute';
-    net.style.top = '0';
-    net.style.left = '50%';
-    net.style.width = '2px';
-    net.style.height = '100%';
-    net.style.backgroundColor = '#00ff00';
-    net.style.opacity = '0.3';
-    net.style.transform = 'translateX(-50%)';
+    net.className = 'absolute top-0 left-1/2 transform -translate-x-1/2 h-full border-l border-dashed border-terminal-green opacity-50';
     
     // Add all elements to the game area
     this.gameElement.appendChild(net);
@@ -172,19 +124,23 @@ export class GameRenderer {
 
   public updatePlayerInfo(leftPlayer: PlayerResponseDto, rightPlayer: PlayerResponseDto): void {
     if (!leftPlayer || !rightPlayer) return;
+    
+    // 왼쪽 플레이어: 아바타 → 이름 순서
     this.leftPlayerInfo.innerHTML = `
       <div class="flex items-center gap-3">
         <div class="w-10 h-10 rounded-full bg-terminal-gray bg-opacity-20 flex items-center justify-center overflow-hidden">
-          <span class="text-sm font-bold">${leftPlayer.name.charAt(0).toUpperCase()}</span>
+          <span class="text-sm">${leftPlayer.name?.charAt(0).toUpperCase() || 'P'}</span>
         </div>
-        <div class="text-sm font-bold">${leftPlayer.name}</div>
+        <div class="text-sm font-bold">${leftPlayer.name || 'Player 1'}</div>
       </div>
     `;
+    
+    // 오른쪽 플레이어: 이름 → 아바타 순서  
     this.rightPlayerInfo.innerHTML = `
       <div class="flex items-center gap-3">
-        <div class="text-sm font-bold">${rightPlayer.name}</div>
+        <div class="text-sm font-bold">${rightPlayer.name || 'Player 2'}</div>
         <div class="w-10 h-10 rounded-full bg-terminal-gray bg-opacity-20 flex items-center justify-center overflow-hidden">
-          <span class="text-sm font-bold">${rightPlayer.name.charAt(0).toUpperCase()}</span>
+          <span class="text-sm">${rightPlayer.name?.charAt(0).toUpperCase() || 'P'}</span>
         </div>
       </div>
     `;
@@ -197,7 +153,12 @@ export class GameRenderer {
 
   // 기존 updatePlayerInfo에 아바타 지원 추가
   public updatePlayerInfoWithAvatar(leftPlayer: { name: string; avatarUrl?: string }, rightPlayer: { name: string; avatarUrl?: string }): void {
-    if (!leftPlayer || !rightPlayer) return;
+    console.log('updatePlayerInfoWithAvatar called with:', leftPlayer, rightPlayer);
+    
+    if (!leftPlayer || !rightPlayer) {
+      console.log('Missing player data, returning');
+      return;
+    }
     
     this.leftPlayerInfo.innerHTML = `
       <div class="flex items-center gap-3">
@@ -222,6 +183,10 @@ export class GameRenderer {
         </div>
       </div>
     `;
+    
+    console.log('Player info HTML updated');
+    console.log('Left player info element:', this.leftPlayerInfo);
+    console.log('Right player info element:', this.rightPlayerInfo);
   }
 
   // 라운드 정보와 함께 카운트다운 표시

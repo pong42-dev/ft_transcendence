@@ -13,6 +13,9 @@ export class GameSetupModal extends BaseModal {
   private resolvePromise: ((value: GameSetupResult | null) => void) | null = null;
   private selectedOpponent: Friend | null = null;
   private isCancelled: boolean = false;
+  private selectedMode: string = '';
+  private invitedFriends: Friend[] = [];
+  private countdownInterval: number | null = null;
 
   constructor() {
     super();
@@ -31,6 +34,12 @@ export class GameSetupModal extends BaseModal {
   }
 
   protected onClose(): void {
+    // 카운트다운 타이머 정리
+    if (this.countdownInterval) {
+      clearInterval(this.countdownInterval);
+      this.countdownInterval = null;
+    }
+    
     // Promise 해결
     if (this.resolvePromise && !this.isCancelled) {
       this.resolvePromise(null);
@@ -127,16 +136,9 @@ export class GameSetupModal extends BaseModal {
   }
 
   private handleAIMode(): void {
-    const result: GameSetupResult = {
-      mode: 'vs ai',
-      opponents: [] // AI 모드에서는 상대방이 없음
-    };
-    
-    if (this.resolvePromise) {
-      this.resolvePromise(result);
-      this.resolvePromise = null;
-      this.close();
-    }
+    this.selectedMode = 'vs ai';
+    this.invitedFriends = [];
+    this.renderMatchupCountdownView();
   }
 
   private handleLocalMode(): void {
@@ -227,16 +229,10 @@ export class GameSetupModal extends BaseModal {
     startGameBtn?.addEventListener('click', () => {
       const guestName = guestNameInput.value.trim();
       if (guestName) {
-        const result: GameSetupResult = {
-          mode: 'local',
-          opponents: [guestName]
-        };
-        
-        if (this.resolvePromise) {
-          this.resolvePromise(result);
-          this.resolvePromise = null;
-          this.close();
-        }
+        this.selectedMode = 'local';
+        this.selectedOpponent = { nickname: guestName } as Friend;
+        this.invitedFriends = [this.selectedOpponent];
+        this.renderMatchupCountdownView();
       }
     });
 
