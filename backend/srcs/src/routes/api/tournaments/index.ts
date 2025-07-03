@@ -44,29 +44,30 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 		},
 		async (request, reply) => {
 			const trx = await fastify.knex.transaction();
+			let response, statusCode;
+			let shouldCommit = false;
 			try {
 				// 1. 요청 본문에서 3명의 게스트 참가자 정보를 가져옵니다.
 				const { participants: guestParticipants } = request.body as { participants: Array<{ type: 'guest'; displayName: string; }> };
 				if (guestParticipants.length !== 3) {
-					await trx.rollback();
-					return reply.status(400).send({ 
-						message: 'Tournament must have exactly 3 guest participants' 
-					});
+					response = { message: 'Tournament must have exactly 3 guest participants' };
+					statusCode = 400;
+					return;
 				}
 				// 게스트 닉네임 유효성 검증
 				for (const guest of guestParticipants) {
 					if (!guest.displayName || guest.displayName.trim().length === 0) {
-						await trx.rollback();
-						return reply.status(400).send({ 
-							message: 'displayName is required for guest type participants' 
-						});
+						response = { message: 'displayName is required for guest type participants' };
+						statusCode = 400;
+						return;
 					}
 				}
 				// 2. 인증된 사용자 정보를 request.user에서 가져옵니다.
 				const loggedInUser = request.user;
 				if (!loggedInUser || !loggedInUser.user_id) {
-					await trx.rollback();
-					return reply.status(400).send({ message: '로그인된 사용자 정보가 필요합니다.' });
+					response = { message: '로그인된 사용자 정보가 필요합니다.' };
+					statusCode = 400;
+					return;
 				}
 				// 3. 전체 참가자 목록 (인증된 사용자 1명 + 게스트 3명)을 구성합니다.
 				const allParticipants = [
@@ -107,28 +108,33 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 					.where('id', tournamentId)
 					.first();
 				if (!tournament) {
-					await trx.rollback();
-					return reply.status(500).send({ 
-						message: 'Failed to retrieve created tournament' 
-					});
+					response = { message: 'Failed to retrieve created tournament' };
+					statusCode = 500;
+					return;
 				}
-				await trx.commit();
-				return reply.status(201).send(tournament);
+				shouldCommit = true;
+				response = tournament;
+				statusCode = 201;
 			} catch (error: any) {
-				await trx.rollback();
 				fastify.log.error('Error creating tournament:', error);
 				fastify.log.error('Error stack:', error.stack);
 				fastify.log.error('Error message:', error.message);
 				fastify.log.error('Error details:', JSON.stringify(error, null, 2));
 				if (error?.message?.includes('Invalid') || error?.message?.includes('required')) {
-					return reply.status(400).send({ 
-						message: 'Invalid input data: ' + error.message 
-					});
+					response = { message: 'Invalid input data: ' + error.message };
+					statusCode = 400;
+				} else {
+					response = { message: 'Internal server error: ' + error.message };
+					statusCode = 500;
 				}
-				return reply.status(500).send({ 
-					message: 'Internal server error: ' + error.message 
-				});
+			} finally {
+				if (shouldCommit) {
+					await trx.commit();
+				} else {
+					await trx.rollback();
+				}
 			}
+			return reply.status(statusCode).send(response);
 		}
 	)
 
