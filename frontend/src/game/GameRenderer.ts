@@ -8,7 +8,6 @@ import { PlayerResponseDto } from '../types/types';
  * 서버에서 받은 state.settings만을 사용하여 화면을 그립니다.
  */
 export class GameRenderer {
-  private container: HTMLElement;
   private gameElement: HTMLElement;
   private leftPaddle: HTMLElement;
   private rightPaddle: HTMLElement;
@@ -20,8 +19,7 @@ export class GameRenderer {
   private roundElement: HTMLElement;
   private initialized = false;
 
-  constructor(container: HTMLElement) {
-    this.container = container;
+  constructor() {
     this.gameElement = document.createElement('div');
     this.leftPaddle = document.createElement('div');
     this.rightPaddle = document.createElement('div');
@@ -37,9 +35,7 @@ export class GameRenderer {
   }
 
   private setupGameArea(): void {
-    // Clear the container
-    this.container.innerHTML = '';
-    
+  
     // Set up the main game element with proper styles
     this.gameElement.style.position = 'relative';
     this.gameElement.style.width = '800px';
@@ -120,7 +116,6 @@ export class GameRenderer {
     this.gameElement.appendChild(this.roundElement);
     
     // Add the game element to the container
-    this.container.appendChild(this.gameElement);
   }
 
   public render(): HTMLElement {
@@ -159,7 +154,6 @@ export class GameRenderer {
       this.ball.style.opacity = '1'; // Make ball visible
       this.ball.style.transition = 'opacity 0.3s ease';
       
-      console.log('Game initialized with settings:', state.settings);
     }
     
     // Update positions
