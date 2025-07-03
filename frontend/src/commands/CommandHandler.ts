@@ -341,6 +341,15 @@ export class CommandHandler {
       return;
     }
 
+    // Google OAuth 사용자에 대한 2FA 제한 확인
+    const currentUser = authStore.getCurrentUser();
+    if (currentUser?.provider === 'google') {
+      this.deps.terminal.appendOutput('❌ 2FA is not available for Google OAuth users.');
+      this.deps.terminal.appendOutput('Google accounts already use secure OAuth authentication.');
+      this.deps.terminal.appendOutput('Additional 2FA setup is not required.');
+      return;
+    }
+
     const subCommand = args[0]?.toLowerCase();
 
     switch (subCommand) {

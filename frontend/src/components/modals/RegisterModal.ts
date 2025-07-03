@@ -37,7 +37,7 @@ export class RegisterModal {
       onShow: () => this.onShow(),
       onClose: () => this.onClose(),
       config: {
-        closable: false,
+        closable: true, // ESC 키로 닫을 수 있도록 변경
         closeOnOutsideClick: true,
         sizeClass: 'w-[450px] max-w-[95%] max-h-[90vh] overflow-hidden',
         animated: true
@@ -265,7 +265,7 @@ export class RegisterModal {
    * 모달이 표시될 때 호출
    */
   private onShow(): void {
-    this.modalManager.focusElement('#name-input');
+    this.modalManager.focusElement('#email-input');
   }
 
   /**
@@ -321,7 +321,13 @@ export class RegisterModal {
    * Google 회원가입 처리
    */
   private handleGoogleRegister(): void {
-    window.location.href = '/api/users/login/google';
+    try {
+      // AuthApiService의 loginWithGoogle 메서드 사용 (회원가입도 같은 엔드포인트)
+      this.apiClient.auth.loginWithGoogle();
+    } catch (error) {
+      console.error('Google register error:', error);
+      this.showGeneralError('Failed to initiate Google registration. Please try again.');
+    }
   }
 
   /**

@@ -36,6 +36,9 @@ export class App {
   private unsubscribeAuth: (() => void) | null = null;
   private unsubscribeUserProfile: (() => void) | null = null;
   
+  // 탭 간 동기화를 위한 BroadcastChannel
+  private authChannel: BroadcastChannel | null = null;
+  
   // Game state (keeping this local as it's UI-specific)
   private isInGame = false;
   
@@ -84,6 +87,9 @@ export class App {
     
     // Listen for custom user data update events
     this.setupCustomEventListeners();
+    
+    // 탭 간 동기화 설정
+    this.setupCrossTabSynchronization();
   }
 
   private setupStoreSubscriptions(): void {
@@ -112,6 +118,55 @@ export class App {
         console.log('[App] Terminal focus restored after user data update');
       }, 300);
     });
+  }
+
+  private setupCrossTabSynchronization(): void {
+    try {
+      // BroadcastChannel 지원 확인
+      if (typeof BroadcastChannel !== 'undefined') {
+        this.authChannel = new BroadcastChannel('auth_channel');
+        this.authChannel.addEventListener('message', (event) => {
+          if (event.data.type === 'logout') {
+            console.info('[App] Received logout event from another tab');
+            this.handleCrossTabLogout();
+          }
+        });
+        console.info('[App] Cross-tab synchronization enabled via BroadcastChannel');
+      } else {
+        // BroadcastChannel 미지원 시 localStorage 이벤트 사용
+        window.addEventListener('storage', (event) => {
+          if (event.key === 'auth_logout_event') {
+            console.info('[App] Received logout event from another tab via localStorage');
+            this.handleCrossTabLogout();
+          }
+        });
+        console.info('[App] Cross-tab synchronization enabled via localStorage events');
+      }
+    } catch (error) {
+      console.warn('[App] Failed to setup cross-tab synchronization:', error);
+    }
+  }
+
+  private handleCrossTabLogout(): void {
+    console.info('[App] Handling cross-tab logout');
+    
+    // 로그아웃 상태로 업데이트
+    authStore.logout();
+    this.clearUserStateCache();
+    
+    // 토큰 정리
+    TokenManager.clearTokens();
+    this.apiClient.clearToken();
+    
+    // UI 업데이트
+    this.render();
+    
+    // 터미널 메시지 표시
+    this.mainTerminal.appendOutput('You have been logged out from another tab.');
+    this.mainTerminal.appendOutput('Please use the "login" command to sign in again.');
+    
+    // 홈으로 이동
+    this.router.navigate('/');
   }
 
   public init(): void {
@@ -1094,6 +1149,16 @@ export class App {
               await this.apiClient.user.uploadAvatar(this.pendingAvatarFile);
               this.mainTerminal.appendOutput('Profile picture uploaded successfully!');
               this.pendingAvatarFile = null; // 업로드 완료 후 제거
+              
+              // 아바타 업로드 후 사용자 정보 재로드하여 UI 즉시 반영
+              try {
+                const updatedUser = await this.apiClient.auth.verifyToken();
+                authStore.login(updatedUser);
+                this.cacheUserState(updatedUser);
+                console.log('🖼️ User profile updated with new avatar');
+              } catch (error) {
+                console.error('Failed to refresh user profile after avatar upload:', error);
+              }
             } catch (error) {
               console.error('Avatar upload failed:', error);
               this.mainTerminal.appendOutput('Failed to upload profile picture. You can try again later with "set avatar" command.');
@@ -1306,5 +1371,11 @@ export class App {
       this.userProfile = null;
     }
     this.lastUserProfileData = null;
+    
+    // BroadcastChannel 정리
+    if (this.authChannel) {
+      this.authChannel.close();
+      this.authChannel = null;
+    }
   }
 }

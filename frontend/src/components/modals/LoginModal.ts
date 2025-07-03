@@ -37,7 +37,7 @@ export class LoginModal {
       onShow: () => this.onShow(),
       onClose: () => this.onClose(),
       config: {
-        closable: false, // 로그인 모달은 X 버튼으로 닫을 수 없음
+        closable: true, // ESC 키로 닫을 수 있도록 변경
         closeOnOutsideClick: true,
         sizeClass: 'w-[450px] max-w-[95%]',
         animated: true
@@ -248,8 +248,13 @@ export class LoginModal {
    * Google 로그인 처리
    */
   private handleGoogleLogin(): void {
-    // 환경 설정에서 API URL 가져오기
-    window.location.href = '/api/users/login/google';
+    try {
+      // AuthApiService의 loginWithGoogle 메서드 사용
+      this.apiClient.auth.loginWithGoogle();
+    } catch (error) {
+      console.error('Google login error:', error);
+      this.showGeneralError('Failed to initiate Google login. Please try again.');
+    }
   }
 
   /**

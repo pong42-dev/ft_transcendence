@@ -46,7 +46,7 @@ export class TwoFAModal {
       onShow: () => this.onShow(),
       onClose: () => this.onClose(),
       config: {
-        closable: false,
+        closable: true, // ESC 키로 닫을 수 있도록 변경
         closeOnOutsideClick: true,
         sizeClass: 'w-[500px] max-w-[95%] max-h-[90vh]',
         animated: true

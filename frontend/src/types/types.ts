@@ -17,6 +17,7 @@ export interface User {
   email?: string;
   avatarUrl?: string;
   twoFactorEnabled: boolean;
+  provider?: string; // 'local' | 'google'
   gamesPlayed: number;
   gamesWon: number;
   friends: Friend[];

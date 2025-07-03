@@ -104,21 +104,23 @@ export class AuthApiService extends BaseApiService {
     formData.append('password', password);
     formData.append('name', nickname);
     
-    // 아바타 파일이 있으면 추가, 없으면 기본 빈 파일 생성
+    // 아바타 파일이 있을 때만 추가
     if (avatarFile) {
       formData.append('avatar', avatarFile);
     }
     
     // BaseApiService의 post 메소드 사용 (mock 지원)
     const registerResponse = await this.post<{
-      success: boolean;
+      success?: boolean;
       msg: string;
     }>('/api/users/register', formData, {
       credentials: 'include',
       isFormData: true
     });
     
-    // 회원가입 실패 시 에러 던지기 (success 필드가 없으면 msg로 판단)
+    // 백엔드 스키마에 따른 성공/실패 판단:
+    // - 성공: 201 상태코드 + success 필드 없음
+    // - 실패: 200 상태코드 + success: false
     if (registerResponse.success === false) {
       throw new ApiError(400, 'Registration failed', { message: registerResponse.msg });
     }
@@ -185,6 +187,29 @@ export class AuthApiService extends BaseApiService {
     // 서버 요청 결과와 관계없이 클라이언트 토큰은 항상 정리
     TokenManager.clearTokens();
     console.info('[Auth] Client tokens cleared');
+    
+    // 다른 탭에 로그아웃 이벤트 브로드캐스트
+    this.broadcastLogout();
+  }
+
+  // 다른 탭에 로그아웃 이벤트 브로드캐스트
+  private broadcastLogout(): void {
+    try {
+      // BroadcastChannel 지원 확인
+      if (typeof BroadcastChannel !== 'undefined') {
+        const channel = new BroadcastChannel('auth_channel');
+        channel.postMessage({ type: 'logout' });
+        channel.close();
+        console.info('[Auth] Logout event broadcasted to other tabs');
+      } else {
+        // BroadcastChannel 미지원 시 localStorage 이벤트 사용
+        localStorage.setItem('auth_logout_event', Date.now().toString());
+        localStorage.removeItem('auth_logout_event');
+        console.info('[Auth] Logout event dispatched via localStorage');
+      }
+    } catch (error) {
+      console.warn('[Auth] Failed to broadcast logout event:', error);
+    }
   }
 
   // Google OAuth 로그인 - /api/users/login/google
@@ -466,7 +491,7 @@ export class AuthApiService extends BaseApiService {
     const userProfileResponse = await this.get<any>('/api/users/me');
     
     // 응답 구조 검증 및 호환성 처리
-    let userData: { name: string; avatar: string | null; twoFA?: boolean; email?: string };
+    let userData: { name: string; avatar: string | null; twoFA?: boolean; email?: string; provider?: string };
     
     if (userProfileResponse.data?.userInfo) {
       // 새로운 API 구조: data.userInfo
@@ -478,7 +503,8 @@ export class AuthApiService extends BaseApiService {
         name: meData.name,
         avatar: meData.avatar,
         twoFA: meData.twoFactorEnabled,
-        email: meData.email
+        email: meData.email,
+        provider: meData.provider
       };
       console.warn('[Auth] Using legacy API structure (data.me)');
     } else {
@@ -513,6 +539,7 @@ export class AuthApiService extends BaseApiService {
       email: userData.email || undefined,
       avatarUrl: userData.avatar || undefined,
       twoFactorEnabled,
+      provider: userData.provider || undefined,
       gamesPlayed: 0,
       gamesWon: 0,
       friends: [],
@@ -533,7 +560,7 @@ export class AuthApiService extends BaseApiService {
     const userProfileResponse = await this.get<any>('/api/users/me');
     
     // 응답 구조 검증 및 호환성 처리
-    let userData: { name: string; avatar: string | null; twoFA?: boolean; email?: string };
+    let userData: { name: string; avatar: string | null; twoFA?: boolean; email?: string; provider?: string };
     
     if (userProfileResponse.data?.userInfo) {
       // 새로운 API 구조: data.userInfo
@@ -545,7 +572,8 @@ export class AuthApiService extends BaseApiService {
         name: meData.name,
         avatar: meData.avatar,
         twoFA: meData.twoFactorEnabled,
-        email: meData.email
+        email: meData.email,
+        provider: meData.provider
       };
       console.warn('[Auth] Using legacy API structure (data.me)');
     } else {
@@ -571,6 +599,7 @@ export class AuthApiService extends BaseApiService {
       email: userData.email || undefined,
       avatarUrl: userData.avatar || undefined,
       twoFactorEnabled,
+      provider: userData.provider || undefined,
       gamesPlayed: 0,
       gamesWon: 0,
       friends: [],
