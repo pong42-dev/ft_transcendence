@@ -168,7 +168,7 @@ export interface PlayerInfo {
 
 export interface GameSetupResult {
   mode: string;
-  opponents: Friend[];
+  opponents: string[];
 }
 
 // =================================================================
@@ -392,11 +392,11 @@ export type PlayerType = 'user' | 'guest' | 'ai';
 export type GameMode = 'local_1v1' | 'ai_1v1' | 'tournament';
 export type GameStatus = 'waiting' | 'countdown' | 'playing' | 'finished' | 'canceled';
 
-export interface CreatePlayerRequestDto {
-  type: PlayerType;
-  userId?: number; // user 타입인 경우 필수
-  displayName?: string; // guest 타입인 경우 필수
-}
+// export interface CreatePlayerRequestDto {
+//   type: PlayerType;
+//   userId?: number; // user 타입인 경우 필수
+//   displayName?: string; // guest 타입인 경우 필수
+// }
 
 export interface PlayerResponseDto {
   id: number;
@@ -405,8 +405,8 @@ export interface PlayerResponseDto {
 }
 
 export interface CreateGameRequestDto {
-  type: GameMode;
-  players: CreatePlayerRequestDto[];
+  type: GameMode; // 'ai_1v1', 'local_1v1', 'tournament'
+  opponents?: string[];  // 게스트들의 닉네임만 담는 배열
 }
 
 export interface GameResponseDto {

@@ -3,7 +3,7 @@ import { GameManager } from '../../../game/GameManager.js'
 import { CreateGameRequestDtoSchema, GameResponseDtoSchema } from '../../../schemas/games.js'
 
 const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
-	// const { authenticate } = fastify  // TODO: 테스트 완료 후 활성화
+	const { authenticate } = fastify
 	const gameManager = GameManager.getInstance()
 	
 	// GameManager에 Repository 주입
@@ -27,96 +27,73 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				tags: ["Games"]
 			},
 			// TODO: 테스트 완료 후 인증 재활성화
-			// preHandler: [authenticate]
+			preHandler: [authenticate]
 		},
 		async (request, reply) => {
 			try {
-				const { type, players: playerInfos } = request.body
+				// 토큰에서 user_id 추출
+				const userId = request.user.user_id;
+				const { type, opponents = [] } = request.body
 
-				// 게임 모드별 플레이어 정보 유효성 검증
+				// 게임 모드별 유효성 검증
 				if (type === 'local_1v1') {
-					// local_1v1: 반드시 유저 1명 + 게스트 1명
-					if (playerInfos.length !== 2) {
+					// local_1v1: 게스트 1명이 필요
+					if (opponents.length !== 1) {
 						return reply.status(400).send({ 
-							message: 'local_1v1 mode requires exactly 2 players (1 user + 1 guest)' 
-						});
-					}
-					
-					const userPlayers = playerInfos.filter(p => p.type === 'user');
-					const guestPlayers = playerInfos.filter(p => p.type === 'guest');
-					const aiPlayers = playerInfos.filter(p => p.type === 'ai');
-					
-					if (userPlayers.length !== 1 || guestPlayers.length !== 1 || aiPlayers.length !== 0) {
-						return reply.status(400).send({ 
-							message: 'local_1v1 mode requires exactly 1 user and 1 guest player' 
+							message: 'local_1v1 mode requires exactly 1 opponent (guest player)' 
 						});
 					}
 				} else if (type === 'ai_1v1') {
-					// ai_1v1: 반드시 유저 1명만 (AI는 자동 추가)
-					if (playerInfos.length !== 1) {
+					// ai_1v1: 상대방 불필요 (AI가 자동 추가)
+					if (opponents.length !== 0) {
 						return reply.status(400).send({ 
-							message: 'ai_1v1 mode requires exactly 1 user player' 
+							message: 'ai_1v1 mode does not require opponents (AI is added automatically)' 
 						});
 					}
-					
-					const userPlayers = playerInfos.filter(p => p.type === 'user');
-					const guestPlayers = playerInfos.filter(p => p.type === 'guest');
-					const aiPlayers = playerInfos.filter(p => p.type === 'ai');
-					
-					if (userPlayers.length !== 1 || guestPlayers.length !== 0 || aiPlayers.length !== 0) {
-						return reply.status(400).send({ 
-							message: 'ai_1v1 mode requires exactly 1 user player (no guest or ai players allowed)' 
-						});
-					}
-				}
-
-				// 플레이어 정보로부터 실제 플레이어 생성/조회
-				const players = [];
-				// AI 게임인 경우 AI 플레이어 추가
-				if (type === 'ai_1v1') {
-					const aiPlayer = await fastify.gameRepository.getOrCreateAIPlayer();
-					players.push(aiPlayer);
-				}
-				for (const playerInfo of playerInfos) {
-					try {
-						let player;
-						
-						if (playerInfo.type === 'user') {
-							if (!playerInfo.userId) {
-								return reply.status(400).send({ 
-									message: 'userId is required for user type player' 
-								});
-							}
-							// 유저 플레이어: 기존 플레이어 조회 또는 생성
-							player = await fastify.gameRepository.getOrCreateUserPlayer(playerInfo.userId);
-						} else if (playerInfo.type === 'guest') {
-							if (!playerInfo.displayName) {
-								return reply.status(400).send({ 
-									message: 'displayName is required for guest type player' 
-								});
-							}
-							// 게스트 플레이어: 항상 새로 생성
-							player = await fastify.gameRepository.createGuestPlayer(playerInfo.displayName);
-						} else {
-							return reply.status(400).send({ 
-								message: `Invalid player type: ${playerInfo.type}` 
-							});
-						}
-						
-						players.push(player);
-					} catch (error: any) {
-						fastify.log.error('Error creating/getting player:', error);
-						return reply.status(500).send({ 
-							message: `Failed to process player: ${error.message}` 
-						});
-					}
-				}
-
-
-				if (type === 'tournament') {
+				} else if (type === 'tournament') {
 					return reply.status(400).send({ 
 						message: 'Tournament mode is not implemented yet' 
 					});
+				}
+
+				// 플레이어 생성
+				const players = [];
+				
+				// 현재 유저 플레이어 추가
+				try {
+					const userPlayer = await fastify.gameRepository.getOrCreateUserPlayer(userId);
+					players.push(userPlayer);
+				} catch (error: any) {
+					fastify.log.error('Error getting/creating user player:', error);
+					return reply.status(500).send({ 
+						message: `Failed to process user player: ${error.message}` 
+					});
+				}
+
+				// 게임 모드별 상대방 플레이어 추가
+				if (type === 'ai_1v1') {
+					// AI 플레이어 추가
+					try {
+						const aiPlayer = await fastify.gameRepository.getOrCreateAIPlayer();
+						players.push(aiPlayer);
+					} catch (error: any) {
+						fastify.log.error('Error creating AI player:', error);
+						return reply.status(500).send({ 
+							message: `Failed to create AI player: ${error.message}` 
+						});
+					}
+				} else if (type === 'local_1v1') {
+					// 게스트 플레이어 추가
+					try {
+						const guestDisplayName = opponents[0];
+						const guestPlayer = await fastify.gameRepository.createGuestPlayer(guestDisplayName);
+						players.push(guestPlayer);
+					} catch (error: any) {
+						fastify.log.error('Error creating guest player:', error);
+						return reply.status(500).send({ 
+							message: `Failed to create guest player: ${error.message}` 
+						});
+					}
 				}
 
 				fastify.log.info('[CREATE API] About to create game with players:', players.map(p => ({ id: p.id, type: p.type, name: p.name })));
