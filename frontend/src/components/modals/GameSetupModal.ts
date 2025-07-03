@@ -140,16 +140,115 @@ export class GameSetupModal extends BaseModal {
   }
 
   private handleLocalMode(): void {
-    const result: GameSetupResult = {
-      mode: 'local',
-      opponents: [] // 로컬 모드에서는 상대방이 없음
-    };
-    
-    if (this.resolvePromise) {
-      this.resolvePromise(result);
-      this.resolvePromise = null;
+    this.renderGuestInputView();
+  }
+
+  private renderGuestInputView(): void {
+    if (!this.contentElement) return;
+
+    this.contentElement.innerHTML = `
+      <div class="flex items-center justify-between mb-6">
+        <h3 class="text-terminal-green text-xl font-bold">Enter Guest Player Name</h3>
+        <button class="text-terminal-gray hover:text-terminal-green transition-all" id="close-btn">
+          ✕
+        </button>
+      </div>
+      
+      <div class="mb-6">
+        <label class="block text-terminal-gray text-sm font-medium mb-2">
+          Guest Player Nickname
+        </label>
+        <input 
+          type="text" 
+          id="guest-name-input" 
+          placeholder="Enter guest player name..."
+          class="w-full px-4 py-3 bg-terminal-black border border-terminal-gray rounded-lg text-terminal-green focus:outline-none focus:border-terminal-green"
+          maxlength="20"
+          autocomplete="off"
+        />
+        <div class="text-xs text-terminal-gray mt-1">
+          Enter a nickname for the guest player (max 20 characters)
+        </div>
+      </div>
+      
+      <div class="flex justify-between gap-2">
+        <button id="back-btn" class="px-4 py-2 text-terminal-gray border border-terminal-gray rounded hover:bg-terminal-gray hover:bg-opacity-10 transition-all">
+          Back
+        </button>
+        <div class="flex gap-2">
+          <button id="cancel-btn" class="px-4 py-2 text-terminal-gray border border-terminal-gray rounded hover:bg-terminal-gray hover:bg-opacity-10 transition-all">
+            Cancel
+          </button>
+          <button id="start-game-btn" class="px-4 py-2 bg-terminal-green text-terminal-black rounded hover:bg-opacity-80 transition-all disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+            Start Game
+          </button>
+        </div>
+      </div>
+    `;
+
+    this.attachGuestInputEventListeners();
+  }
+
+  private attachGuestInputEventListeners(): void {
+    if (!this.contentElement) return;
+
+    const guestNameInput = this.contentElement.querySelector('#guest-name-input') as HTMLInputElement;
+    const backBtn = this.contentElement.querySelector('#back-btn') as HTMLButtonElement;
+    const cancelBtn = this.contentElement.querySelector('#cancel-btn') as HTMLButtonElement;
+    const startGameBtn = this.contentElement.querySelector('#start-game-btn') as HTMLButtonElement;
+    const closeBtn = this.contentElement.querySelector('#close-btn') as HTMLButtonElement;
+
+    // Input validation
+    guestNameInput?.addEventListener('input', () => {
+      const value = guestNameInput.value.trim();
+      if (startGameBtn) {
+        startGameBtn.disabled = value.length === 0;
+      }
+    });
+
+    // Back button
+    backBtn?.addEventListener('click', () => {
+      this.renderModeSelectionView();
+    });
+
+    // Cancel button
+    cancelBtn?.addEventListener('click', () => {
+      this.isCancelled = true;
       this.close();
-    }
+    });
+
+    // Close button
+    closeBtn?.addEventListener('click', () => {
+      this.isCancelled = true;
+      this.close();
+    });
+
+    // Start game button
+    startGameBtn?.addEventListener('click', () => {
+      const guestName = guestNameInput.value.trim();
+      if (guestName) {
+        const result: GameSetupResult = {
+          mode: 'local',
+          opponents: [guestName]
+        };
+        
+        if (this.resolvePromise) {
+          this.resolvePromise(result);
+          this.resolvePromise = null;
+          this.close();
+        }
+      }
+    });
+
+    // Enter key support
+    guestNameInput?.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter' && !startGameBtn.disabled) {
+        startGameBtn.click();
+      }
+    });
+
+    // Focus on input
+    guestNameInput?.focus();
   }
 
   private renderFriendSelectionView(): void {
@@ -325,7 +424,7 @@ export class GameSetupModal extends BaseModal {
 
     const result: GameSetupResult = {
       mode: 'remote',
-      opponents: [this.selectedOpponent]
+      opponents: [this.selectedOpponent.username || this.selectedOpponent.nickname || 'Unknown']
     };
 
     if (this.resolvePromise) {
