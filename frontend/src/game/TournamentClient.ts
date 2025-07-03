@@ -16,13 +16,18 @@ export class TournamentClient {
     private wsService: TournamentWebSocketService,
     private renderer: GameRenderer,
     private inputHandler: InputHandler,
-    private tournamentId: string
-  ) {}
+    private tournamentId: string,
+    userId?: string | number
+  ) {
+    if (userId) this.userId = Number(userId);
+  }
 
   public async start() {
-    const apiClient = new ApiClient();
-    const user = await apiClient.user.getProfile();
-    this.userId = Number(user.id);
+    if (this.userId == null) {
+      const apiClient = new ApiClient();
+      const user = await apiClient.user.getProfile();
+      this.userId = Number(user.id);
+    }
     this.connect();
     this.setupWebSocketListeners();
     this.setupInputHandling();
