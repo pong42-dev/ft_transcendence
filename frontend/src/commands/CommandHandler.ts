@@ -4,7 +4,7 @@ import { Router } from '../utils/Router.js';
 import { Terminal } from '../components/Terminal.js';
 import { ErrorHandler } from '../utils/ErrorHandler.js';
 import { authStore } from '../store/index.js';
-import { User, Player } from '../types/types.js';
+import { User } from '../types/types.js';
 import { UserStateCache } from '../services/UserStateCache.js';
 import i18next from '../services/i18n.js';
 
@@ -259,52 +259,8 @@ export class CommandHandler {
     }
 
     try {
-      // Stop any existing game first
-      const gameConfig = await this.deps.onShowModal('gameSetup');
-      
-      if (gameConfig) {
-        const { mode, opponents } = gameConfig;
-        this.deps.terminal.appendOutput(`Starting ${mode} game...`);
-
-        const currentUser = authStore.getCurrentUser();
-        if (currentUser) {
-          const player1: Player = {
-            nickname: currentUser.nickname || currentUser.username,
-            avatarUrl: currentUser.avatarUrl,
-          };
-
-          // Set up game configuration
-          let gameData;
-          if (mode === 'vs ai') {
-            gameData = {
-              mode: 'regular',
-              players: [{ nickname: 'AI' }, player1],
-              multiplayer: false
-            };
-          } else if (mode === 'local') {
-            const opponent = opponents[0];
-            gameData = {
-              mode: 'regular',
-              players: [player1, { nickname: opponent.nickname }],
-              multiplayer: true
-            };
-          } else if (mode === 'tournament') {
-            const opponent = opponents[0];
-            gameData = {
-              mode: 'tournament',
-              players: [player1, { nickname: opponent.nickname }],
-              multiplayer: true
-            };
-          }
-
-          if (gameData) {
-            this.deps.onGameStart(gameData);
-            this.deps.router.navigate('/game');
-          }
-        }
-      } else {
-        this.deps.terminal.appendOutput(i18next.t('playCommand.game_cancelled'));
-      }
+      // App.ts의 handlePlayGame 메서드 호출 - GameSetupModal이 처리됨
+      await this.deps.onGameStart(null);
     } catch (error) {
       this.deps.terminal.appendOutput(i18next.t('playCommand.failed_start_game'));
       console.error('Play command error:', error);
