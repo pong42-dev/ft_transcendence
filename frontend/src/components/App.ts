@@ -17,6 +17,7 @@ import { UserStateCache } from '../services/UserStateCache.js';
 import { UIRenderer } from '../managers/UIRenderer.js';
 import { ModalManager } from '../managers/ModalManager.js';
 import { UserProfileManager } from '../managers/UserProfileManager.js';
+import { GamePage } from '../game/GamePage.js';
 
 export class App {
   // UI Elements References
@@ -32,6 +33,9 @@ export class App {
   private userProfileManager: UserProfileManager;
   // Components
   private mainTerminal: Terminal;
+  private gamePage: GamePage | null = null;
+  // Game state
+  private gameSetupResult: any = null;
   
   // Store subscriptions cleanup functions
   private unsubscribeAuth: (() => void) | null = null;
@@ -198,8 +202,37 @@ export class App {
   }
 
   private showGameView(): void {
+    // 기존 게임 페이지가 있다면 정리
+    if (this.gamePage) {
+      this.gamePage.destroy();
+      this.gamePage = null;
+    }
+
+    // 게임 상태로 설정
     this.uiRenderer.setGameState(true);
     this.uiRenderer.render();
+
+    // main-content 컨테이너 가져오기
+    const mainContent = document.querySelector('.main-content') as HTMLElement;
+    if (!mainContent) {
+      this.mainTerminal.appendOutput('Error: Game container not found.');
+      return;
+    }
+
+    // GamePage 생성 및 시작
+    this.gamePage = new GamePage(
+      mainContent,
+      this.apiClient,
+      this.gameSetupResult, // 게임 설정 데이터 전달
+      () => {
+        // 게임 종료 콜백
+        this.gamePage = null;
+        this.gameSetupResult = null; // 게임 설정 데이터 정리
+        this.uiRenderer.setGameState(false);
+        this.router.navigate('/profile');
+        this.mainTerminal.appendOutput('Game ended. Returning to profile.');
+      }
+    );
   }
 
   private showGameMode(_mode: string): void {
@@ -233,8 +266,8 @@ export class App {
           const currentUser = authStore.getCurrentUser();
           if (currentUser) {
 
-            // Set up game configuration before navigating
-            // Game setup logic commented out until PongGame is re-enabled
+            // Save game setup result for GamePage
+            this.gameSetupResult = result;
 
             // Set game state BEFORE navigating
             this.uiRenderer.setGameState(true);
@@ -329,6 +362,15 @@ export class App {
 
   // Cleanup method for proper store unsubscription
   public cleanup(): void {
+    // GamePage cleanup
+    if (this.gamePage) {
+      this.gamePage.destroy();
+      this.gamePage = null;
+    }
+    
+    // Game setup data cleanup
+    this.gameSetupResult = null;
+    
     if (this.unsubscribeAuth) {
       this.unsubscribeAuth();
     }
