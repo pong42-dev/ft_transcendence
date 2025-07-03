@@ -5,9 +5,9 @@
  * 더 효율적이고 유연한 모달 시스템을 제공합니다.
  */
 
-import { ModalManager, ModalContent, ModalConfig } from './ModalManager.js';
-import { DOMUpdater } from './DOMUpdater.js';
-import { errorHandler, ErrorHandler } from '../../utils/ErrorHandler.js';
+import { ModalManager, ModalContent, ModalConfig } from '../../managers/ModalManager.js';
+import { DOMUpdater } from '../../utils/DOMUpdater.js';
+import { ErrorHandler } from '../../utils/ErrorHandler.js';
 import { ValidationResult } from '../../utils/validators.js';
 import { ApiError } from '../../services/ApiClient.js';
 
@@ -19,7 +19,7 @@ export abstract class BaseModal {
 
   constructor() {
     this.modalManager = ModalManager.getInstance();
-    this.errorHandler = errorHandler;
+    this.errorHandler = ErrorHandler.getInstance();
   }
 
   /**

@@ -5,8 +5,8 @@
  */
 
 // 핵심 모달 시스템
-export { ModalManager } from './ModalManager.js';
-export { DOMUpdater } from './DOMUpdater.js';
+export { ModalManager } from '../../managers/ModalManager.js';
+export { DOMUpdater } from '../../utils/DOMUpdater.js';
 export { BaseModal } from './BaseModal.js';
 
 // 구체적인 모달들

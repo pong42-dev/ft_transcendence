@@ -6,8 +6,8 @@
 import { ApiClient } from '../../services/ApiClient.js';
 import { User } from '../../types/types.js';
 import { validateEmail, validatePassword } from '../../utils/validators.js';
-import { ModalManager, ModalContent } from './ModalManager.js';
-import { DOMUpdater } from './DOMUpdater.js';
+import { ModalManager, ModalContent } from '../../managers/ModalManager.js';
+import { DOMUpdater } from '../../utils/DOMUpdater.js';
 
 export interface LoginModalCallbacks {
   onLoginSuccess: (user: User) => void;

@@ -5,6 +5,7 @@ import { Terminal } from '../components/Terminal.js';
 import { ErrorHandler } from '../utils/ErrorHandler.js';
 import { authStore } from '../store/index.js';
 import { User, Player } from '../types/types.js';
+import { UserStateCache } from '../services/UserStateCache.js';
 
 export interface CommandHandlerDependencies {
   apiClient: ApiClient;
@@ -14,8 +15,6 @@ export interface CommandHandlerDependencies {
   onGameStart: (gameConfig: any) => void;
   onShowModal: (modalType: string, options?: any) => Promise<any>;
   onUserStateUpdate: (user: User) => void;
-  onCacheUserState: (user: User) => void;
-  onClearUserStateCache: () => void;
 }
 
 export class CommandHandler {
@@ -135,7 +134,7 @@ export class CommandHandler {
     }
 
     authStore.logout();
-    this.deps.onClearUserStateCache();
+    UserStateCache.clear();
     this.deps.terminal.reset();
     this.deps.router.navigate('/');
     
@@ -509,7 +508,7 @@ export class CommandHandler {
         // Update cache
         const userToCache = { ...updatedUserState };
         delete (userToCache as any).twoFactorEnabled;
-        this.deps.onCacheUserState(userToCache);
+        UserStateCache.cache(userToCache);
       }
       
       this.deps.terminal.appendOutput(`✅ Name updated successfully to: "${updatedUser.nickname}"`);

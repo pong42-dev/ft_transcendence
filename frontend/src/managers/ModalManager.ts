@@ -1,9 +1,25 @@
+import { ApiClient } from '../services/ApiClient.js';
+import { Router } from '../utils/Router.js';
+import { Terminal } from '../components/Terminal.js';
+import { User } from '../types/types.js';
+import { TwoFAModal } from '../components/modals/TwoFAModal.js';
+import { FileModal } from '../components/modals/FileModal.js';
+import { NewTournamentTestModal } from '../components/modals/NewTournamentTestModal.js';
+
 /**
  * ModalManager - 모달의 중앙 집중식 관리
  * 
  * 이 클래스는 싱글톤 패턴을 사용하여 모든 모달을 하나의 컨테이너에서 관리합니다.
  * 상속 기반의 BaseModal 시스템을 대체하여 더 유연한 모달 시스템을 제공합니다.
  */
+
+export interface ModalCallbacks {
+  onLoginSuccess?: (user: User) => Promise<void>;
+  onRegisterSuccess?: (user: User, avatarFile?: File) => void;
+  onSwitchToRegister?: () => void;
+  onSwitchToLogin?: () => void;
+  on2FARequired?: (tmpToken: string) => void;
+}
 
 export interface ModalConfig {
   /** 모달을 닫을 수 있는지 여부 */
@@ -38,6 +54,11 @@ export class ModalManager {
   private modalContent: HTMLElement | null = null;
   private currentContent: ModalContent | null = null;
   private isVisible: boolean = false;
+  
+  // App.ts에서 이동된 의존성들
+  private apiClient: ApiClient | null = null;
+  private terminal: Terminal | null = null;
+  private currentLoginModal: any = null;
 
   // 기본 설정
   private defaultConfig: Required<ModalConfig> = {
@@ -61,6 +82,14 @@ export class ModalManager {
       ModalManager.instance = new ModalManager();
     }
     return ModalManager.instance;
+  }
+
+  /**
+   * 의존성 주입 (App.ts에서 호출)
+   */
+  public setDependencies(apiClient: ApiClient, _router: Router, terminal: Terminal): void {
+    this.apiClient = apiClient;
+    this.terminal = terminal;
   }
 
   /**
@@ -299,5 +328,148 @@ export class ModalManager {
 
     // 콘텐츠 다시 렌더링
     this.renderContent(this.currentContent);
+  }
+
+  // === App.ts에서 이동된 모달 관리 메서드들 ===
+
+  /**
+   * 모달 표시 (CommandHandler에서 호출)
+   */
+  public async showAppModal(modalType: string, options?: any): Promise<any> {
+    if (!this.apiClient) {
+      console.error('[ModalManager] Dependencies not set. Call setDependencies() first.');
+      return;
+    }
+
+    switch (modalType) {
+      case 'login':
+        return this.showLoginModal(options?.callbacks);
+      case 'register':
+        return this.showRegisterModal(options?.callbacks);
+      case '2fa':
+        return this.show2FAModal(options);
+      case 'file':
+        return this.showFileModal(options);
+      case 'tournament':
+        const tournamentModal = new NewTournamentTestModal(this.apiClient);
+        tournamentModal.show();
+        return;
+      case 'friend':
+        break;
+      default:
+        console.warn(`Unknown modal type: ${modalType}`);
+    }
+  }
+
+  /**
+   * 로그인 모달 표시
+   */
+  public async showLoginModal(callbacks?: ModalCallbacks): Promise<void> {
+    if (!this.apiClient) return;
+
+    const { LoginModal } = await import('../components/modals/LoginModal.js');
+    
+    this.currentLoginModal = new LoginModal(this.apiClient, {
+      onLoginSuccess: callbacks?.onLoginSuccess || (() => {}),
+      onSwitchToRegister: callbacks?.onSwitchToRegister || (() => {}),
+      on2FARequired: callbacks?.on2FARequired || (() => {})
+    });
+    
+    this.currentLoginModal.show();
+  }
+
+  /**
+   * 회원가입 모달 표시
+   */
+  public async showRegisterModal(callbacks?: ModalCallbacks): Promise<void> {
+    if (!this.apiClient) return;
+
+    const { RegisterModal } = await import('../components/modals/RegisterModal.js');
+    
+    const registerModal = new RegisterModal(this.apiClient, {
+      onRegisterSuccess: callbacks?.onRegisterSuccess || (() => {}),
+      onSwitchToLogin: callbacks?.onSwitchToLogin || (() => {}),
+      on2FARequired: callbacks?.on2FARequired || (() => {})
+    });
+    
+    registerModal.show();
+  }
+
+  /**
+   * 2FA 모달 표시
+   */
+  public async show2FAModal(options?: any): Promise<void> {
+    if (!this.apiClient) return;
+
+    const { onComplete, onCancel, mode = 'enable' } = options || {};
+    
+    const twoFAModal = new TwoFAModal(this.apiClient, mode, {
+      onComplete: async (code?: string) => {
+        if (!code) {
+          if (onCancel) onCancel();
+          return;
+        }
+        try {
+          if (onComplete) await onComplete(code);
+        } catch (error) {
+          console.error('[ModalManager] Error in 2FA completion callback:', error);
+        }
+        this.restoreTerminalFocus();
+      },
+      onCancel: () => {
+        if (onCancel) onCancel();
+        this.restoreTerminalFocus();
+      }
+    });
+
+    twoFAModal.show();
+  }
+
+  /**
+   * 파일 모달 표시
+   */
+  public async showFileModal(options?: any): Promise<File | null> {
+    const {
+      title = 'Select Avatar',
+      accept = 'image/*',
+      maxSize = 5 * 1024 * 1024,
+      onFileSelected
+    } = options || {};
+
+    return new Promise((resolve, reject) => {
+      const fileModal = new FileModal(
+        title,
+        accept,
+        maxSize,
+        (file: File) => {
+          if (onFileSelected) {
+            onFileSelected(file, resolve, reject);
+          } else {
+            resolve(file);
+          }
+        }
+      );
+      
+      fileModal.show();
+    });
+  }
+
+  /**
+   * 로그인 모달 닫기
+   */
+  public closeLoginModal(): void {
+    if (this.currentLoginModal) {
+      this.currentLoginModal.hide();
+      this.currentLoginModal = null;
+    }
+  }
+
+  /**
+   * 터미널 포커스 복원
+   */
+  private restoreTerminalFocus(): void {
+    if (this.terminal) {
+      setTimeout(() => this.terminal!.focus(), 100);
+    }
   }
 }

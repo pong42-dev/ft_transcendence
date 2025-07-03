@@ -2,8 +2,8 @@
  * FileModal - ModalManager를 사용하는 파일 선택 모달
  */
 
-import { ModalManager, ModalContent } from './ModalManager.js';
-import { DOMUpdater } from './DOMUpdater.js';
+import { ModalManager, ModalContent } from '../../managers/ModalManager.js';
+import { DOMUpdater } from '../../utils/DOMUpdater.js';
 
 export class FileModal {
   private onFileSelect: (file: File) => void;

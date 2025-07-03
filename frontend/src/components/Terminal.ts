@@ -1,5 +1,5 @@
 // Removed unused import
-import { DOMUpdater } from './modals/DOMUpdater.js';
+import { DOMUpdater } from '../utils/DOMUpdater.js';
 
 export class Terminal {
   private terminalElement: HTMLElement;

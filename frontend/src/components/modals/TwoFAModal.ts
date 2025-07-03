@@ -4,8 +4,8 @@
 
 import { ApiClient } from '../../services/ApiClient.js';
 import { TwoFAInitResponse } from '../../types/types.js';
-import { ModalManager, ModalContent } from './ModalManager.js';
-import { DOMUpdater } from './DOMUpdater.js';
+import { ModalManager, ModalContent } from '../../managers/ModalManager.js';
+import { DOMUpdater } from '../../utils/DOMUpdater.js';
 import { authStore } from '../../store/index.js';
 
 export interface TwoFAModalCallbacks {
