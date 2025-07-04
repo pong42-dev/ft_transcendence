@@ -395,7 +395,8 @@ export class GameClient {
       onGameFinish: () => {
         // onGameFinish - Close 버튼을 눌렀을 때만 게임 종료
         this.callbacks.onFinish();
-      }
+      },
+      gameMode: this.gameInfo.type // 게임 모드 전달
     });
   }
   
