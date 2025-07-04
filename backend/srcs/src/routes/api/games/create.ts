@@ -72,10 +72,10 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 
 				// 게임 모드별 상대방 플레이어 추가
 				if (type === 'ai_1v1') {
-					// AI 플레이어 추가
+					// AI 플레이어 추가 (맨 앞에 추가하여 left 포지션)
 					try {
 						const aiPlayer = await fastify.gameRepository.getOrCreateAIPlayer();
-						players.push(aiPlayer);
+						players.unshift(aiPlayer); // 배열 맨 앞에 추가
 					} catch (error: any) {
 						fastify.log.error('Error creating AI player:', error);
 						return reply.status(500).send({ 

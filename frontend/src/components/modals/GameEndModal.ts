@@ -5,7 +5,7 @@
  * 더 효율적이고 일관된 모달 시스템을 구현합니다.
  */
 
-import { GameResult } from '../../types/types.js';
+import { GameResult, GameMode } from '../../types/types.js';
 import { ModalManager, ModalContent } from '../../managers/ModalManager.js';
 import i18n from '../../services/i18n';
 
@@ -16,6 +16,7 @@ export class GameEndModal {
   private isTournament: boolean;
   private isFinal: boolean;
   private gameResult: GameResult;
+  private gameMode?: GameMode;
   private onGameFinish?: () => void;
   private contentElement: HTMLElement | null = null;
 
@@ -25,7 +26,8 @@ export class GameEndModal {
     isFinal: boolean, 
     onProfileClick: () => void, 
     onNextMatch?: () => void,
-    onGameFinish?: () => void
+    onGameFinish?: () => void,
+    gameMode?: GameMode
   ) {
     this.modalManager = ModalManager.getInstance();
     this.gameResult = gameResult;
@@ -33,6 +35,7 @@ export class GameEndModal {
     this.onNextMatch = onNextMatch;
     this.isTournament = isTournament;
     this.isFinal = isFinal;
+    this.gameMode = gameMode;
     this.onGameFinish = onGameFinish;
   }
 
@@ -76,13 +79,40 @@ export class GameEndModal {
     const userWon = this.gameResult.winner === 'right';
     const winnerName = this.gameResult.winner === 'left' ? this.gameResult.leftPlayer.nickname : this.gameResult.rightPlayer.nickname;
     
+    // AI 모드인지 확인
+    const isAIMode = this.gameMode === 'ai_1v1';
+    
+    let titleText: string;
+    let subtitleText: string;
+    let iconEmoji: string;
+    
+    if (isAIMode) {
+      // AI 모드일 때
+      if (userWon) {
+        // 유저가 이겼을 때
+        titleText = 'Victory!';
+        subtitleText = 'Congratulations!';
+        iconEmoji = '🏆';
+      } else {
+        // AI가 이겼을 때
+        titleText = 'Good Game!';
+        subtitleText = 'AI won the game';
+        iconEmoji = '🤖';
+      }
+    } else {
+      // 로컬/게스트 모드일 때
+      titleText = `${winnerName} Wins!`;
+      subtitleText = 'Congratulations!';
+      iconEmoji = '🏆';
+    }
+    
     this.contentElement.innerHTML = `
       <div class="text-center mb-6">
         <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-terminal-gray bg-opacity-10 mb-3">
-          <div class="text-3xl">${userWon ? '🏆' : '💪'}</div>
+          <div class="text-3xl">${iconEmoji}</div>
         </div>
-        <h3 class="text-terminal-green text-2xl font-bold mb-1">${userWon ? i18n.t('gameEndModal.victory') : i18n.t('gameEndModal.good_game')}</h3>
-        <div class="text-sm opacity-70">${userWon ? i18n.t('gameEndModal.congratulations') : i18n.t('gameEndModal.winner_announcement', { winnerName })}</div>
+        <h3 class="text-terminal-green text-2xl font-bold mb-1">${i18n.t(`gameEndModal.${titleText}`)}</h3>
+        <div class="text-sm opacity-70">${i18n.t(`gameEndModal.${subtitleText}`)}</div>
       </div>
       
       <div class="bg-terminal-gray bg-opacity-5 rounded-lg p-4 mb-6">

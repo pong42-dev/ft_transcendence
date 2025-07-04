@@ -474,7 +474,7 @@ export class ModalManager {
   public async showGameEndModal(options?: any): Promise<void> {
     const { GameEndModal } = await import('../components/modals/GameEndModal.js');
     
-    const { gameResult, isTournament, isFinal, onProfileClick, onNextMatch, onGameFinish } = options || {};
+    const { gameResult, isTournament, isFinal, onProfileClick, onNextMatch, onGameFinish, gameMode } = options || {};
     
     const gameEndModal = new GameEndModal(
       gameResult,
@@ -482,7 +482,8 @@ export class ModalManager {
       isFinal || false,
       onProfileClick || (() => {}),
       onNextMatch,
-      onGameFinish
+      onGameFinish,
+      gameMode
     );
     
     gameEndModal.show();
