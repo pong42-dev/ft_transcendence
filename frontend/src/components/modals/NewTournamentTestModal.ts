@@ -1,17 +1,27 @@
 import { ModalManager, ModalContent } from '../../managers/ModalManager.js';
-import { GamePage } from '../../game/GamePage';
+import { TournamentClient } from '../../game/TournamentClient';
+import { tournamentWebSocketService } from '../../services/websocket/TournamentWebSocketService.js';
+import { GameRenderer } from '../../game/GameRenderer';
+import { InputHandler } from '../../game/InputHandler';
+import { TournamentApiService } from '../../services/api/TournamentApiService.js';
+import { TokenManager } from '../../services/core/TokenManager.js';
 
 export class NewTournamentTestModal {
   private modalManager: ModalManager;
+  private tournamentClient: TournamentClient | null = null;
   private container: HTMLElement | null = null;
+  private tournamentId: string | null = null;
   private participants: string[] = ['', '', ''];
   private errorMsg: string = '';
+  private step: 'input' | 'tournament' = 'input';
 
   constructor() {
     this.modalManager = ModalManager.getInstance();
   }
 
   show(): void {
+    this.tournamentId = null;
+    this.step = 'input';
     const modalContent: ModalContent = {
       title: 'Tournament 실서비스 플로우',
       content: () => this.createContent(),
@@ -35,7 +45,10 @@ export class NewTournamentTestModal {
   }
 
   private onClose(): void {
-    // 정리 작업
+    if (this.tournamentClient) {
+      // 필요시 this.tournamentClient.destroy();
+      this.tournamentClient = null;
+    }
   }
 
   private createContent(): HTMLElement {
@@ -50,17 +63,22 @@ export class NewTournamentTestModal {
 
   private updateContent() {
     if (!this.container) return;
-    let html = '';
-    html += `<div class="mb-4 text-lg font-bold text-terminal-green">참가자 닉네임 입력</div>`;
-    for (let i = 0; i < this.participants.length; i++) {
-      html += `<div class="mb-2 flex items-center gap-2"><input type="text" class="bg-terminal-black border border-terminal-gray text-terminal-green px-2 py-1 rounded text-sm" id="name-input-${i}" value="${this.participants[i]}" placeholder="게스트 ${i + 1}" /></div>`;
+    if (this.step === 'input') {
+      let html = '';
+      html += `<div class="mb-4 text-lg font-bold text-terminal-green">참가자 닉네임 입력</div>`;
+      for (let i = 0; i < this.participants.length; i++) {
+        html += `<div class="mb-2 flex items-center gap-2"><input type="text" class="bg-terminal-black border border-terminal-gray text-terminal-green px-2 py-1 rounded text-sm" id="name-input-${i}" value="${this.participants[i]}" placeholder="게스트 ${i + 1}" /></div>`;
+      }
+      html += `<button id="confirm-names-btn" class="bg-terminal-green text-terminal-black px-4 py-2 rounded mt-2">확인</button>`;
+      if (this.errorMsg) {
+        html += `<div class="text-terminal-red text-xs mt-2">${this.errorMsg}</div>`;
+      }
+      this.container.innerHTML = html;
+      this.attachInputEventListeners();
+    } else if (this.step === 'tournament') {
+      // TournamentClient가 컨테이너에 렌더링함
+      this.container.innerHTML = '';
     }
-    html += `<button id="confirm-names-btn" class="bg-terminal-green text-terminal-black px-4 py-2 rounded mt-2">확인</button>`;
-    if (this.errorMsg) {
-      html += `<div class="text-terminal-red text-xs mt-2">${this.errorMsg}</div>`;
-    }
-    this.container.innerHTML = html;
-    this.attachInputEventListeners();
   }
 
   private attachInputEventListeners() {
@@ -79,32 +97,58 @@ export class NewTournamentTestModal {
       this.updateContent();
       return;
     }
-    // GamePage를 통해 토너먼트 모드로 진입
-    this.startGamePageTournamentMode();
+    try {
+      const participants = this.participants.map(name => ({ type: 'guest' as const, displayName: name }));
+      const api = new TournamentApiService();
+      const res = await api.createTournament({ participants });
+      this.tournamentId = String(res.id || res.tournamentId || res.tournament_id);
+      this.step = 'tournament';
+      this.errorMsg = '';
+      this.updateContent();
+      this.initTournamentClient();
+    } catch (e: any) {
+      this.errorMsg = e?.message || '토너먼트 생성 실패';
+      this.updateContent();
+    }
   }
 
-  private startGamePageTournamentMode() {
-    // GamePage를 메인 컨테이너에 생성해서 토너먼트 모드로 실행
-    const mainContent = document.querySelector('.main-content') as HTMLElement;
-    if (!mainContent) {
-      alert('게임 컨테이너를 찾을 수 없습니다.');
-      return;
-    }
-    // GamePage 생성 (tournament 모드)
-    const apiClient = (this.modalManager as any).apiClient;
-    const gameSetupResult = {
-      mode: 'tournament',
-      opponents: this.participants
-    };
-    new GamePage(
-      mainContent,
-      apiClient,
-      gameSetupResult,
-      () => {
-        // 토너먼트 종료 후 콜백 (필요시 구현)
-        this.close();
-      }
+  private async initTournamentClient() {
+    if (!this.container || !this.tournamentId) return;
+    const renderer = new GameRenderer(this.container); // GameRenderer는 container 인자를 요구할 수 있음
+    const inputHandler = new InputHandler();
+    const userId = this.decodeUserIdFromAccessToken() || undefined;
+    this.tournamentClient = new TournamentClient(
+      this.container,
+      tournamentWebSocketService,
+      renderer,
+      inputHandler,
+      this.tournamentId,
+      userId
     );
-    this.close(); // 모달 닫기
+    await this.tournamentClient.start();
+  }
+
+  // JWT에서 user_id 추출하는 메서드
+  private decodeUserIdFromAccessToken(): string | undefined {
+    try {
+      // TokenManager를 import하지 않고 직접 세션에서 토큰을 가져옴
+      const accessToken = sessionStorage.getItem('access_token_session');
+      if (!accessToken) return undefined;
+      const payloadBase64 = accessToken.split('.')[1];
+      if (!payloadBase64) return undefined;
+      const base64 = payloadBase64.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(
+        atob(base64)
+          .split('')
+          .map(function(c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+          })
+          .join('')
+      );
+      const payload = JSON.parse(jsonPayload);
+      return payload.user_id ? String(payload.user_id) : undefined;
+    } catch (e) {
+      return undefined;
+    }
   }
 }
