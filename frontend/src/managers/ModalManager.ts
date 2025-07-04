@@ -351,9 +351,13 @@ export class ModalManager {
       case 'file':
         return this.showFileModal(options);
       case 'tournament':
-        const tournamentModal = new NewTournamentTestModal(this.apiClient);
+        const tournamentModal = new NewTournamentTestModal();
         tournamentModal.show();
         return;
+      case 'game-setup':
+        return this.showGameSetupModal(options);
+      case 'game-end':
+        return this.showGameEndModal(options);
       case 'friend':
         break;
       default:
@@ -452,6 +456,36 @@ export class ModalManager {
       
       fileModal.show();
     });
+  }
+
+  /**
+   * 게임 설정 모달 표시
+   */
+  public async showGameSetupModal(_options?: any): Promise<any> {
+    const { GameSetupModal } = await import('../components/modals/GameSetupModal.js');
+    
+    const gameSetupModal = new GameSetupModal();
+    return gameSetupModal.open();
+  }
+
+  /**
+   * 게임 종료 모달 표시
+   */
+  public async showGameEndModal(options?: any): Promise<void> {
+    const { GameEndModal } = await import('../components/modals/GameEndModal.js');
+    
+    const { gameResult, isTournament, isFinal, onProfileClick, onNextMatch, onGameFinish } = options || {};
+    
+    const gameEndModal = new GameEndModal(
+      gameResult,
+      isTournament || false,
+      isFinal || false,
+      onProfileClick || (() => {}),
+      onNextMatch,
+      onGameFinish
+    );
+    
+    gameEndModal.show();
   }
 
   /**
