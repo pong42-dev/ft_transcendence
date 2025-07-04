@@ -453,7 +453,7 @@ export interface GameStateDto {
   settings: GameSettingsDto;
 }
 
-export type GameEventType =
+export type GameEventType = 
   | 'countdown'
   | 'round_start'
   | 'round_end'
@@ -469,8 +469,7 @@ export interface GameEventDto {
       player1: number;
       player2: number;
     };
-    // 확장 가능
-  }
+  };
 }
 
 export interface TournamentRound {

@@ -153,8 +153,13 @@ export const GameEventDtoSchema = Type.Object({
   ]),
   data: Type.Optional(Type.Object({
     remainingTime: Type.Optional(Type.Number()), // For 'countdown'
-    winnerId: Type.Optional(Type.Integer()),      // For 'game_end'
-    // Can be extended with more data for other events
+    winnerId: Type.Optional(Type.Integer()),      // For 'round_end' and 'game_end'
+    
+    // [수정] game_end 이벤트를 위한 최종 점수 필드 추가
+    finalScores: Type.Optional(Type.Object({
+      player1: Type.Integer(),
+      player2: Type.Integer(),
+    })),
   })),
 });
 export type GameEventDto = Static<typeof GameEventDtoSchema>;
