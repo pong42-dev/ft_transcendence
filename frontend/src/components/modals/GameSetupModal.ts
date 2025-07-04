@@ -5,16 +5,14 @@
  * ModalManager를 활용하는 일관된 모달 시스템으로 통합합니다.
  */
 
-import { Friend, GameSetupResult } from '../../types/types.js';
+import { GameSetupResult } from '../../types/types.js';
 import { BaseModal } from './BaseModal.js';
 import i18n from '../../services/i18n';
 
 export class GameSetupModal extends BaseModal {
   private resolvePromise: ((value: GameSetupResult | null) => void) | null = null;
-  private selectedOpponent: Friend | null = null;
   private isCancelled: boolean = false;
   private selectedMode: string = '';
-  private invitedFriends: Friend[] = [];
   private countdownInterval: number | null = null;
 
   constructor() {
@@ -82,11 +80,11 @@ export class GameSetupModal extends BaseModal {
         </button>
         <button data-mode="local" class="rounded-lg border border-terminal-gray p-4 text-left transition-all hover:bg-terminal-gray hover:bg-opacity-10">
           <div class="text-lg font-bold mb-2">${i18n.t('gameSetupModal.local')}</div>
-          <div class="text-sm opacity-70">${i18n.t('gameSetupModal.play_with_friends')}</div>
+          <div class="text-sm opacity-70">${i18n.t('gameSetupModal.play_with_a guest')}</div>
         </button>
-        <button data-mode="remote" class="rounded-lg border border-terminal-gray p-4 text-left transition-all hover:bg-terminal-gray hover:bg-opacity-10">
-          <div class="text-lg font-bold mb-2">${i18n.t('gameSetupModal.remote')}</div>
-          <div class="text-sm opacity-70">${i18n.t('gameSetupModal.play_online')}</div>
+        <button data-mode="tournament" class="rounded-lg border border-terminal-gray p-4 text-left transition-all hover:bg-terminal-gray hover:bg-opacity-10">
+          <div class="text-lg font-bold mb-2">${i18n.t('gameSetupModal.tournament')}</div>
+          <div class="text-sm opacity-70">${i18n.t('gameSetupModal.play_tournament_with_3_guests')}</div>
         </button>
       </div>
       <div class="flex justify-end gap-2 mt-6">
@@ -135,8 +133,8 @@ export class GameSetupModal extends BaseModal {
       case 'local':
         this.handleLocalMode();
         break;
-      case 'remote':
-        this.renderFriendSelectionView();
+      case 'tournament':
+        this.handleTournamentMode();
         break;
       default:
         console.warn('Unknown game mode:', mode);
@@ -145,7 +143,6 @@ export class GameSetupModal extends BaseModal {
 
   private handleAIMode(): void {
     this.selectedMode = 'vs ai';
-    this.invitedFriends = [];
     
     // AI 모드 게임 설정 결과를 반환
     const result: GameSetupResult = {
@@ -159,38 +156,58 @@ export class GameSetupModal extends BaseModal {
     }
     
     this.close();
-    // this.renderMatchupCountdownView();
   }
 
   private handleLocalMode(): void {
-    this.renderGuestInputView();
+    this.selectedMode = 'local';
+    this.renderGuestInputView(1);
   }
 
-  private renderGuestInputView(): void {
+  private handleTournamentMode(): void {
+    this.selectedMode = 'tournament';
+    this.renderGuestInputView(3);
+  }
+
+  private renderGuestInputView(playerCount: number = 1): void {
     if (!this.contentElement) return;
+
+    const isMultiplePlayers = playerCount > 1;
+    const title = isMultiplePlayers ? 
+      `Enter ${playerCount} Guest Player Names` : 
+      'Enter Guest Player Name';
+
+    let inputFields = '';
+    for (let i = 0; i < playerCount; i++) {
+      const playerNumber = playerCount > 1 ? ` ${i + 1}` : '';
+      inputFields += `
+        <div class="mb-4">
+          <label class="block text-terminal-gray text-sm font-medium mb-2">
+            Guest Player${playerNumber} Nickname
+          </label>
+          <input 
+            type="text" 
+            id="guest-name-input-${i}" 
+            placeholder="Enter guest player${playerNumber} name..."
+            class="w-full px-4 py-3 bg-terminal-black border border-terminal-gray rounded-lg text-terminal-green focus:outline-none focus:border-terminal-green"
+            maxlength="20"
+            autocomplete="off"
+          />
+        </div>
+      `;
+    }
 
     this.contentElement.innerHTML = `
       <div class="flex items-center justify-between mb-6">
-        <h3 class="text-terminal-green text-xl font-bold">Enter Guest Player Name</h3>
+        <h3 class="text-terminal-green text-xl font-bold">${title}</h3>
         <button class="text-terminal-gray hover:text-terminal-green transition-all" id="close-btn">
           ✕
         </button>
       </div>
       
       <div class="mb-6">
-        <label class="block text-terminal-gray text-sm font-medium mb-2">
-          Guest Player Nickname
-        </label>
-        <input 
-          type="text" 
-          id="guest-name-input" 
-          placeholder="Enter guest player name..."
-          class="w-full px-4 py-3 bg-terminal-black border border-terminal-gray rounded-lg text-terminal-green focus:outline-none focus:border-terminal-green"
-          maxlength="20"
-          autocomplete="off"
-        />
+        ${inputFields}
         <div class="text-xs text-terminal-gray mt-1">
-          Enter a nickname for the guest player (max 20 characters)
+          Enter ${isMultiplePlayers ? 'nicknames' : 'a nickname'} for the guest player${isMultiplePlayers ? 's' : ''} (max 20 characters each)
         </div>
       </div>
       
@@ -209,24 +226,37 @@ export class GameSetupModal extends BaseModal {
       </div>
     `;
 
-    this.attachGuestInputEventListeners();
+    this.attachGuestInputEventListeners(playerCount);
   }
 
-  private attachGuestInputEventListeners(): void {
+  private attachGuestInputEventListeners(playerCount: number = 1): void {
     if (!this.contentElement) return;
 
-    const guestNameInput = this.contentElement.querySelector('#guest-name-input') as HTMLInputElement;
     const backBtn = this.contentElement.querySelector('#back-btn') as HTMLButtonElement;
     const cancelBtn = this.contentElement.querySelector('#cancel-btn') as HTMLButtonElement;
     const startGameBtn = this.contentElement.querySelector('#start-game-btn') as HTMLButtonElement;
     const closeBtn = this.contentElement.querySelector('#close-btn') as HTMLButtonElement;
 
-    // Input validation
-    guestNameInput?.addEventListener('input', () => {
-      const value = guestNameInput.value.trim();
-      if (startGameBtn) {
-        startGameBtn.disabled = value.length === 0;
+    // Get all input elements
+    const guestNameInputs: HTMLInputElement[] = [];
+    for (let i = 0; i < playerCount; i++) {
+      const input = this.contentElement.querySelector(`#guest-name-input-${i}`) as HTMLInputElement;
+      if (input) {
+        guestNameInputs.push(input);
       }
+    }
+
+    // Input validation function
+    const validateInputs = () => {
+      const allValid = guestNameInputs.every(input => input.value.trim().length > 0);
+      if (startGameBtn) {
+        startGameBtn.disabled = !allValid;
+      }
+    };
+
+    // Add input validation to all inputs
+    guestNameInputs.forEach(input => {
+      input.addEventListener('input', validateInputs);
     });
 
     // Back button
@@ -248,16 +278,15 @@ export class GameSetupModal extends BaseModal {
 
     // Start game button
     startGameBtn?.addEventListener('click', () => {
-      const guestName = guestNameInput.value.trim();
-      if (guestName) {
-        this.selectedMode = 'local';
-        this.selectedOpponent = { nickname: guestName } as Friend;
-        this.invitedFriends = [this.selectedOpponent];
-        
-        // 게임 설정 결과를 반환
+      const guestNames = guestNameInputs
+        .map(input => input.value.trim())
+        .filter(name => name.length > 0);
+
+      if (guestNames.length === playerCount) {
+        // Create game setup result
         const result: GameSetupResult = {
-          mode: 'local',
-          opponents: [guestName]
+          mode: this.selectedMode,
+          opponents: guestNames
         };
 
         if (this.resolvePromise) {
@@ -266,201 +295,22 @@ export class GameSetupModal extends BaseModal {
         }
         
         this.close();
-        // this.renderMatchupCountdownView();
       }
     });
 
-    // Enter key support
-    guestNameInput?.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter' && !startGameBtn.disabled) {
-        startGameBtn.click();
-      }
-    });
-
-    // Focus on input
-    guestNameInput?.focus();
-  }
-
-  private renderFriendSelectionView(): void {
-    if (!this.contentElement) return;
-
-    this.contentElement.innerHTML = `
-      <div class="flex items-center justify-between mb-6">
-        <h3 class="text-terminal-green text-xl font-bold">${i18n.t('gameSetupModal.select_opponent')}</h3>
-        <button class="text-terminal-gray hover:text-terminal-green transition-all" id="close-btn">
-          ✕
-        </button>
-      </div>
-      
-      <div class="mb-4">
-        <input 
-          type="text" 
-          id="friend-search" 
-          placeholder="${i18n.t('gameSetupModal.search_friends')}"
-          class="w-full px-4 py-2 bg-terminal-black border border-terminal-gray rounded-lg text-terminal-green focus:outline-none focus:border-terminal-green"
-        />
-      </div>
-      
-      <div class="max-h-[300px] overflow-y-auto mb-6">
-        <div id="friends-list" class="space-y-2">
-          <!-- Friends will be populated here -->
-        </div>
-      </div>
-      
-      <div class="flex justify-between gap-2">
-        <button id="back-btn" class="px-4 py-2 text-terminal-gray border border-terminal-gray rounded hover:bg-terminal-gray hover:bg-opacity-10 transition-all">
-          ${i18n.t('common.back')}
-        </button>
-        <div class="flex gap-2">
-          <button id="cancel-btn" class="px-4 py-2 text-terminal-gray border border-terminal-gray rounded hover:bg-terminal-gray hover:bg-opacity-10 transition-all">
-            ${i18n.t('common.cancel')}
-          </button>
-          <button id="invite-btn" class="px-4 py-2 bg-terminal-green text-terminal-black rounded hover:bg-opacity-80 transition-all disabled:opacity-50 disabled:cursor-not-allowed" disabled>
-            ${i18n.t('gameSetupModal.send_invite')}
-          </button>
-        </div>
-      </div>
-    `;
-
-    this.loadFriendsList();
-    this.attachFriendSelectionEventListeners();
-  }
-
-  private loadFriendsList(): void {
-    // Mock friends data - 실제로는 API에서 가져와야 함
-    const mockFriends: Friend[] = [
-      { id: 1, username: 'alice_dev', nickname: 'Alice', status: 'online', blocked: false },
-      { id: 2, username: 'bob_coder', nickname: 'Bob', status: 'offline', blocked: false },
-      { id: 3, username: 'charlie_game', nickname: 'Charlie', status: 'online', blocked: false },
-    ];
-
-    this.renderFriendsList(mockFriends);
-  }
-
-  private renderFriendsList(friends: Friend[]): void {
-    if (!this.contentElement) return;
-
-    const friendsList = this.contentElement.querySelector('#friends-list');
-    if (!friendsList) return;
-
-    if (friends.length === 0) {
-      friendsList.innerHTML = `
-        <div class="text-center text-terminal-gray py-8">
-          <p>${i18n.t('gameSetupModal.no_friends_found')}</p>
-        </div>
-      `;
-      return;
-    }
-
-    friendsList.innerHTML = friends.map(friend => `
-      <div class="friend-item flex items-center justify-between p-3 border border-terminal-gray rounded-lg hover:bg-terminal-gray hover:bg-opacity-10 transition-all cursor-pointer" data-friend-id="${friend.id}">
-        <div class="flex items-center gap-3">
-          <div class="w-8 h-8 bg-terminal-green bg-opacity-20 rounded-full flex items-center justify-center">
-            <span class="text-terminal-green font-bold">${friend.username.charAt(0).toUpperCase()}</span>
-          </div>
-          <div>
-            <div class="font-medium">${friend.username}</div>
-            <div class="text-sm text-terminal-gray">${friend.status === 'online' ? i18n.t('common.online') : i18n.t('common.offline')}</div>
-          </div>
-        </div>
-        <div class="text-terminal-green opacity-0 friend-check">✓</div>
-      </div>
-    `).join('');
-
-    // Add click listeners to friend items
-    const friendItems = friendsList.querySelectorAll('.friend-item');
-    friendItems.forEach(item => {
-      item.addEventListener('click', () => {
-        const friendId = item.getAttribute('data-friend-id');
-        const friend = friends.find(f => f.id?.toString() === friendId);
-        if (friend) {
-          this.selectFriend(friend, item as HTMLElement);
+    // Enter key support for all inputs
+    guestNameInputs.forEach(input => {
+      input.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && !startGameBtn.disabled) {
+          startGameBtn.click();
         }
       });
     });
-  }
 
-  private selectFriend(friend: Friend, element: HTMLElement): void {
-    // Clear previous selections
-    const allChecks = this.contentElement?.querySelectorAll('.friend-check');
-    allChecks?.forEach(check => {
-      (check as HTMLElement).style.opacity = '0';
-    });
-
-    const allItems = this.contentElement?.querySelectorAll('.friend-item');
-    allItems?.forEach(item => {
-      item.classList.remove('border-terminal-green');
-      item.classList.add('border-terminal-gray');
-    });
-
-    // Select current friend
-    this.selectedOpponent = friend;
-    element.classList.remove('border-terminal-gray');
-    element.classList.add('border-terminal-green');
-    
-    const check = element.querySelector('.friend-check') as HTMLElement;
-    if (check) {
-      check.style.opacity = '1';
-    }
-
-    // Enable invite button
-    const inviteBtn = this.contentElement?.querySelector('#invite-btn') as HTMLButtonElement;
-    if (inviteBtn) {
-      inviteBtn.disabled = false;
+    // Focus on first input
+    if (guestNameInputs.length > 0) {
+      guestNameInputs[0].focus();
     }
   }
 
-  private attachFriendSelectionEventListeners(): void {
-    if (!this.contentElement) return;
-
-    const searchInput = this.contentElement.querySelector('#friend-search') as HTMLInputElement;
-    const backBtn = this.contentElement.querySelector('#back-btn') as HTMLButtonElement;
-    const cancelBtn = this.contentElement.querySelector('#cancel-btn') as HTMLButtonElement;
-    const inviteBtn = this.contentElement.querySelector('#invite-btn') as HTMLButtonElement;
-    const closeBtn = this.contentElement.querySelector('#close-btn') as HTMLButtonElement;
-
-    // Search functionality
-    searchInput?.addEventListener('input', () => {
-      // TODO: Implement friend search
-    });
-
-    // Back button
-    backBtn?.addEventListener('click', () => {
-      this.renderModeSelectionView();
-    });
-
-    // Cancel button
-    cancelBtn?.addEventListener('click', () => {
-      this.isCancelled = true;
-      this.close();
-    });
-
-    // Close button
-    closeBtn?.addEventListener('click', () => {
-      this.isCancelled = true;
-      this.close();
-    });
-
-    // Invite button
-    inviteBtn?.addEventListener('click', () => {
-      if (this.selectedOpponent) {
-        this.sendGameInvite();
-      }
-    });
-  }
-
-  private sendGameInvite(): void {
-    if (!this.selectedOpponent) return;
-
-    const result: GameSetupResult = {
-      mode: 'remote',
-      opponents: [this.selectedOpponent.username || this.selectedOpponent.nickname || 'Unknown']
-    };
-
-    if (this.resolvePromise) {
-      this.resolvePromise(result);
-      this.resolvePromise = null;
-      this.close();
-    }
-  }
 }
