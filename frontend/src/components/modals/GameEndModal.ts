@@ -1,20 +1,23 @@
 /**
- * GameEndModal - 통합된 BaseModal을 활용한 게임 종료 모달
+ * GameEndModal - ModalManager를 직접 활용한 게임 종료 모달
  * 
- * 게임 결과를 표시하고 다음 액션을 선택할 수 있는 모달입니다.
+ * BaseModal을 제거하고 ModalManager를 직접 사용하여
+ * 더 효율적이고 일관된 모달 시스템을 구현합니다.
  */
 
 import { GameResult } from '../../types/types.js';
-import { BaseModal } from './BaseModal.js';
+import { ModalManager, ModalContent } from '../../managers/ModalManager.js';
 import i18n from '../../services/i18n';
 
-export class GameEndModal extends BaseModal {
+export class GameEndModal {
+  private modalManager: ModalManager;
   private onProfileClick: () => void;
   private onNextMatch?: () => void;
   private isTournament: boolean;
   private isFinal: boolean;
   private gameResult: GameResult;
   private onGameFinish?: () => void;
+  private contentElement: HTMLElement | null = null;
 
   constructor(
     gameResult: GameResult, 
@@ -24,7 +27,7 @@ export class GameEndModal extends BaseModal {
     onNextMatch?: () => void,
     onGameFinish?: () => void
   ) {
-    super();
+    this.modalManager = ModalManager.getInstance();
     this.gameResult = gameResult;
     this.onProfileClick = onProfileClick;
     this.onNextMatch = onNextMatch;
@@ -33,23 +36,40 @@ export class GameEndModal extends BaseModal {
     this.onGameFinish = onGameFinish;
   }
 
-  protected onShow(): void {
+  public show(): void {
+    const modalContent: ModalContent = {
+      title: 'Game Result',
+      content: () => {
+        this.contentElement = document.createElement('div');
+        this.contentElement.className = 'modal-body';
+        this.render();
+        return this.contentElement;
+      },
+      onShow: () => this.onShow(),
+      onClose: () => this.onClose(),
+      config: {
+        closable: false,
+        closeOnOutsideClick: false,
+        sizeClass: 'max-w-[500px] w-[95%]'
+      }
+    };
+
+    this.modalManager.show(modalContent);
+  }
+
+  public close(): void {
+    this.modalManager.hide();
+  }
+
+  private onShow(): void {
     // 모달이 표시될 때 초기화
   }
 
-  protected onClose(): void {
+  private onClose(): void {
     // 정리 작업만 수행, 자동 콜백 호출하지 않음
   }
 
-  protected canCloseOnOutsideClick(): boolean {
-    return false; // 중요한 결과이므로 외부 클릭으로 닫지 않음
-  }
-
-  protected canClose(): boolean {
-    return false; // ESC 키로도 닫지 않음
-  }
-
-  protected render(): void {
+  private render(): void {
     if (!this.contentElement) return;
     
     // Determine if current user won (assuming right player is the user in most cases)

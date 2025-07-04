@@ -1,22 +1,24 @@
 /**
- * GameSetupModal - 통합된 BaseModal을 활용한 게임 설정 모달
+ * GameSetupModal - ModalManager를 직접 활용한 게임 설정 모달
  * 
- * 기존 GameSetupModal을 BaseModal 기반으로 리팩토링하여
- * ModalManager를 활용하는 일관된 모달 시스템으로 통합합니다.
+ * BaseModal을 제거하고 ModalManager를 직접 사용하여
+ * 더 효율적이고 일관된 모달 시스템을 구현합니다.
  */
 
 import { GameSetupResult } from '../../types/types.js';
-import { BaseModal } from './BaseModal.js';
+import { ModalManager, ModalContent } from '../../managers/ModalManager.js';
 import i18n from '../../services/i18n';
 
-export class GameSetupModal extends BaseModal {
+export class GameSetupModal {
+  private modalManager: ModalManager;
   private resolvePromise: ((value: GameSetupResult | null) => void) | null = null;
   private isCancelled: boolean = false;
   private selectedMode: string = '';
   private countdownInterval: number | null = null;
+  private contentElement: HTMLElement | null = null;
 
   constructor() {
-    super();
+    this.modalManager = ModalManager.getInstance();
   }
 
   public open(): Promise<GameSetupResult | null> {
@@ -32,14 +34,39 @@ export class GameSetupModal extends BaseModal {
     if (this.resolvePromise) {
       this.isCancelled = true;
     }
-    super.close();
+    this.hide();
   }
 
-  protected onShow(): void {
+  private show(): void {
+    const modalContent: ModalContent = {
+      title: 'Select Game Mode',
+      content: () => {
+        this.contentElement = document.createElement('div');
+        this.contentElement.className = 'modal-body';
+        this.renderModeSelectionView();
+        return this.contentElement;
+      },
+      onShow: () => this.onShow(),
+      onClose: () => this.onClose(),
+      config: {
+        closable: true,
+        closeOnOutsideClick: true,
+        sizeClass: 'max-w-[600px] w-[95%]'
+      }
+    };
+
+    this.modalManager.show(modalContent);
+  }
+
+  private hide(): void {
+    this.modalManager.hide();
+  }
+
+  private onShow(): void {
     // 모달이 표시될 때 초기화
   }
 
-  protected onClose(): void {
+  private onClose(): void {
     // 카운트다운 타이머 정리
     if (this.countdownInterval) {
       clearInterval(this.countdownInterval);
@@ -51,16 +78,6 @@ export class GameSetupModal extends BaseModal {
       this.resolvePromise(null);
       this.resolvePromise = null;
     }
-  }
-
-  protected canCloseOnOutsideClick(): boolean {
-    return true;
-  }
-
-  protected render(): void {
-    if (!this.contentElement) return;
-    
-    this.renderModeSelectionView();
   }
 
   private renderModeSelectionView(): void {
