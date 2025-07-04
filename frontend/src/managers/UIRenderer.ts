@@ -53,7 +53,7 @@ export class UIRenderer {
    * 초기 레이아웃 생성
    */
   private initializeLayout(): void {
-    this.appElement.innerHTML = `
+    const layoutHTML = `
       <div class="flex flex-col h-full border border-terminal-gray rounded-lg overflow-hidden relative">
         <!-- Header -->
         <div class="app-header flex items-center p-2 bg-terminal-black border-b border-terminal-gray">
@@ -96,9 +96,13 @@ export class UIRenderer {
       </div>
     `;
 
-    // Insert terminal once
+    DOMUpdater.updateHTML(this.appElement, layoutHTML);
+
+    // Insert terminal once using DOMUpdater
     const terminalContainer = this.appElement.querySelector('.terminal-container') as HTMLElement;
-    terminalContainer.appendChild(this.mainTerminal.render());
+    if (terminalContainer) {
+      terminalContainer.appendChild(this.mainTerminal.render());
+    }
   }
 
   /**
@@ -113,7 +117,7 @@ export class UIRenderer {
    * 메인 콘텐츠 업데이트
    */
   private updateMainContent(): void {
-    const mainContent = document.querySelector('.main-content') as HTMLElement;
+    const mainContent = this.appElement.querySelector('.main-content') as HTMLElement;
     if (!mainContent) return;
     
     const isLoggedIn = authStore.getIsLoggedIn();
@@ -152,6 +156,9 @@ export class UIRenderer {
           console.log('[UIRenderer] Creating new UserProfile with 2FA status:', currentUser.twoFactorEnabled);
           this.userProfile = new UserProfile(currentUser, true);
         }
+        
+        // Clear main content and append user profile using DOMUpdater
+        DOMUpdater.updateHTML(mainContent, '');
         mainContent.appendChild(this.userProfile!.render());
       }
     } else {
