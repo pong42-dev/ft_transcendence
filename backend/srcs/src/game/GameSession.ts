@@ -215,10 +215,28 @@ export class GameSession {
       // DB에 게임 승자 설정
       await this.gameRepository.setGameWinner(this.gameId, matchWinnerPlayer.id);
       
-      // 'game_end' 이벤트를 먼저 보내고,
+      // 마지막 라운드 종료 이벤트를 먼저 보내서 클라이언트가 점수를 업데이트하도록 함
+      this.onGameEvent({
+        event: 'round_end',
+        data: {},
+      });
+      
+      // 최종 점수가 반영된 게임 상태를 바로 보냄
+      this.onGameEvent({
+        event: 'game_state',
+        data: this._createGameStateDto(),
+      });
+      
+      // 그 다음에 'game_end' 이벤트를 보냄
       this.onGameEvent({
         event: 'game_end',
-        data: { winnerId: matchWinnerPlayer.id },
+        data: { 
+          winnerId: matchWinnerPlayer.id,
+          finalScores: {
+            player1: scores.left,
+            player2: scores.right
+          }
+        },
       });
       // 그 다음에 게임 루프를 중지시킵니다.
       await this.stop('normal');
