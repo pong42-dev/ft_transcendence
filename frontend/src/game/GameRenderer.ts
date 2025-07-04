@@ -76,36 +76,35 @@ export class GameRenderer {
 
   /**
    * 최초 update에서만 settings 기반 스타일 적용, 이후 위치/점수만 갱신
+   * 화면 크기에 맞게 스케일링 적용
+   */
+  /**
+   * 게임 상태 업데이트 - 원래 상태로 복원
    */
   public update(state: GameStateDto): void {
     if (!this.initialized && state.settings) {
-      // Left paddle setup
+      // 기본 스타일 설정
       this.leftPaddle.style.position = 'absolute';
       this.leftPaddle.style.backgroundColor = '#00ff00';
       this.leftPaddle.style.width = `${state.settings.paddleWidth}px`;
       this.leftPaddle.style.height = `${state.settings.paddleHeight}px`;
       this.leftPaddle.style.left = `${state.settings.paddleOffset}px`;
-      this.leftPaddle.style.top = `${state.settings.canvasHeight / 2 - state.settings.paddleHeight / 2}px`;
       
-      // Right paddle setup
       this.rightPaddle.style.position = 'absolute';
       this.rightPaddle.style.backgroundColor = '#00ff00';
       this.rightPaddle.style.width = `${state.settings.paddleWidth}px`;
       this.rightPaddle.style.height = `${state.settings.paddleHeight}px`;
       this.rightPaddle.style.right = `${state.settings.paddleOffset}px`;
-      this.rightPaddle.style.top = `${state.settings.canvasHeight / 2 - state.settings.paddleHeight / 2}px`;
       
-      // Ball setup
       this.ball.style.position = 'absolute';
       this.ball.style.backgroundColor = '#00ff00';
       this.ball.style.borderRadius = '50%';
       this.ball.style.width = `${state.settings.ballSize}px`;
       this.ball.style.height = `${state.settings.ballSize}px`;
-      this.ball.style.left = `${state.settings.canvasWidth / 2 - state.settings.ballSize / 2}px`;
-      this.ball.style.top = `${state.settings.canvasHeight / 2 - state.settings.ballSize / 2}px`;
-      this.ball.style.opacity = '1'; // Make ball visible
+      this.ball.style.opacity = '1';
       this.ball.style.transition = 'opacity 0.3s ease';
       
+      this.initialized = true;
     }
     
     // Update positions
@@ -121,26 +120,34 @@ export class GameRenderer {
       <span>${state.scores.player2}</span>
     `;
   }
-
+  
   public updatePlayerInfo(leftPlayer: PlayerResponseDto, rightPlayer: PlayerResponseDto): void {
     if (!leftPlayer || !rightPlayer) return;
     
     // 왼쪽 플레이어: 아바타 → 이름 순서
+    const leftAvatarHtml = leftPlayer.avatarUrl 
+      ? `<img src="${leftPlayer.avatarUrl}" class="w-full h-full object-cover rounded-full" alt="${leftPlayer.name}">`
+      : `<span class="text-sm">${leftPlayer.name?.charAt(0).toUpperCase() || 'P'}</span>`;
+    
     this.leftPlayerInfo.innerHTML = `
       <div class="flex items-center gap-3">
         <div class="w-10 h-10 rounded-full bg-terminal-gray bg-opacity-20 flex items-center justify-center overflow-hidden">
-          <span class="text-sm">${leftPlayer.name?.charAt(0).toUpperCase() || 'P'}</span>
+          ${leftAvatarHtml}
         </div>
         <div class="text-sm font-bold">${leftPlayer.name || 'Player 1'}</div>
       </div>
     `;
     
-    // 오른쪽 플레이어: 이름 → 아바타 순서  
+    // 오른쪽 플레이어: 이름 → 아바타 순서
+    const rightAvatarHtml = rightPlayer.avatarUrl 
+      ? `<img src="${rightPlayer.avatarUrl}" class="w-full h-full object-cover rounded-full" alt="${rightPlayer.name}">`
+      : `<span class="text-sm">${rightPlayer.name?.charAt(0).toUpperCase() || 'P'}</span>`;
+      
     this.rightPlayerInfo.innerHTML = `
       <div class="flex items-center gap-3">
         <div class="text-sm font-bold">${rightPlayer.name || 'Player 2'}</div>
         <div class="w-10 h-10 rounded-full bg-terminal-gray bg-opacity-20 flex items-center justify-center overflow-hidden">
-          <span class="text-sm">${rightPlayer.name?.charAt(0).toUpperCase() || 'P'}</span>
+          ${rightAvatarHtml}
         </div>
       </div>
     `;

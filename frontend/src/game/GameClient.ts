@@ -135,22 +135,22 @@ export class GameClient {
       // AI 모드: AI가 왼쪽, 유저가 오른쪽
       leftPlayerName = 'AI';
       rightPlayerName = userPlayer?.name || 'Player';
-      leftPlayerAvatar = undefined; // AI는 아바타 없음
-      rightPlayerAvatar = undefined; // 현재 PlayerResponseDto에 avatarUrl 없음
+      leftPlayerAvatar = undefined; // AI는 기본 아바타 사용
+      rightPlayerAvatar = userPlayer?.avatarUrl;
       
     } else if (this.gameMode === 'local_1v1') {
       // 로컬 모드: 유저가 왼쪽, 게스트가 오른쪽
       leftPlayerName = userPlayer?.name || 'Player 1';
       rightPlayerName = guestPlayer?.name || 'Player 2';
-      leftPlayerAvatar = undefined;
-      rightPlayerAvatar = undefined;
+      leftPlayerAvatar = userPlayer?.avatarUrl;
+      rightPlayerAvatar = guestPlayer?.avatarUrl;
       
     } else {
       // 기본값 (다른 모드들)
       leftPlayerName = players[0]?.name || 'Player 1';
       rightPlayerName = players[1]?.name || 'Player 2';
-      leftPlayerAvatar = undefined;
-      rightPlayerAvatar = undefined;
+      leftPlayerAvatar = players[0]?.avatarUrl;
+      rightPlayerAvatar = players[1]?.avatarUrl;
     }
 
     console.log('Player info:', {
@@ -194,18 +194,23 @@ export class GameClient {
         // 라운드 종료 시 특별한 처리 없음 (점수는 gameState에서 업데이트됨)
         break;
       case 'game_end':
-        this.handleGameEnd(gameEvent.data?.winnerId);
+        this.handleGameEnd(gameEvent.data?.winnerId, gameEvent.data?.finalScores);
         break;
     }
   }
 
-  private handleGameEnd(winnerId?: number): void {
+  private handleGameEnd(winnerId?: number, finalScores?: { player1: number; player2: number }): void {
     // 게임 종료 처리
     this.gameEnded = true; // 게임이 정상적으로 끝났음을 표시
     this.inputHandler.deactivate();
     
+    // 최종 점수 사용 (백엔드에서 제공된 경우) 또는 현재 점수 사용
+    const scores = finalScores ? 
+      { left: finalScores.player1, right: finalScores.player2 } : 
+      this.currentScores;
+    
     // 최종 라운드 수 계산 (총 점수 합계)
-    const finalTotalRounds = this.currentScores.left + this.currentScores.right;
+    const finalTotalRounds = scores.left + scores.right;
     
     // 게임 결과 데이터 구성
     const players = this.gameInfo.players;
@@ -221,11 +226,11 @@ export class GameClient {
       // AI 모드: AI가 왼쪽, 유저가 오른쪽
       leftPlayer = {
         nickname: 'AI',
-        score: this.currentScores.left
+        score: scores.left
       };
       rightPlayer = {
         nickname: userPlayer?.name || 'Player',
-        score: this.currentScores.right
+        score: scores.right
       };
       
       // 승자 결정: AI가 이기면 left, 유저가 이기면 right
@@ -235,11 +240,11 @@ export class GameClient {
       // 로컬 모드: 유저가 왼쪽, 게스트가 오른쪽
       leftPlayer = {
         nickname: userPlayer?.name || 'Player 1',
-        score: this.currentScores.left
+        score: scores.left
       };
       rightPlayer = {
         nickname: guestPlayer?.name || 'Player 2',
-        score: this.currentScores.right
+        score: scores.right
       };
       
       // 승자 결정
@@ -249,11 +254,11 @@ export class GameClient {
       // 기본값 (다른 모드)
       leftPlayer = {
         nickname: players[0]?.name || 'Player 1',
-        score: this.currentScores.left
+        score: scores.left
       };
       rightPlayer = {
         nickname: players[1]?.name || 'Player 2', 
-        score: this.currentScores.right
+        score: scores.right
       };
       winner = winnerId === players[0]?.id ? 'left' : 'right';
     }

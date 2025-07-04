@@ -77,6 +77,7 @@ export const PlayerResponseDtoSchema = Type.Object({
   id: Type.Integer(),
   type: PlayerTypeSchema,
   name: Type.String(), // users.nickname or players.display_name
+  avatarUrl: Type.Optional(Type.String()), // user avatar URL
 });
 export type PlayerResponseDto = Static<typeof PlayerResponseDtoSchema>;
 

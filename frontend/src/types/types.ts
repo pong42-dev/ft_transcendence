@@ -402,6 +402,7 @@ export interface PlayerResponseDto {
   id: number;
   type: PlayerType;
   name: string; // users.nickname or players.display_name
+  avatarUrl?: string; // user avatar URL
 }
 
 export interface CreateGameRequestDto {
@@ -464,6 +465,10 @@ export interface GameEventDto {
   data?: {
     remainingTime?: number;
     winnerId?: number;
+    finalScores?: {
+      player1: number;
+      player2: number;
+    };
     // 확장 가능
   }
 }
