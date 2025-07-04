@@ -92,10 +92,16 @@ export class GameSession {
   public async stop(reason: 'normal' | 'player_left' | 'error') {
     console.log(`[GameSession] stop called with reason: ${reason}, gameId: ${this.gameId}, current status: ${this.status}`);
     
-    if (this.loop) clearInterval(this.loop);
-    if (this.intermissionTimer) clearTimeout(this.intermissionTimer);
-    this.loop = null;
-    this.intermissionTimer = null;
+    // 모든 타이머 정리
+    if (this.loop) {
+      clearInterval(this.loop);
+      clearTimeout(this.loop); // setTimeout도 고려
+      this.loop = null;
+    }
+    if (this.intermissionTimer) {
+      clearTimeout(this.intermissionTimer);
+      this.intermissionTimer = null;
+    }
     
     // 'waiting' 상태에서도 취소 가능하도록 조건 확장
     if (this.status === 'playing' || this.status === 'countdown' || this.status === 'waiting') {
@@ -120,14 +126,22 @@ export class GameSession {
     if (this.status !== 'waiting') return;
     let remainingTime = 5;
     this.status = 'countdown';
-    this.loop = setInterval(() => {
+    
+    const countdown = () => {
       this.onGameEvent({ event: 'countdown', data: { remainingTime } });
       remainingTime--;
+      
       if (remainingTime < 0) {
-        clearInterval(this.loop!);
+        // 카운트다운 완료 후 게임 시작
         this._startGameLoop();
+      } else {
+        // 다음 카운트다운을 1초 후에 실행
+        this.loop = setTimeout(countdown, 1000);
       }
-    }, 1000);
+    };
+    
+    // 첫 카운트다운 즉시 시작
+    countdown();
   }
 
   // =================================================================
@@ -135,12 +149,28 @@ export class GameSession {
   // =================================================================
 
   private async _startGameLoop() {
+    console.log(`[GameSession] _startGameLoop called, current status: ${this.status}`);
     this.status = 'playing';
     // this._startTime = Date.now(); // 나중에 필요시 사용
     // DB에 게임 시작 상태 업데이트
     await this.gameRepository.updateGameStatus(this.gameId, 'playing');
-    this.onGameEvent({ event: 'round_start' });
+    
+    console.log(`[GameSession] Starting first round intermission`);
+    // 첫 라운드도 인터미션을 거친 후 시작
+    this._startRoundIntermission();
+  }
 
+  /**
+   * [신규] 실제 게임 물리 로직(공 움직임)을 실행하는 루프입니다.
+   */
+  private _startGamePhysicsLoop() {
+    // 이전 루프가 있다면 정리
+    if (this.loop) {
+      clearInterval(this.loop);
+      clearTimeout(this.loop);
+    }
+    
+    this.engine.resetRound(); // 라운드 시작 전 상태 초기화
     this.loop = setInterval(() => {
       this._updateGame();
     }, this.config.gameLoopInterval);
@@ -153,7 +183,7 @@ export class GameSession {
         this.stop('error'); // 혹은 다른 적절한 처리
         return;
     }
-    
+
     let leftPlayerInput, rightPlayerInput;
     
     if (this._mode === 'ai_1v1') {
@@ -216,6 +246,10 @@ export class GameSession {
     // 4. 라운드 종료 이벤트를 전송합니다.
     this.onGameEvent({ event: 'round_end', data: { winnerId: winner.id } });
 
+    // 4.5. 업데이트된 점수를 즉시 클라이언트에 전송합니다.
+    const updatedGameState = this._createGameStateDto();
+    this.onGameStateUpdate(updatedGameState);
+
     // 5. 게임이 완전히 종료되었는지 확인합니다.
     if (result.gameEnded && result.matchWinner) {
       const matchWinnerPlayer = result.matchWinner === 'left' ? players[0] : players[1];
@@ -236,40 +270,50 @@ export class GameSession {
       });
 
       await this.stop('normal');
-
     } else {
-      this._startRoundIntermission();
+        // ✅ 게임이 끝나지 않았다면, 다음 라운드를 위해 인터미션을 시작합니다.
+        this._startRoundIntermission();
     }
   }
 
   /**
-     * [신규] 3초간의 라운드 인터미션을 시작하고 카운트다운 이벤트를 전송합니다.
-     */
-    private _startRoundIntermission() {
-        let remainingTime = 3;
-        const currentRound = this.engine.getRoundWins().left + this.engine.getRoundWins().right + 1;
+   * [신규] 3초간의 라운드 인터미션을 시작하고 카운트다운 이벤트를 전송합니다.
+   * 라운드 종료 후 다음 라운드 시작 전에만 사용됩니다.
+   */
+  private _startRoundIntermission() {
+    let remainingTime = 3;
+    const scores = this.engine.getRoundWins();
+    const currentRound = scores.left + scores.right + 1;
+    
+    console.log(`[GameSession] Starting round intermission for round ${currentRound}, scores: ${scores.left}-${scores.right}`);
 
-        const countdown = () => {
-          if (this.status !== 'playing') return; // 게임이 중단되면 타이머도 멈춤
+    const countdown = () => {
+      if (this.status !== 'playing') {
+        console.log(`[GameSession] Intermission stopped due to status change: ${this.status}`);
+        return; // 게임이 중단되면 타이머도 멈춤
+      }
 
-          this.onGameEvent({
-            event: 'intermission_countdown',
-            data: { remainingTime, round: currentRound }
-          });
+      console.log(`[GameSession] Intermission countdown: ${remainingTime}, round: ${currentRound}`);
+      
+      this.onGameEvent({
+        event: 'intermission_countdown',
+        data: { remainingTime, round: currentRound }
+      });
 
-          remainingTime--;
+      remainingTime--;
 
-          if (remainingTime < 0) {
-            // 카운트다운이 끝나면 라운드를 리셋하고 게임 루프를 다시 시작
-            this.engine.resetRound();
-            this._startGameLoop();
-          } else {
-            this.intermissionTimer = setTimeout(countdown, 1000);
-          }
-        };
-        
-        countdown(); // 인터미션 시작
-    }
+      if (remainingTime < 0) {
+        // 카운트다운이 끝나면 다음 라운드 시작
+        console.log(`[GameSession] Intermission complete, starting round ${currentRound}`);
+        this.onGameEvent({ event: 'round_start' });
+        this._startGamePhysicsLoop();
+      } else {
+        this.intermissionTimer = setTimeout(countdown, 1000);
+      }
+    };
+    
+    countdown(); // 인터미션 시작
+  }
 
   // =================================================================
   // DTO Creation
