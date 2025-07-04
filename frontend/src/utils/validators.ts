@@ -20,12 +20,31 @@ export const validatePassword = (password: string): ValidationResult => {
     return { isValid: false, error: 'Password is required' };
   }
   
-  if (password.length < 8) {
-    return { isValid: false, error: 'Password must be at least 8 characters long' };
+  // 백엔드와 일치하는 검증 규칙
+  const lengthValid = password.length >= 8 && password.length <= 15;
+  const hasDigit = /[0-9]/.test(password);
+  const hasLowerCase = /[a-z]/.test(password);
+  const hasUpperCase = /[A-Z]/.test(password);
+  const hasSpecialChar = /[@#%&!$*]/.test(password);
+  
+  if (!lengthValid) {
+    return { isValid: false, error: 'Password must be 8-15 characters long' };
   }
-
-  if (password.length > 16) {
-    return { isValid: false, error: 'Password must be less than 16 characters long' };
+  
+  if (!hasDigit) {
+    return { isValid: false, error: 'Password must contain at least one digit (0-9)' };
+  }
+  
+  if (!hasLowerCase) {
+    return { isValid: false, error: 'Password must contain at least one lowercase letter (a-z)' };
+  }
+  
+  if (!hasUpperCase) {
+    return { isValid: false, error: 'Password must contain at least one uppercase letter (A-Z)' };
+  }
+  
+  if (!hasSpecialChar) {
+    return { isValid: false, error: 'Password must contain at least one special character (@#%&!$*)' };
   }
   
   return { isValid: true };
