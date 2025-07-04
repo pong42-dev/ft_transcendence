@@ -78,8 +78,8 @@ export class GameSession {
   public removePlayer(playerId: number) {
     this.players.delete(playerId);
     this.playerInputs.delete(playerId);
-    // 플레이어가 나가면 게임 중단
-    if (this.status === 'playing' || this.status === 'countdown') {
+    // 플레이어가 나가면 게임 중단 (대기 상태 포함)
+    if (this.status === 'playing' || this.status === 'countdown' || this.status === 'waiting') {
       this.stop('player_left');
     }
   }
