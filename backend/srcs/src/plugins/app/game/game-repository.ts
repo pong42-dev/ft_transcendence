@@ -288,21 +288,32 @@ export function createGameRepository(fastify: FastifyInstance) {
 		 */
 		async mapDBPlayerToResponseDto(dbPlayer: DBPlayer): Promise<PlayerResponseDto> {
 			let name: string;
+			let avatarUrl: string | undefined;
 
 			if (dbPlayer.type === 'user' && dbPlayer.user_id) {
-				// 사용자 프로필에서 닉네임 조회
+				// 사용자 프로필에서 닉네임과 아바타 조회
 				const userProfile = await knex('user_profiles')
 					.where('user_id', dbPlayer.user_id)
 					.first();
-				name = userProfile?.nickname || `User ${dbPlayer.user_id}`;
+				name = userProfile?.name || `User ${dbPlayer.user_id}`;
+				
+				// 아바타 URL 생성
+				if (userProfile?.avatar) {
+					avatarUrl = `http://localhost:3000/${userProfile.avatar}`;
+				} else {
+					avatarUrl = `http://localhost:3000/${fastify.config.PUBLIC_DIRNAME}/default-avatar.png`;
+				}
 			} else {
 				name = dbPlayer.display_name || 'Unknown';
+				// AI나 게스트는 기본 아바타 사용
+				avatarUrl = `http://localhost:3000/${fastify.config.PUBLIC_DIRNAME}/default-avatar.png`;
 			}
 
 			return {
 				id: dbPlayer.id,
 				type: dbPlayer.type,
-				name
+				name,
+				avatarUrl
 			};
 		},
 
