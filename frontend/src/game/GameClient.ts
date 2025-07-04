@@ -7,6 +7,12 @@ import { GameResponseDto, GameResult } from '../types/types';
 import { GameStateDto, GameEventDto, WSPlayerInputMessage } from '../types/game-websocket';
 import { GameEndModal } from '../components/modals/GameEndModal';
 
+export interface GameClientCallbacks {
+  onPreGameCountdown: (remainingTime: number) => void;
+  onGameStart: () => void;
+  onFinish: () => void;
+}
+
 export class GameClient {
   // 게임 세션 정보
   private gameId: string | null = null;
@@ -18,8 +24,9 @@ export class GameClient {
   
   private isLocalMultiplayer: boolean = false;
   private playerInfoUpdated: boolean = false; // 플레이어 정보 업데이트 여부
-  private onFinishCallback: () => void;
-  
+  // private onFinishCallback: () => void;
+  private callbacks: GameClientCallbacks;
+
   // 게임 상태 추적
   private currentScores = { left: 0, right: 0 };
   private gameEnded = false; // 게임이 정상적으로 끝났는지 추적
@@ -29,41 +36,140 @@ export class GameClient {
     private readonly webSocketService: WebSocketService,
     private readonly renderer: GameRenderer,
     private readonly inputHandler: InputHandler,
-    onFinish: () => void,
-  ) {
-    this.onFinishCallback = onFinish;
+    callbacks: GameClientCallbacks,
+    ) {
+      this.callbacks = callbacks;
+    }
+  //   onFinish: () => void,
+  // ) {
+  //   this.onFinishCallback = onFinish;
+  // } 
+  /**
+   * [신규] WebSocket 연결을 수립하고 사전 게임 이벤트를 처리합니다.
+   * 기존 startGame()의 연결 로직을 이쪽으로 옮깁니다.
+   */
+  public connectAndListen(): void {
+    this.gameId = this.gameInfo.gameId;
+
+    // 1. 사전 게임용 임시 이벤트 핸들러를 등록합니다.
+    this.webSocketService.on('game_event', this.handlePreGameEvent);
+    this.webSocketService.on('close', this.handleConnectionClose);
+    this.webSocketService.on('error', this.handleError);
+
+    // 2. WebSocket에 연결합니다.
+    const userPlayer = this.gameInfo.players.find(p => p.type === 'user');
+    if (!userPlayer) {
+      console.error("User player not found");
+      this.callbacks.onFinish();
+      return;
+    }
+    this.playerId = userPlayer.id;
+
+    const backendHost = 'localhost:3000';
+    const wsUrl = `ws://${backendHost}/ws/game/${this.gameId}?playerId=${this.playerId}`;
+    this.webSocketService.connect(wsUrl);
+  }
+  
+  /**
+   * [신규] 사전 게임(초기 카운트다운) 이벤트를 처리하는 핸들러입니다.
+   */
+  private handlePreGameEvent = (gameEvent: GameEventDto) => {
+    if (gameEvent.event === 'countdown') {
+      // GamePage의 UI를 업데이트하기 위해 콜백을 호출합니다.
+      this.callbacks.onPreGameCountdown(gameEvent.data?.remainingTime ?? 0);
+    } 
+    else if (gameEvent.event === 'round_start') {
+      // 진짜 게임 시작! 사전 게임 핸들러를 제거하고 인게임 핸들러를 설정합니다.
+      this.webSocketService.off('game_event', this.handlePreGameEvent);
+      this.setupInGameListeners(); // 인게임 핸들러로 전환
+      
+      // GamePage에 게임 화면으로 전환하라고 알립니다.
+      this.callbacks.onGameStart();
+      
+      // 렌더러에 공을 표시하라고 알립니다.
+      this.renderer.showBall();
+    }
+    else if (gameEvent.event === 'game_canceled') {
+      console.log('Game canceled by server.');
+      this.gameEnded = true; // 게임이 종료되었음을 명시
+      this.callbacks.onFinish();
+    }
+  };
+
+  /**
+   * [신규] 인게임 상태와 이벤트를 처리할 리스너들을 설정합니다.
+   */
+  private setupInGameListeners(): void {
+    this.gameMode = this.gameInfo.type;
+    this.isLocalMultiplayer = this.gameMode === 'local_1v1';
+    if (this.isLocalMultiplayer) {
+      const guestPlayer = this.gameInfo.players.find(p => p.type === 'guest');
+      this.player2Id = guestPlayer?.id ?? null;
+    }
+
+    this.setupInputHandling();
+    this.inputHandler.activate(this.isLocalMultiplayer);
+
+    this.webSocketService.on('game_state', this.handleGameState);
+    this.webSocketService.on('game_event', this.handleInGameEvent); // 인게임 전용 이벤트 핸들러
   }
 
-  public async startGame(): Promise<void> {
-    try {
-      this.gameId = this.gameInfo.gameId;
-      this.gameMode = this.gameInfo.type;
-
-      this.isLocalMultiplayer = this.gameMode === 'local_1v1';
-      
-      // 플레이어 ID 설정
-      const userPlayer = this.gameInfo.players.find(p => p.type === 'user');
-      if (!userPlayer) throw new Error('User player not found');
-      this.playerId = userPlayer.id;
-
-      if (this.isLocalMultiplayer) {
-        const guestPlayer = this.gameInfo.players.find(p => p.type === 'guest');
-        this.player2Id = guestPlayer?.id ?? null;
-      }
-
-      this.setupWebSocketListeners();
-      this.setupInputHandling();
-
-      const backendHost = 'localhost:3000';
-      const wsUrl = `ws://${backendHost}/ws/game/${this.gameId}?playerId=${this.playerId}`;
-      this.webSocketService.connect(wsUrl);
-
-    } catch (error) {
-      console.error('Failed to start game:', error);
-      this.onFinishCallback(); // 에러 발생 시 종료
-      throw error;
+  // [수정] 기존 handleGameEvent는 인게임 전용으로 이름을 변경합니다.
+  private handleInGameEvent = (gameEvent: GameEventDto) => {
+    switch (gameEvent.event) {
+      // 'countdown'과 'round_start'는 pre-game에서 처리했으므로 여기서는 제외됩니다.
+      case 'intermission_countdown': // 3단계에서 추가될 라운드 간 카운트다운
+         if (gameEvent.data?.remainingTime !== undefined && gameEvent.data?.round !== undefined) {
+           this.renderer.showCountdownWithRound(gameEvent.data.remainingTime, gameEvent.data.round);
+         }
+         break;
+      case 'round_start': // 라운드 간 인터미션 후
+        this.renderer.showBall();
+        break;
+      case 'round_end':
+        // 특별한 처리 없음
+        break;
+      case 'game_end':
+        this.handleGameEnd(gameEvent.data?.winnerId, gameEvent.data?.finalScores);
+        break;
+      case 'game_canceled':
+        console.log('Game canceled by server during play.');
+        this.gameEnded = true;
+        this.callbacks.onFinish();
+        break;
     }
   }
+
+  // public async startGame(): Promise<void> {
+  //   try {
+  //     this.gameId = this.gameInfo.gameId;
+  //     this.gameMode = this.gameInfo.type;
+
+  //     this.isLocalMultiplayer = this.gameMode === 'local_1v1';
+      
+  //     // 플레이어 ID 설정
+  //     const userPlayer = this.gameInfo.players.find(p => p.type === 'user');
+  //     if (!userPlayer) throw new Error('User player not found');
+  //     this.playerId = userPlayer.id;
+
+  //     if (this.isLocalMultiplayer) {
+  //       const guestPlayer = this.gameInfo.players.find(p => p.type === 'guest');
+  //       this.player2Id = guestPlayer?.id ?? null;
+  //     }
+
+  //     this.setupWebSocketListeners();
+  //     this.setupInputHandling();
+
+  //     const backendHost = 'localhost:3000';
+  //     const wsUrl = `ws://${backendHost}/ws/game/${this.gameId}?playerId=${this.playerId}`;
+  //     this.webSocketService.connect(wsUrl);
+
+  //   } catch (error) {
+  //     console.error('Failed to start game:', error);
+  //     this.onFinishCallback(); // 에러 발생 시 종료
+  //     throw error;
+  //   }
+  // }
 
   /**
    * [반영 완료] 사용자 입력을 처리하여 웹소켓 메시지를 전송하는 메서드
@@ -103,13 +209,13 @@ export class GameClient {
     this.inputHandler.on('input', this.handleInput);
   }
 
-  private setupWebSocketListeners(): void {
-    this.webSocketService.on('open', this.handleConnectionOpen);
-    this.webSocketService.on('game_state', this.handleGameState);
-    this.webSocketService.on('game_event', this.handleGameEvent);
-    this.webSocketService.on('error', this.handleError);
-    this.webSocketService.on('close', this.handleConnectionClose);
-  }
+  // private setupWebSocketListeners(): void {
+  //   this.webSocketService.on('open', this.handleConnectionOpen);
+  //   this.webSocketService.on('game_state', this.handleGameState);
+  //   this.webSocketService.on('game_event', this.handleGameEvent);
+  //   this.webSocketService.on('error', this.handleError);
+  //   this.webSocketService.on('close', this.handleConnectionClose);
+  // }
   
   private handleConnectionOpen = () => {
     this.inputHandler.activate(this.isLocalMultiplayer);
@@ -279,12 +385,12 @@ export class GameClient {
       false, // isFinal
       () => {
         // onProfileClick - 프로필 보기하고 게임 종료
-        this.onFinishCallback();
+        this.callbacks.onFinish();
       },
       undefined, // onNextMatch - 토너먼트가 아니므로 불필요
       () => {
         // onGameFinish - Close 버튼을 눌렀을 때만 게임 종료
-        this.onFinishCallback();
+        this.callbacks.onFinish();
       }
     );
 
@@ -294,23 +400,24 @@ export class GameClient {
   private handleError = (error: any) => {
     console.error('WebSocket error:', error);
     // 게임이 정상적으로 끝나지 않은 경우에만 콜백 호출
-    if (!this.gameEnded) {
-      this.onFinishCallback();
-    }
+    // if (!this.gameEnded) {
+    //   this.callbacks.onFinish();
+    // }
   }
 
   private handleConnectionClose = () => {
     console.warn('WebSocket connection closed.');
     // 게임이 정상적으로 끝나지 않은 경우에만 콜백 호출
-    if (!this.gameEnded) {
-      this.onFinishCallback();
-    }
+    // if (!this.gameEnded) {
+    //   this.callbacks.onFinish();
+    // }
   }
 
   public destroy(): void {
-    this.webSocketService.off('open', this.handleConnectionOpen);
+    // 모든 이벤트 리스너를 제거해야 합니다.
+    this.webSocketService.off('game_event', this.handlePreGameEvent);
     this.webSocketService.off('game_state', this.handleGameState);
-    this.webSocketService.off('game_event', this.handleGameEvent);
+    this.webSocketService.off('game_event', this.handleInGameEvent);
     this.webSocketService.off('error', this.handleError);
     this.webSocketService.off('close', this.handleConnectionClose);
     this.inputHandler.off('input', this.handleInput);

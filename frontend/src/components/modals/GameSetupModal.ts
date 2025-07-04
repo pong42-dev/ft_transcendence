@@ -29,6 +29,14 @@ export class GameSetupModal extends BaseModal {
     });
   }
 
+  public close(): void {
+    // Promise가 아직 해결되지 않았다면 취소로 처리
+    if (this.resolvePromise) {
+      this.isCancelled = true;
+    }
+    super.close();
+  }
+
   protected onShow(): void {
     // 모달이 표시될 때 초기화
   }
@@ -40,8 +48,8 @@ export class GameSetupModal extends BaseModal {
       this.countdownInterval = null;
     }
     
-    // Promise 해결
-    if (this.resolvePromise && !this.isCancelled) {
+    // Promise 해결 - 취소된 경우에만 null 반환
+    if (this.resolvePromise && this.isCancelled) {
       this.resolvePromise(null);
       this.resolvePromise = null;
     }
@@ -138,7 +146,20 @@ export class GameSetupModal extends BaseModal {
   private handleAIMode(): void {
     this.selectedMode = 'vs ai';
     this.invitedFriends = [];
-    this.renderMatchupCountdownView();
+    
+    // AI 모드 게임 설정 결과를 반환
+    const result: GameSetupResult = {
+      mode: 'vs ai',
+      opponents: ['AI']
+    };
+
+    if (this.resolvePromise) {
+      this.resolvePromise(result);
+      this.resolvePromise = null;
+    }
+    
+    this.close();
+    // this.renderMatchupCountdownView();
   }
 
   private handleLocalMode(): void {
@@ -232,7 +253,20 @@ export class GameSetupModal extends BaseModal {
         this.selectedMode = 'local';
         this.selectedOpponent = { nickname: guestName } as Friend;
         this.invitedFriends = [this.selectedOpponent];
-        this.renderMatchupCountdownView();
+        
+        // 게임 설정 결과를 반환
+        const result: GameSetupResult = {
+          mode: 'local',
+          opponents: [guestName]
+        };
+
+        if (this.resolvePromise) {
+          this.resolvePromise(result);
+          this.resolvePromise = null;
+        }
+        
+        this.close();
+        // this.renderMatchupCountdownView();
       }
     });
 

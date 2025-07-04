@@ -15,6 +15,8 @@ export class GamePage {
     private gameClient: GameClient | null = null;
     // private tournamentClient: TournamentClient | null = null; 
 
+    private renderer: GameRenderer | null = null;
+
     /**
      * @param container - 이 페이지가 렌더링될 부모 DOM 요소
      * @param apiClient - App.ts에서 사용하는 ApiClient의 인스턴스
@@ -25,7 +27,6 @@ export class GamePage {
         this.container = container;
         this.apiClient = apiClient;
         this.onGameEndCallback = onGameEnd;
-
         this.init(gameSetupResult);
     }
 
@@ -50,7 +51,8 @@ export class GamePage {
                 // 1. 단일 게임 모드일 경우: GameApiService를 호출합니다.
                 console.log('Requesting to create a single game...');
                 const gameInfo = await this.apiClient.game.createGame(gameSettings);
-                this.startSingleGame(gameInfo);
+                // this.startSingleGame(gameInfo);
+                this.startWaitingFlow(gameInfo);
 
             } else if (gameSettings.type === 'tournament') {
 
@@ -72,31 +74,96 @@ export class GamePage {
             this.onGameEndCallback();
         }
     }
-
-    private startSingleGame(gameInfo: GameResponseDto) {
-        this.container.innerHTML = '';
-        const renderer = new GameRenderer();
+    /**
+     * [신규] 대기 화면을 설정하고 GameClient의 연결을 시작합니다.
+     */
+    private startWaitingFlow(gameInfo: GameResponseDto) {
+        // 1. UI 컴포넌트들을 미리 생성합니다.
+        this.renderer = new GameRenderer();
         const inputHandler = new InputHandler();
 
-        this.container.appendChild(renderer.render()); // GameRenderer의 render 메서드로 게임 화면을 렌더링합니다.
+        // 2. 대기 화면을 먼저 렌더링합니다.
+        this.renderWaitingScreen();
 
-        // GameClient를 생성하고, ApiClient의 game 서비스를 넘겨줍니다.
+        // 3. GameClient를 생성하고 콜백을 전달합니다.
         this.gameClient = new GameClient(
-            gameInfo, // ApiClient의 game 서비스를 사용
+            gameInfo,
             webSocketService,
-            renderer,
+            this.renderer,
             inputHandler,
-            () => { // [핵심] GameClient에 '게임이 끝났을 때 실행할 함수'를 전달
-                this.onGameEndCallback(); // GameClient가 끝나면 App.ts의 콜백 호출
+            {
+                onPreGameCountdown: (time) => this.updateWaitingScreenCountdown(time),
+                onGameStart: () => this.transitionToGameScreen(),
+                onFinish: () => this.onGameEndCallback(),
             }
         );
 
-        this.gameClient.startGame().catch(error => {
-            console.error('An error occurred while starting the game:', error);
-            alert('게임을 시작하는 중 오류가 발생했습니다.');
-            this.onGameEndCallback();
+        // 4. GameClient에 연결 및 이벤트 수신 시작을 지시합니다.
+        this.gameClient.connectAndListen();
+    }
+
+    /**
+     * [신규] 대기 화면 UI를 렌더링합니다.
+     */
+    private renderWaitingScreen() {
+        this.container.innerHTML = `
+            <div id="waiting-screen" class="w-full h-full flex flex-col items-center justify-center bg-terminal-black text-terminal-green">
+                <h2 class="text-3xl font-bold mb-4">Game Starting</h2>
+                <p class="text-xl mb-8">Waiting for server...</p>
+                <div id="countdown-display" class="text-7xl font-mono font-bold mb-8"></div>
+                <button id="cancel-game-btn" class="px-6 py-3 border border-terminal-red text-terminal-red rounded-lg hover:bg-terminal-red hover:bg-opacity-10 transition-all">
+                    Cancel
+                </button>
+            </div>
+        `;
+        this.container.querySelector('#cancel-game-btn')?.addEventListener('click', () => {
+            this.onGameEndCallback(); // 취소 시 페이지 닫기
         });
     }
+
+    /**
+     * [신규] GameClient 콜백을 통해 대기 화면의 카운트다운 숫자를 업데이트합니다.
+     */
+    private updateWaitingScreenCountdown(time: number) {
+        const countdownDisplay = this.container.querySelector('#countdown-display');
+        if (countdownDisplay) {
+            countdownDisplay.textContent = time > 0 ? time.toString() : '';
+        }
+    }
+
+    /**
+     * [신규] GameClient 콜백에 의해 호출되며, 실제 게임 화면으로 전환합니다.
+     */
+    private transitionToGameScreen() {
+        if (!this.renderer) return;
+        this.container.innerHTML = ''; // 대기 화면 UI 제거
+        this.container.appendChild(this.renderer.render()); // 게임 렌더러의 DOM 요소를 추가
+    }
+
+    // private startSingleGame(gameInfo: GameResponseDto) {
+    //     this.container.innerHTML = '';
+    //     const renderer = new GameRenderer();
+    //     const inputHandler = new InputHandler();
+
+    //     this.container.appendChild(renderer.render()); // GameRenderer의 render 메서드로 게임 화면을 렌더링합니다.
+
+    //     // GameClient를 생성하고, ApiClient의 game 서비스를 넘겨줍니다.
+    //     this.gameClient = new GameClient(
+    //         gameInfo, // ApiClient의 game 서비스를 사용
+    //         webSocketService,
+    //         renderer,
+    //         inputHandler,
+    //         () => { // [핵심] GameClient에 '게임이 끝났을 때 실행할 함수'를 전달
+    //             this.onGameEndCallback(); // GameClient가 끝나면 App.ts의 콜백 호출
+    //         }
+    //     );
+
+    //     this.gameClient.startGame().catch(error => {
+    //         console.error('An error occurred while starting the game:', error);
+    //         alert('게임을 시작하는 중 오류가 발생했습니다.');
+    //         this.onGameEndCallback();
+    //     });
+    // }
 
     public destroy(): void {
         this.gameClient?.destroy();

@@ -37,6 +37,7 @@ export class GameSession {
   private status: GameStatus = 'waiting';
   private _mode: GameMode = 'local_1v1';
   private loop: NodeJS.Timeout | null = null;
+  private intermissionTimer: NodeJS.Timeout | null = null;
   // private _startTime: number = 0; // 나중에 필요시 사용
 
   // Callbacks
@@ -91,10 +92,10 @@ export class GameSession {
   public async stop(reason: 'normal' | 'player_left' | 'error') {
     console.log(`[GameSession] stop called with reason: ${reason}, gameId: ${this.gameId}, current status: ${this.status}`);
     
-    if (this.loop) {
-      clearInterval(this.loop);
-      this.loop = null;
-    }
+    if (this.loop) clearInterval(this.loop);
+    if (this.intermissionTimer) clearTimeout(this.intermissionTimer);
+    this.loop = null;
+    this.intermissionTimer = null;
     
     // 'waiting' 상태에서도 취소 가능하도록 조건 확장
     if (this.status === 'playing' || this.status === 'countdown' || this.status === 'waiting') {
@@ -193,6 +194,10 @@ export class GameSession {
 // GameSession.ts - _handleRoundEnd (수정 후)
 
   private async _handleRoundEnd(winnerSide: 'left' | 'right') {
+    if (this.loop) {
+      clearInterval(this.loop);
+      this.loop = null;
+    }
     const players = Array.from(this.players.values());
     if (players.length < 2) return;
 
@@ -233,9 +238,38 @@ export class GameSession {
       await this.stop('normal');
 
     } else {
-      this.engine.resetRound();
+      this._startRoundIntermission();
     }
   }
+
+  /**
+     * [신규] 3초간의 라운드 인터미션을 시작하고 카운트다운 이벤트를 전송합니다.
+     */
+    private _startRoundIntermission() {
+        let remainingTime = 3;
+        const currentRound = this.engine.getRoundWins().left + this.engine.getRoundWins().right + 1;
+
+        const countdown = () => {
+          if (this.status !== 'playing') return; // 게임이 중단되면 타이머도 멈춤
+
+          this.onGameEvent({
+            event: 'intermission_countdown',
+            data: { remainingTime, round: currentRound }
+          });
+
+          remainingTime--;
+
+          if (remainingTime < 0) {
+            // 카운트다운이 끝나면 라운드를 리셋하고 게임 루프를 다시 시작
+            this.engine.resetRound();
+            this._startGameLoop();
+          } else {
+            this.intermissionTimer = setTimeout(countdown, 1000);
+          }
+        };
+        
+        countdown(); // 인터미션 시작
+    }
 
   // =================================================================
   // DTO Creation
