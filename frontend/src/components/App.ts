@@ -8,7 +8,6 @@ import {
   // Player
 } from '../types/types.js';
 import * as Types from '../types/types.js';
-import { GameSetupModal } from './modals/GameSetupModal.js';
 import { ErrorHandler } from '../utils/ErrorHandler.js';
 import { authStore, userProfileStore } from '../store/index.js';
 import { CommandHandler } from '../commands/CommandHandler.js';
@@ -256,8 +255,7 @@ export class App {
         // Stop any existing game first
         // this.pongGame.stop();
         
-        const gameSetupModal = new GameSetupModal();
-        const result = await gameSetupModal.open();
+        const result = await this.modalManager.showGameSetupModal();
 
         if (result) {
           const { mode } = result;

@@ -149,31 +149,6 @@ export class GamePage {
         this.container.appendChild(this.renderer.render()); // 게임 렌더러의 DOM 요소를 추가
     }
 
-    // private startSingleGame(gameInfo: GameResponseDto) {
-    //     this.container.innerHTML = '';
-    //     const renderer = new GameRenderer();
-    //     const inputHandler = new InputHandler();
-
-    //     this.container.appendChild(renderer.render()); // GameRenderer의 render 메서드로 게임 화면을 렌더링합니다.
-
-    //     // GameClient를 생성하고, ApiClient의 game 서비스를 넘겨줍니다.
-    //     this.gameClient = new GameClient(
-    //         gameInfo, // ApiClient의 game 서비스를 사용
-    //         webSocketService,
-    //         renderer,
-    //         inputHandler,
-    //         () => { // [핵심] GameClient에 '게임이 끝났을 때 실행할 함수'를 전달
-    //             this.onGameEndCallback(); // GameClient가 끝나면 App.ts의 콜백 호출
-    //         }
-    //     );
-
-    //     this.gameClient.startGame().catch(error => {
-    //         console.error('An error occurred while starting the game:', error);
-    //         alert('게임을 시작하는 중 오류가 발생했습니다.');
-    //         this.onGameEndCallback();
-    //     });
-    // }
-
     public destroy(): void {
         this.isGameActive = false;
         this.removeBrowserEventListeners();

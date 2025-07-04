@@ -3,7 +3,7 @@ import { GameRenderer } from './GameRenderer';
 import { InputHandler } from './InputHandler';
 import { GameResponseDto, GameResult } from '../types/types';
 import { GameStateDto, GameEventDto, WSPlayerInputMessage } from '../types/game-websocket';
-import { GameEndModal } from '../components/modals/GameEndModal';
+import { ModalManager } from '../managers/ModalManager';
 
 export interface GameClientCallbacks {
   onPreGameCountdown: (remainingTime: number) => void;
@@ -381,23 +381,22 @@ export class GameClient {
       gameMode: 'regular' as const
     };
 
-    // GameEndModal 띄우기
-    const gameEndModal = new GameEndModal(
+    // ModalManager를 통해 GameEndModal 띄우기
+    const modalManager = ModalManager.getInstance();
+    modalManager.showGameEndModal({
       gameResult,
-      false, // isTournament
-      false, // isFinal
-      () => {
+      isTournament: false,
+      isFinal: false,
+      onProfileClick: () => {
         // onProfileClick - 프로필 보기하고 게임 종료
         this.callbacks.onFinish();
       },
-      undefined, // onNextMatch - 토너먼트가 아니므로 불필요
-      () => {
+      onNextMatch: undefined, // 토너먼트가 아니므로 불필요
+      onGameFinish: () => {
         // onGameFinish - Close 버튼을 눌렀을 때만 게임 종료
         this.callbacks.onFinish();
       }
-    );
-
-    gameEndModal.show();
+    });
   }
   
   private handleError = (error: any) => {
