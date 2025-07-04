@@ -23,6 +23,7 @@ export class GameClient {
   private isLocalMultiplayer: boolean = false;
   private playerInfoUpdated: boolean = false; // 플레이어 정보 업데이트 여부
   private callbacks: GameClientCallbacks;
+  private aiDifficulty?: 'easy' | 'medium' | 'hard'; // AI 난이도 저장
 
   // 게임 상태 추적
   private currentScores = { left: 0, right: 0 };
@@ -34,8 +35,10 @@ export class GameClient {
     private readonly renderer: GameRenderer,
     private readonly inputHandler: InputHandler,
     callbacks: GameClientCallbacks,
+    aiDifficulty?: 'easy' | 'medium' | 'hard'
     ) {
       this.callbacks = callbacks;
+      this.aiDifficulty = aiDifficulty;
     }
 
   /**
@@ -396,7 +399,8 @@ export class GameClient {
         // onGameFinish - Close 버튼을 눌렀을 때만 게임 종료
         this.callbacks.onFinish();
       },
-      gameMode: this.gameInfo.type // 게임 모드 전달
+      gameMode: this.gameInfo.type, // 게임 모드 전달
+      aiDifficulty: this.gameInfo.type === 'ai_1v1' ? (this.aiDifficulty || 'medium') : undefined // AI 모드일 때만 난이도 전달
     });
   }
   
