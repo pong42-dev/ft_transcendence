@@ -17,6 +17,7 @@ export class GameEndModal {
   private isFinal: boolean;
   private gameResult: GameResult;
   private gameMode?: GameMode;
+  private aiDifficulty?: 'easy' | 'medium' | 'hard';
   private onGameFinish?: () => void;
   private contentElement: HTMLElement | null = null;
 
@@ -27,7 +28,8 @@ export class GameEndModal {
     onProfileClick: () => void, 
     onNextMatch?: () => void,
     onGameFinish?: () => void,
-    gameMode?: GameMode
+    gameMode?: GameMode,
+    aiDifficulty?: 'easy' | 'medium' | 'hard'
   ) {
     this.modalManager = ModalManager.getInstance();
     this.gameResult = gameResult;
@@ -36,6 +38,7 @@ export class GameEndModal {
     this.isTournament = isTournament;
     this.isFinal = isFinal;
     this.gameMode = gameMode;
+    this.aiDifficulty = aiDifficulty;
     this.onGameFinish = onGameFinish;
   }
 
@@ -137,15 +140,17 @@ export class GameEndModal {
           </div>
         </div>
         
-        <div class="grid grid-cols-2 gap-3 text-center">
+        <div class="${isAIMode ? 'grid grid-cols-2 gap-3' : 'flex justify-center'} text-center">
           <div class="bg-terminal-gray bg-opacity-10 rounded-lg p-2">
             <div class="text-xl font-bold mb-1">${this.gameResult.totalRounds}</div>
             <div class="text-xs opacity-50">${i18n.t('gameEndModal.total_rounds')}</div>
           </div>
+          ${isAIMode ? `
           <div class="bg-terminal-gray bg-opacity-10 rounded-lg p-2">
-            <div class="text-xl font-bold mb-1">${this.gameResult.gameMode.toUpperCase()}</div>
-            <div class="text-xs opacity-50">${i18n.t('gameEndModal.game_mode')}</div>
+            <div class="text-xl font-bold mb-1">${(this.aiDifficulty || 'MEDIUM').toUpperCase()}</div>
+            <div class="text-xs opacity-50">${i18n.t('AI Difficulty')}</div>
           </div>
+          ` : ''}
         </div>
       </div>
       

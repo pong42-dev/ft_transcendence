@@ -11,6 +11,7 @@ export class GamePage {
     private onGameEndCallback: () => void;
 
     private gameClient: GameClient | null = null;
+    private currentSetupResult: GameSetupResult | null = null; // 게임 설정 결과 저장
 
     private renderer: GameRenderer | null = null;
     
@@ -41,6 +42,9 @@ export class GamePage {
             this.onGameEndCallback();
             return;
         }
+
+        // 게임 설정 결과 저장
+        this.currentSetupResult = setupResult;
 
         const gameSettings = this._createGameRequestFromSetup(setupResult);
 
@@ -104,7 +108,8 @@ export class GamePage {
                 onPreGameCountdown: (time) => this.updateWaitingScreenCountdown(time),
                 onGameStart: () => this.transitionToGameScreen(),
                 onFinish: () => this.handleGameFinish(),
-            }
+            },
+            this.currentSetupResult?.aiSettings?.difficulty // AI 난이도 전달
         );
 
         // 6. GameClient에 연결 및 이벤트 수신 시작을 지시합니다.
