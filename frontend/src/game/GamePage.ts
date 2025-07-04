@@ -11,9 +11,15 @@ export class GamePage {
     private onGameEndCallback: () => void;
 
     private gameClient: GameClient | null = null;
-    private tournamentClient: TournamentClient | null = null; 
 
     private renderer: GameRenderer | null = null;
+    
+    // 브라우저 이벤트 리스너들을 추적하기 위한 변수들
+    private isGameActive: boolean = false;
+    private beforeUnloadHandler?: (e: BeforeUnloadEvent) => void;
+    private visibilityChangeHandler?: () => void;
+    private popStateHandler?: (event: PopStateEvent) => void;
+    private pageHideHandler?: () => void;
 
     /**
      * @param container - 이 페이지가 렌더링될 부모 DOM 요소
@@ -57,7 +63,7 @@ export class GamePage {
                 console.log('Requesting to create a tournament...');
                 // TournamentApiService의 DTO에 맞게 데이터를 변환합니다.
                 // const tournamentRequestData = { participants: gameSettings.players };
-                const tournamentInfo = await this.apiClient.tournament.createTournament(gameSettings);
+                // const tournamentInfo = await this.apiClient.tournament.createTournament(gameSettings);
 
                 // 나중에 구현될 TournamentClient를 여기서 시작합니다.
                 // this.startTournament(tournamentInfo); 
@@ -79,10 +85,16 @@ export class GamePage {
         this.renderer = new GameRenderer();
         const inputHandler = new InputHandler();
 
-        // 2. 대기 화면을 먼저 렌더링합니다.
+        // 2. 게임이 활성 상태로 설정
+        this.isGameActive = true;
+
+        // 3. 브라우저 이벤트 리스너 설정
+        this.setupBrowserEventListeners();
+
+        // 4. 대기 화면을 먼저 렌더링합니다.
         this.renderWaitingScreen();
 
-        // 3. GameClient를 생성하고 콜백을 전달합니다.
+        // 5. GameClient를 생성하고 콜백을 전달합니다.
         this.gameClient = new GameClient(
             gameInfo,
             webSocketService,
@@ -91,11 +103,11 @@ export class GamePage {
             {
                 onPreGameCountdown: (time) => this.updateWaitingScreenCountdown(time),
                 onGameStart: () => this.transitionToGameScreen(),
-                onFinish: () => this.onGameEndCallback(),
+                onFinish: () => this.handleGameFinish(),
             }
         );
 
-        // 4. GameClient에 연결 및 이벤트 수신 시작을 지시합니다.
+        // 6. GameClient에 연결 및 이벤트 수신 시작을 지시합니다.
         this.gameClient.connectAndListen();
     }
 
@@ -163,6 +175,8 @@ export class GamePage {
     // }
 
     public destroy(): void {
+        this.isGameActive = false;
+        this.removeBrowserEventListeners();
         this.gameClient?.destroy();
         this.container.innerHTML = '';
     }
@@ -222,6 +236,12 @@ export class GamePage {
     private cancelGame() {
         console.log('Game canceled by user');
         
+        // 게임 비활성화
+        this.isGameActive = false;
+        
+        // 브라우저 이벤트 리스너 제거
+        this.removeBrowserEventListeners();
+        
         // GameClient가 있으면 연결 해제 (백엔드에 disconnect 신호 전송)
         if (this.gameClient) {
             this.gameClient.destroy();
@@ -229,5 +249,108 @@ export class GamePage {
         
         // 페이지 닫기
         this.onGameEndCallback();
+    }
+
+    /**
+     * [신규] 브라우저 이벤트 리스너들을 설정합니다.
+     */
+    private setupBrowserEventListeners() {
+        // 히스토리에 게임 상태 추가 (뒤로가기 감지를 위해)
+        const gameState = { isInGame: true, timestamp: Date.now() };
+        history.pushState(gameState, '', window.location.href);
+
+        // beforeunload 이벤트: 페이지를 떠나려고 할 때 (새로고침, 창 닫기 등)
+        this.beforeUnloadHandler = (e: BeforeUnloadEvent) => {
+            if (this.isGameActive && this.gameClient) {
+                // 게임이 진행 중이면 경고 메시지 표시
+                e.preventDefault();
+                e.returnValue = '게임이 진행 중입니다. 정말 나가시겠습니까?';
+                
+                // 백그라운드에서 게임 취소 처리
+                this.handleUnexpectedExit();
+                
+                return e.returnValue;
+            }
+        };
+
+        // popstate 이벤트: 브라우저 뒤로가기/앞으로가기 버튼 클릭 시
+        this.popStateHandler = (_event: PopStateEvent) => {
+            if (this.isGameActive && this.gameClient) {
+                console.log('Browser back/forward button detected during active game, canceling...');
+                // 뒤로가기를 시도했을 때 게임 취소
+                this.handleUnexpectedExit();
+                // 잠시 후 실제로 뒤로가기 실행 (게임 정리 시간 확보)
+                setTimeout(() => {
+                    if (!this.isGameActive) {
+                        // 게임이 이미 비활성화되었다면 실제 뒤로가기 허용
+                        history.back();
+                    }
+                }, 100);
+            }
+        };
+
+        // pagehide 이벤트: 페이지가 숨겨질 때 (뒤로가기, 탭 닫기 등 - beforeunload보다 확실함)
+        this.pageHideHandler = () => {
+            if (this.isGameActive && this.gameClient) {
+                console.log('Page hide detected during active game, canceling...');
+                this.handleUnexpectedExit();
+            }
+        };
+
+        // visibilitychange 이벤트: 탭이 숨겨지거나 브라우저가 최소화될 때
+        this.visibilityChangeHandler = () => {
+            if (document.hidden && this.isGameActive && this.gameClient) {
+                console.log('Page became hidden during active game, canceling...');
+                this.handleUnexpectedExit();
+            }
+        };
+
+        // 이벤트 리스너 등록
+        window.addEventListener('beforeunload', this.beforeUnloadHandler);
+        window.addEventListener('popstate', this.popStateHandler);
+        window.addEventListener('pagehide', this.pageHideHandler);
+        document.addEventListener('visibilitychange', this.visibilityChangeHandler);
+    }
+
+    /**
+     * [신규] 예상치 못한 종료 상황을 처리합니다.
+     */
+    private handleUnexpectedExit() {
+        if (this.gameClient && this.isGameActive) {
+            console.log('Handling unexpected exit - destroying game client');
+            this.gameClient.destroy();
+            this.isGameActive = false;
+        }
+    }
+
+    /**
+     * [신규] 게임 종료를 처리하고 이벤트 리스너를 정리합니다.
+     */
+    private handleGameFinish() {
+        this.isGameActive = false;
+        this.removeBrowserEventListeners();
+        this.onGameEndCallback();
+    }
+
+    /**
+     * [신규] 브라우저 이벤트 리스너들을 제거합니다.
+     */
+    private removeBrowserEventListeners() {
+        if (this.beforeUnloadHandler) {
+            window.removeEventListener('beforeunload', this.beforeUnloadHandler);
+            this.beforeUnloadHandler = undefined;
+        }
+        if (this.popStateHandler) {
+            window.removeEventListener('popstate', this.popStateHandler);
+            this.popStateHandler = undefined;
+        }
+        if (this.pageHideHandler) {
+            window.removeEventListener('pagehide', this.pageHideHandler);
+            this.pageHideHandler = undefined;
+        }
+        if (this.visibilityChangeHandler) {
+            document.removeEventListener('visibilitychange', this.visibilityChangeHandler);
+            this.visibilityChangeHandler = undefined;
+        }
     }
 }
