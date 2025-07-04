@@ -1,4 +1,5 @@
 import { GameEngine } from './GameEngine.js';
+import { AIDifficulty } from '../schemas/AITypes.js';
 import {
   PlayerResponseDto,
   GameStateDto,
@@ -36,8 +37,8 @@ export class GameSession {
   // State
   private status: GameStatus = 'waiting';
   private _mode: GameMode = 'local_1v1';
-  private loop: NodeJS.Timeout | null = null;
-  private intermissionTimer: NodeJS.Timeout | null = null;
+  private loop: ReturnType<typeof setInterval> | null = null;
+  private intermissionTimer: ReturnType<typeof setTimeout> | null = null;
   // private _startTime: number = 0; // 나중에 필요시 사용
 
   // Callbacks
@@ -51,6 +52,7 @@ export class GameSession {
     gameRepository: GameRepositoryType,
     onStateUpdate: GameStateUpdateCallback,
     onEvent: GameEventCallback,
+    aiDifficulty: AIDifficulty = 'medium'
   ) {
     this.id = id;
     this.gameId = gameId;
@@ -60,7 +62,13 @@ export class GameSession {
     this.onGameEvent = onEvent;
 
     this.config = new GameConfig();
-    this.engine = new GameEngine(this.config);
+    
+    // AI 모드인 경우 AI 설정을 전달
+    if (mode === 'ai_1v1') {
+      this.engine = new GameEngine(this.config, aiDifficulty);
+    } else {
+      this.engine = new GameEngine(this.config);
+    }
     
     console.log(`[GameSession] Created session ${id} with mode ${mode}`);
   }

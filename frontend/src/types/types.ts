@@ -169,6 +169,9 @@ export interface PlayerInfo {
 export interface GameSetupResult {
   mode: string;
   opponents: string[];
+  aiSettings?: {
+    difficulty: 'easy' | 'medium' | 'hard';
+  };
 }
 
 // =================================================================
@@ -408,6 +411,9 @@ export interface PlayerResponseDto {
 export interface CreateGameRequestDto {
   type: GameMode; // 'ai_1v1', 'local_1v1', 'tournament'
   opponents?: string[];  // 게스트들의 닉네임만 담는 배열
+  aiSettings?: {
+    difficulty: 'easy' | 'medium' | 'hard';
+  };
 }
 
 export interface GameResponseDto {

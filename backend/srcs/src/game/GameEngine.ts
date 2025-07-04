@@ -1,4 +1,6 @@
 import { GameConfig } from './GameConfig.js';
+import { AIPlayer } from './AIPlayer.js';
+import { GameState, AIDifficulty } from '../schemas/AITypes.js';
 
 /**
  * Game Engine Module
@@ -11,6 +13,7 @@ import { GameConfig } from './GameConfig.js';
  */
 export class GameEngine {
   private config: GameConfig;
+  private aiPlayer: AIPlayer;
   
   // Game state
   private ballX: number = 0;
@@ -26,8 +29,9 @@ export class GameEngine {
   private canvasWidth: number = 600;
   private canvasHeight: number = 400;
 
-  constructor(config: GameConfig) {
+  constructor(config: GameConfig, aiDifficulty: AIDifficulty = 'medium') {
     this.config = config;
+    this.aiPlayer = new AIPlayer(aiDifficulty);
     this.resetGame();
   }
 
@@ -127,19 +131,35 @@ export class GameEngine {
   }
 
   private updateAI(): void {
-    const leftPaddleCenter = this.leftPaddleY + this.config.paddleHeight / 2;
-    const targetY = this.ballY + this.config.ballSize / 2;
+    // 현재 게임 상태 생성 (점수 정보 포함)
+    const scores = this.getRoundWins();
+    const gameState: GameState = {
+      ballX: this.ballX,
+      ballY: this.ballY,
+      ballSpeedX: this.ballSpeedX,
+      ballSpeedY: this.ballSpeedY,
+      paddleY: this.leftPaddleY,
+      opponentPaddleY: this.rightPaddleY,
+      canvasWidth: this.canvasWidth,
+      canvasHeight: this.canvasHeight,
+      paddleHeight: this.config.paddleHeight,
+      paddleWidth: this.config.paddleWidth,
+      ballSize: this.config.ballSize,
+      aiScore: scores.left,        // AI는 왼쪽 패들
+      playerScore: scores.right    // 플레이어는 오른쪽 패들
+    };
 
-    if (this.ballSpeedX < 0) { // Ball moving towards AI paddle
-      if (leftPaddleCenter < targetY - 10) {
-        this.leftPaddleY += this.config.aiSpeed;
-      } else if (leftPaddleCenter > targetY + 10) {
-        this.leftPaddleY -= this.config.aiSpeed;
-      }
-    }
-
-    // Use dynamic canvas height like original
-    this.leftPaddleY = Math.max(0, Math.min(this.canvasHeight - this.config.paddleHeight, this.leftPaddleY));
+    // AI 결정 생성
+    const decision = this.aiPlayer.update(gameState, Date.now());
+    
+    // 패들 위치 업데이트
+    this.leftPaddleY = this.aiPlayer.calculatePaddleMovement(
+      this.leftPaddleY,
+      decision,
+      this.config.paddleHeight,
+      this.canvasHeight,
+      this.config.paddleSpeed
+    );
   }
 
   public handleRoundEnd(winner: 'left' | 'right'): { gameEnded: boolean; matchWinner?: 'left' | 'right' } {
@@ -180,5 +200,14 @@ export class GameEngine {
   public resetGameState(): void {
     this.currentRound = 1;
     this.roundWins = { left: 0, right: 0 };
+  }
+
+  // AI 관련 메서드들
+  public updateAISettings(difficulty: AIDifficulty): void {
+    this.aiPlayer.updateConfig(difficulty);
+  }
+
+  public getAIDebugInfo() {
+    return this.aiPlayer.getDebugInfo();
   }
 }

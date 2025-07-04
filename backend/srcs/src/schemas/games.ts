@@ -85,6 +85,9 @@ export type PlayerResponseDto = Static<typeof PlayerResponseDtoSchema>;
 export const CreateGameRequestDtoSchema = Type.Object({
   type: GameModeSchema, // 'ai_1v1', 'local_1v1', 'tournament'
   opponents: Type.Optional(Type.Array(Type.String())), // 게스트들의 닉네임만 담는 배열
+  aiSettings: Type.Optional(Type.Object({
+    difficulty: Type.Union([Type.Literal('easy'), Type.Literal('medium'), Type.Literal('hard')])
+  }))
 });
 export type CreateGameRequestDto = Static<typeof CreateGameRequestDtoSchema>;
 

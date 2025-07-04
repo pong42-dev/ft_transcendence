@@ -33,7 +33,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 			try {
 				// 토큰에서 user_id 추출
 				const userId = request.user.user_id;
-				const { type, opponents = [] } = request.body
+				const { type, opponents = [], aiSettings } = request.body
 
 				// 게임 모드별 유효성 검증
 				if (type === 'local_1v1') {
@@ -98,8 +98,15 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 
 				fastify.log.info('[CREATE API] About to create game with players:', players.map(p => ({ id: p.id, type: p.type, name: p.name })));
 
-				// 게임 생성
-				const gameId = await gameManager.createGame(type, players);
+				// 게임 생성 (AI 설정이 있으면 전달)
+				const gameId = await gameManager.createGame(
+					type, 
+					players, 
+					undefined, // customCallbacks
+					aiSettings ? {
+						difficulty: aiSettings.difficulty
+					} : undefined
+				);
 				
 				if (!gameId) {
 					return reply.status(500).send({ 

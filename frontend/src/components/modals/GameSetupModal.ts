@@ -16,6 +16,8 @@ export class GameSetupModal {
   private selectedMode: string = '';
   private countdownInterval: number | null = null;
   private contentElement: HTMLElement | null = null;
+  // AI 설정 추가
+  private aiDifficulty: 'easy' | 'medium' | 'hard' = 'medium';
 
   constructor() {
     this.modalManager = ModalManager.getInstance();
@@ -160,19 +162,7 @@ export class GameSetupModal {
 
   private handleAIMode(): void {
     this.selectedMode = 'vs ai';
-    
-    // AI 모드 게임 설정 결과를 반환
-    const result: GameSetupResult = {
-      mode: 'vs ai',
-      opponents: ['AI']
-    };
-
-    if (this.resolvePromise) {
-      this.resolvePromise(result);
-      this.resolvePromise = null;
-    }
-    
-    this.close();
+    this.renderAISettingsView();
   }
 
   private handleLocalMode(): void {
@@ -328,6 +318,115 @@ export class GameSetupModal {
     if (guestNameInputs.length > 0) {
       guestNameInputs[0].focus();
     }
+  }
+
+  private renderAISettingsView(): void {
+    if (!this.contentElement) return;
+
+    this.contentElement.innerHTML = `
+      <div class="flex items-center justify-between mb-6">
+        <h3 class="text-terminal-green text-xl font-bold">AI Difficulty</h3>
+        <button class="text-terminal-gray hover:text-terminal-green transition-all" id="close-btn">
+          ✕
+        </button>
+      </div>
+      
+      <div class="space-y-4">
+        <!-- Difficulty Selection -->
+        <div>
+          <h4 class="text-terminal-gray text-lg font-medium mb-3">Choose your challenge level</h4>
+          <div class="grid grid-cols-1 gap-3">
+            <label class="flex items-center space-x-3 p-4 rounded-lg border border-terminal-gray cursor-pointer hover:bg-terminal-gray hover:bg-opacity-10 transition-all">
+              <input type="radio" name="difficulty" value="easy" class="text-terminal-green focus:ring-terminal-green">
+              <div>
+                <div class="text-terminal-green font-medium">🟢 Easy</div>
+                <div class="text-sm text-terminal-gray">Slower reactions, more mistakes (Updates every 2 seconds)</div>
+              </div>
+            </label>
+            <label class="flex items-center space-x-3 p-4 rounded-lg border border-terminal-gray cursor-pointer hover:bg-terminal-gray hover:bg-opacity-10 transition-all">
+              <input type="radio" name="difficulty" value="medium" class="text-terminal-green focus:ring-terminal-green" checked>
+              <div>
+                <div class="text-terminal-green font-medium">🟡 Medium</div>
+                <div class="text-sm text-terminal-gray">Balanced gameplay, good challenge (Updates every 1 second)</div>
+              </div>
+            </label>
+            <label class="flex items-center space-x-3 p-4 rounded-lg border border-terminal-gray cursor-pointer hover:bg-terminal-gray hover:bg-opacity-10 transition-all">
+              <input type="radio" name="difficulty" value="hard" class="text-terminal-green focus:ring-terminal-green">
+              <div>
+                <div class="text-terminal-green font-medium">🔴 Hard</div>
+                <div class="text-sm text-terminal-gray">Fast reactions, strategic play (Updates every 0.5 seconds)</div>
+              </div>
+            </label>
+          </div>
+        </div>
+      </div>
+      
+      <div class="flex justify-between gap-2 mt-6">
+        <button id="back-btn" class="px-4 py-2 text-terminal-gray border border-terminal-gray rounded hover:bg-terminal-gray hover:bg-opacity-10 transition-all">
+          Back
+        </button>
+        <div class="flex gap-2">
+          <button id="cancel-btn" class="px-4 py-2 text-terminal-gray border border-terminal-gray rounded hover:bg-terminal-gray hover:bg-opacity-10 transition-all">
+            Cancel
+          </button>
+          <button id="start-ai-game-btn" class="px-4 py-2 bg-terminal-green text-terminal-black rounded hover:bg-opacity-80 transition-all">
+            Start AI Game
+          </button>
+        </div>
+      </div>
+    `;
+
+    this.attachAISettingsEventListeners();
+  }
+
+  private attachAISettingsEventListeners(): void {
+    if (!this.contentElement) return;
+
+    const backBtn = this.contentElement.querySelector('#back-btn') as HTMLButtonElement;
+    const cancelBtn = this.contentElement.querySelector('#cancel-btn') as HTMLButtonElement;
+    const startAIGameBtn = this.contentElement.querySelector('#start-ai-game-btn') as HTMLButtonElement;
+    const closeBtn = this.contentElement.querySelector('#close-btn') as HTMLButtonElement;
+
+    // Back button
+    backBtn?.addEventListener('click', () => {
+      this.renderModeSelectionView();
+    });
+
+    // Cancel button
+    cancelBtn?.addEventListener('click', () => {
+      this.isCancelled = true;
+      this.close();
+    });
+
+    // Close button
+    closeBtn?.addEventListener('click', () => {
+      this.isCancelled = true;
+      this.close();
+    });
+
+    // Start AI game button
+    startAIGameBtn?.addEventListener('click', () => {
+      // Get selected difficulty
+      const difficultyInput = this.contentElement?.querySelector('input[name="difficulty"]:checked') as HTMLInputElement;
+      
+      this.aiDifficulty = (difficultyInput?.value as 'easy' | 'medium' | 'hard') || 'medium';
+
+      // Create game setup result with AI settings
+      const result: GameSetupResult = {
+        mode: 'vs ai',
+        opponents: ['AI'],
+        aiSettings: {
+          difficulty: this.aiDifficulty
+        }
+      };
+
+      if (this.resolvePromise) {
+        this.resolvePromise(result);
+        this.resolvePromise = null;
+      }
+      
+      this.close();
+    });
   }
 
 }

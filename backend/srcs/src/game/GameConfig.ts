@@ -16,7 +16,7 @@ export class GameConfig {
   public readonly ballSpeedX: number = 8; // Faster for better gameplay
   public readonly ballSpeedY: number = 6; // Faster for better gameplay
   public readonly paddleSpeed: number = 12; // Faster paddle movement
-  public readonly aiSpeed: number = 10; // Faster AI movement
+  // AI도 동일한 속도 사용 (패들 속도 일치 조건)
   public readonly paddleOffset: number = 40; // left paddle: 40px from left, right paddle: 40px from right
   
   // Server-specific configurations
