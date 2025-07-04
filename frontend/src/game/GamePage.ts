@@ -5,6 +5,8 @@ import { GameRenderer } from '../game/GameRenderer';
 import { InputHandler } from '../game/InputHandler';
 import { ApiClient } from '../services/ApiClient'; // ApiClient를 직접 import
 import { webSocketService } from '../services/websocket/WebSocketService';
+import { TournamentClient } from '../game/TournamentClient';
+import { tournamentWebSocketService } from '../services/websocket/TournamentWebSocketService';
 import { GameMode, GameSetupResult, CreateGameRequestDto, GameResponseDto } from '../types/types';
 
 export class GamePage {
@@ -13,7 +15,7 @@ export class GamePage {
     private onGameEndCallback: () => void;
 
     private gameClient: GameClient | null = null;
-    // private tournamentClient: TournamentClient | null = null; 
+    private tournamentClient: TournamentClient | null = null;
 
     private renderer: GameRenderer | null = null;
 
@@ -30,7 +32,7 @@ export class GamePage {
         this.init(gameSetupResult);
     }
 
-    private async init(gameSetupResult?: GameSetupResult | null) {
+    private async init(gameSetupResult: GameSetupResult | null) {
         let setupResult = gameSetupResult;
         
         if (!setupResult) {
@@ -58,14 +60,9 @@ export class GamePage {
 
                 // 2. 토너먼트 모드일 경우: TournamentApiService를 호출합니다.
                 console.log('Requesting to create a tournament...');
-                // TournamentApiService의 DTO에 맞게 데이터를 변환합니다.
-                // const tournamentRequestData = { participants: gameSettings.players };
-                // const tournamentInfo = await this.apiClient.tournament.createTournament();
-
-                // 나중에 구현될 TournamentClient를 여기서 시작합니다.
-                // this.startTournament(tournamentInfo); 
-                alert('토너먼트 모드는 아직 준비 중입니다.');
-                this.onGameEndCallback();
+                const participants = (gameSettings.opponents ?? []).map(name => ({ type: 'guest' as const, displayName: name }));
+                const tournamentInfo = await this.apiClient.tournament.createTournament({ participants });
+                this.startTournament(tournamentInfo);
 
             }
         } catch (error) {
@@ -165,8 +162,27 @@ export class GamePage {
     //     });
     // }
 
+    private startTournament(tournamentInfo: any) {
+        this.container.innerHTML = '';
+        const renderer = new GameRenderer();
+        const inputHandler = new InputHandler();
+        const userId = this._getCurrentUserId();
+        this.tournamentClient = new TournamentClient(
+            this.container,
+            tournamentWebSocketService,
+            renderer,
+            inputHandler,
+            tournamentInfo.id || tournamentInfo.tournamentId || tournamentInfo.tournament_id,
+            userId
+        );
+        this.tournamentClient.start();
+        // 토너먼트 종료 후 콜백 필요시 구현
+    }
+
     public destroy(): void {
         this.gameClient?.destroy();
+        // TournamentClient는 destroy 메서드가 없으므로 null 할당만
+        this.tournamentClient = null;
         this.container.innerHTML = '';
     }
 
@@ -217,5 +233,27 @@ export class GamePage {
         };
 
         return finalRequest;
+    }
+
+    private _getCurrentUserId(): string | undefined {
+        try {
+            const accessToken = sessionStorage.getItem('access_token_session');
+            if (!accessToken) return undefined;
+            const payloadBase64 = accessToken.split('.')[1];
+            if (!payloadBase64) return undefined;
+            const base64 = payloadBase64.replace(/-/g, '+').replace(/_/g, '/');
+            const jsonPayload = decodeURIComponent(
+                atob(base64)
+                    .split('')
+                    .map(function(c) {
+                        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                    })
+                    .join('')
+            );
+            const payload = JSON.parse(jsonPayload);
+            return payload.user_id ? String(payload.user_id) : undefined;
+        } catch (e) {
+            return undefined;
+        }
     }
 }
