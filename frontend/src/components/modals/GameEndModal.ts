@@ -4,6 +4,7 @@
  * 게임 결과를 표시하고 다음 액션을 선택할 수 있는 모달입니다.
  */
 
+import { ModalManager, ModalContent } from '../../managers/ModalManager.js';
 import { GameResult } from '../../types/types.js';
 import { BaseModal } from './BaseModal.js';
 import i18n from '../../services/i18n';
@@ -64,19 +65,17 @@ export class GameEndModal extends BaseModal {
         <h3 class="text-terminal-green text-2xl font-bold mb-1">${userWon ? i18n.t('gameEndModal.victory') : i18n.t('gameEndModal.good_game')}</h3>
         <div class="text-sm opacity-70">${userWon ? i18n.t('gameEndModal.congratulations') : i18n.t('gameEndModal.winner_announcement', { winnerName })}</div>
       </div>
-      
       <div class="bg-terminal-gray bg-opacity-5 rounded-lg p-4 mb-6">
         <div class="flex justify-between items-center mb-3">
           <div class="text-lg font-bold">${i18n.t('gameEndModal.match_stats')}</div>
           <div class="text-sm opacity-50">${i18n.t('gameEndModal.final_score')}</div>
         </div>
-        
         <div class="flex justify-between items-center mb-4">
           <div class="flex items-center gap-2">
-            <div class="w-8 h-8 rounded-lg ${this.gameResult.winner === 'left' ? 'bg-terminal-green bg-opacity-20' : 'bg-terminal-gray bg-opacity-20'} flex items-center justify-center font-bold text-sm">
-              ${this.gameResult.leftPlayer.nickname ? this.gameResult.leftPlayer.nickname.substring(0, 2) : 'L'}
+            <div class="w-8 h-8 rounded-lg ${gameResult.winner === 'left' ? 'bg-terminal-green bg-opacity-20' : 'bg-terminal-gray bg-opacity-20'} flex items-center justify-center font-bold text-sm">
+              ${gameResult.leftPlayer.nickname ? gameResult.leftPlayer.nickname.substring(0, 2) : 'L'}
             </div>
-            <div class="text-xl font-bold">${this.gameResult.leftPlayer.score}</div>
+            <div class="text-xl font-bold">${gameResult.leftPlayer.score}</div>
           </div>
           <div class="flex items-center justify-center">
             <div class="text-terminal-gray">${i18n.t('common.vs')}</div>
@@ -100,21 +99,17 @@ export class GameEndModal extends BaseModal {
           </div>
         </div>
       </div>
-      
       <div class="space-y-3">
-        ${this.renderActionButtons()}
+        ${renderActionButtons()}
       </div>
     `;
+    attachEventListeners();
+  };
 
-    this.attachEventListeners();
-  }
-
-  private renderActionButtons(): string {
+  const renderActionButtons = () => {
     let buttons = '';
-
-    // Tournament specific buttons
-    if (this.isTournament) {
-      if (!this.isFinal && this.onNextMatch) {
+    if (isTournament) {
+      if (!isFinal && onNextMatch) {
         buttons += `
           <button 
             id="next-match-btn"
@@ -123,7 +118,7 @@ export class GameEndModal extends BaseModal {
             ${i18n.t('gameEndModal.next_match')}
           </button>
         `;
-      } else if (this.isFinal) {
+      } else if (isFinal) {
         buttons += `
           <button 
             id="tournament-results-btn"
@@ -134,8 +129,6 @@ export class GameEndModal extends BaseModal {
         `;
       }
     }
-
-    // Common buttons - Back to Profile을 메인 버튼으로
     buttons += `
       <button 
         id="profile-btn"
@@ -150,44 +143,47 @@ export class GameEndModal extends BaseModal {
         ${i18n.t('common.close')}
       </button>
     `;
-
     return buttons;
-  }
+  };
 
-  private attachEventListeners(): void {
-    if (!this.contentElement) return;
+  const attachEventListeners = () => {
+    if (!contentElement) return;
+    const nextMatchBtn = contentElement.querySelector('#next-match-btn') as HTMLButtonElement;
+    const tournamentResultsBtn = contentElement.querySelector('#tournament-results-btn') as HTMLButtonElement;
+    const profileBtn = contentElement.querySelector('#profile-btn') as HTMLButtonElement;
+    const closeBtn = contentElement.querySelector('#close-btn') as HTMLButtonElement;
 
-    const nextMatchBtn = this.contentElement.querySelector('#next-match-btn') as HTMLButtonElement;
-    const tournamentResultsBtn = this.contentElement.querySelector('#tournament-results-btn') as HTMLButtonElement;
-    const profileBtn = this.contentElement.querySelector('#profile-btn') as HTMLButtonElement;
-    const closeBtn = this.contentElement.querySelector('#close-btn') as HTMLButtonElement;
-
-    // Next match button
     nextMatchBtn?.addEventListener('click', () => {
-      if (this.onNextMatch) {
-        this.close();
-        this.onNextMatch();
-      }
+      modalManager.hide();
+      if (onNextMatch) onNextMatch();
     });
-
-    // Tournament results button
     tournamentResultsBtn?.addEventListener('click', () => {
-      this.close();
+      modalManager.hide();
       // TODO: Show tournament results
     });
-
-    // Profile button
     profileBtn?.addEventListener('click', () => {
-      this.close();
-      this.onProfileClick();
+      modalManager.hide();
+      onProfileClick();
     });
-
-    // Close button
     closeBtn?.addEventListener('click', () => {
-      this.close();
-      if (this.onGameFinish) {
-        this.onGameFinish();
-      }
+      modalManager.hide();
+      if (onGameFinish) onGameFinish();
     });
-  }
+  };
+
+  const modalContent: ModalContent = {
+    title: 'Game Result',
+    content: () => {
+      contentElement = document.createElement('div');
+      render();
+      return contentElement;
+    },
+    config: {
+      closable: false,
+      closeOnOutsideClick: false,
+      sizeClass: 'max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto'
+    }
+  };
+
+  modalManager.show(modalContent);
 }

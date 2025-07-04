@@ -15,5 +15,5 @@ export { RegisterModal } from './RegisterModal.js';
 export { FileModal } from './FileModal.js';
 export { TwoFAModal } from './TwoFAModal.js';
 export { GameSetupModal } from './GameSetupModal.js';
-export { GameEndModal } from './GameEndModal.js';
+export { showGameEndModal } from './GameEndModal.js';
 export { TournamentTestModal } from './TournamentTestModal.js';

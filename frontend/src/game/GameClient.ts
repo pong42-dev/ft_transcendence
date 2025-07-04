@@ -393,8 +393,6 @@ export class GameClient {
         this.callbacks.onFinish();
       }
     );
-
-    gameEndModal.show();
   }
   
   private handleError = (error: any) => {
