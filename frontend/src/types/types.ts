@@ -455,6 +455,7 @@ export interface GameStateDto {
 
 export type GameEventType = 
   | 'countdown'
+  | 'intermission_countdown'
   | 'round_start'
   | 'round_end'
   | 'game_end'
