@@ -52,6 +52,11 @@ export interface GameEventDto {
   data?: {
     remainingTime?: number;
     winnerId?: number;
+    round?: number; // 라운드 번호 (intermission_countdown에서 사용)
+    finalScores?: { // 최종 점수 (game_end에서 사용)
+      player1: number;
+      player2: number;
+    };
     // 확장 가능
   };
 }
