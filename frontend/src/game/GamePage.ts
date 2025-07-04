@@ -1,5 +1,3 @@
-// frontend/src/pages/GamePage.ts
-
 import { GameClient } from '../game/GameClient';
 import { GameRenderer } from '../game/GameRenderer';
 import { InputHandler } from '../game/InputHandler';
@@ -13,7 +11,7 @@ export class GamePage {
     private onGameEndCallback: () => void;
 
     private gameClient: GameClient | null = null;
-    // private tournamentClient: TournamentClient | null = null; 
+    private tournamentClient: TournamentClient | null = null; 
 
     private renderer: GameRenderer | null = null;
 
@@ -51,7 +49,6 @@ export class GamePage {
                 // 1. 단일 게임 모드일 경우: GameApiService를 호출합니다.
                 console.log('Requesting to create a single game...');
                 const gameInfo = await this.apiClient.game.createGame(gameSettings);
-                // this.startSingleGame(gameInfo);
                 this.startWaitingFlow(gameInfo);
 
             } else if (gameSettings.type === 'tournament') {
@@ -60,7 +57,7 @@ export class GamePage {
                 console.log('Requesting to create a tournament...');
                 // TournamentApiService의 DTO에 맞게 데이터를 변환합니다.
                 // const tournamentRequestData = { participants: gameSettings.players };
-                // const tournamentInfo = await this.apiClient.tournament.createTournament();
+                const tournamentInfo = await this.apiClient.tournament.createTournament(gameSettings);
 
                 // 나중에 구현될 TournamentClient를 여기서 시작합니다.
                 // this.startTournament(tournamentInfo); 

@@ -1,5 +1,3 @@
-// frontend/src/game/GameClient.ts
-
 import { WebSocketService } from '../services/websocket/WebSocketService';
 import { GameRenderer } from './GameRenderer';
 import { InputHandler } from './InputHandler';
@@ -24,7 +22,6 @@ export class GameClient {
   
   private isLocalMultiplayer: boolean = false;
   private playerInfoUpdated: boolean = false; // 플레이어 정보 업데이트 여부
-  // private onFinishCallback: () => void;
   private callbacks: GameClientCallbacks;
 
   // 게임 상태 추적
@@ -40,10 +37,7 @@ export class GameClient {
     ) {
       this.callbacks = callbacks;
     }
-  //   onFinish: () => void,
-  // ) {
-  //   this.onFinishCallback = onFinish;
-  // } 
+
   /**
    * [신규] WebSocket 연결을 수립하고 사전 게임 이벤트를 처리합니다.
    * 기존 startGame()의 연결 로직을 이쪽으로 옮깁니다.
@@ -78,13 +72,30 @@ export class GameClient {
       // GamePage의 UI를 업데이트하기 위해 콜백을 호출합니다.
       this.callbacks.onPreGameCountdown(gameEvent.data?.remainingTime ?? 0);
     } 
-    else if (gameEvent.event === 'round_start') {
-      // 진짜 게임 시작! 사전 게임 핸들러를 제거하고 인게임 핸들러를 설정합니다.
-      this.webSocketService.off('game_event', this.handlePreGameEvent);
-      this.setupInGameListeners(); // 인게임 핸들러로 전환
+    else if (gameEvent.event === 'intermission_countdown') {
+      // 첫 라운드 전 인터미션 카운트다운도 처리
+      // 아직 게임 화면으로 전환하지 않았다면 먼저 전환
+      if (!this.playerInfoUpdated) {
+        this.webSocketService.off('game_event', this.handlePreGameEvent);
+        this.setupInGameListeners(); // 인게임 핸들러로 전환
+        this.callbacks.onGameStart(); // 게임 화면으로 전환
+        this.playerInfoUpdated = true;
+      }
       
-      // GamePage에 게임 화면으로 전환하라고 알립니다.
-      this.callbacks.onGameStart();
+      // 인터미션 카운트다운 표시
+      if (gameEvent.data?.remainingTime !== undefined && gameEvent.data?.round !== undefined) {
+        this.renderer.showCountdownWithRound(gameEvent.data.remainingTime, gameEvent.data.round);
+      }
+    }
+    else if (gameEvent.event === 'round_start') {
+      // 인터미션이 끝나고 라운드 시작
+      // 아직 게임 화면으로 전환하지 않았다면 전환 (인터미션이 없는 경우 대비)
+      if (!this.playerInfoUpdated) {
+        this.webSocketService.off('game_event', this.handlePreGameEvent);
+        this.setupInGameListeners(); // 인게임 핸들러로 전환
+        this.callbacks.onGameStart(); // 게임 화면으로 전환
+        this.playerInfoUpdated = true;
+      }
       
       // 렌더러에 공을 표시하라고 알립니다.
       this.renderer.showBall();
@@ -107,6 +118,9 @@ export class GameClient {
       this.player2Id = guestPlayer?.id ?? null;
     }
 
+    // 플레이어 정보 업데이트 (이름, 아바타)
+    this.updatePlayerInfoFromGameInfo();
+
     this.setupInputHandling();
     this.inputHandler.activate(this.isLocalMultiplayer);
 
@@ -119,6 +133,7 @@ export class GameClient {
     switch (gameEvent.event) {
       // 'countdown'과 'round_start'는 pre-game에서 처리했으므로 여기서는 제외됩니다.
       case 'intermission_countdown': // 3단계에서 추가될 라운드 간 카운트다운
+          console.log('Intermission countdown:', gameEvent.data?.remainingTime);
          if (gameEvent.data?.remainingTime !== undefined && gameEvent.data?.round !== undefined) {
            this.renderer.showCountdownWithRound(gameEvent.data.remainingTime, gameEvent.data.round);
          }
@@ -209,18 +224,6 @@ export class GameClient {
     this.inputHandler.on('input', this.handleInput);
   }
 
-  // private setupWebSocketListeners(): void {
-  //   this.webSocketService.on('open', this.handleConnectionOpen);
-  //   this.webSocketService.on('game_state', this.handleGameState);
-  //   this.webSocketService.on('game_event', this.handleGameEvent);
-  //   this.webSocketService.on('error', this.handleError);
-  //   this.webSocketService.on('close', this.handleConnectionClose);
-  // }
-  
-  private handleConnectionOpen = () => {
-    this.inputHandler.activate(this.isLocalMultiplayer);
-  }
-
   /**
    * GameInfo에서 플레이어 정보를 추출하여 렌더러에 업데이트
    */
@@ -288,22 +291,22 @@ export class GameClient {
     this.currentScores.right = gameState.scores.player2;
   }
 
-  private handleGameEvent = (gameEvent: GameEventDto) => {
-    switch (gameEvent.event) {
-      case 'countdown':
-        this.renderer.showCountdown(gameEvent.data?.remainingTime);
-        break;
-      case 'round_start':
-        this.renderer.showBall();
-        break;
-      case 'round_end':
-        // 라운드 종료 시 특별한 처리 없음 (점수는 gameState에서 업데이트됨)
-        break;
-      case 'game_end':
-        this.handleGameEnd(gameEvent.data?.winnerId, gameEvent.data?.finalScores);
-        break;
-    }
-  }
+  // private handleGameEvent = (gameEvent: GameEventDto) => {
+  //   switch (gameEvent.event) {
+  //     case 'countdown':
+  //       this.renderer.showCountdown(gameEvent.data?.remainingTime);
+  //       break;
+  //     case 'round_start':
+  //       this.renderer.showBall();
+  //       break;
+  //     case 'round_end':
+  //       // 라운드 종료 시 특별한 처리 없음 (점수는 gameState에서 업데이트됨)
+  //       break;
+  //     case 'game_end':
+  //       this.handleGameEnd(gameEvent.data?.winnerId, gameEvent.data?.finalScores);
+  //       break;
+  //   }
+  // }
 
   private handleGameEnd(winnerId?: number, finalScores?: { player1: number; player2: number }): void {
     // 게임 종료 처리
