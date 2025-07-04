@@ -190,58 +190,49 @@ export class GameSession {
     this.onGameStateUpdate(gameStateDto);
   }
 
+// GameSession.ts - _handleRoundEnd (수정 후)
+
   private async _handleRoundEnd(winnerSide: 'left' | 'right') {
     const players = Array.from(this.players.values());
     if (players.length < 2) return;
 
     const winner = winnerSide === 'left' ? players[0] : players[1];
-    this.onGameEvent({ event: 'round_end', data: { winnerId: winner.id } });
-
-    // GameEngine의 handleRoundEnd는 게임 종료 여부와 승자 정보를 반환
+    
+    // 1. 엔진의 라운드 종료 처리 및 점수 업데이트를 먼저 수행합니다.
     const result = this.engine.handleRoundEnd(winnerSide);
 
-    // 현재 점수를 DB에 업데이트
-    const scores = this.engine.getRoundWins();
-    const leftPlayer = players[0];
-    const rightPlayer = players[1];
-    
-    await this.gameRepository.updatePlayerScore(this.gameId, leftPlayer.id, scores.left);
-    await this.gameRepository.updatePlayerScore(this.gameId, rightPlayer.id, scores.right);
+    // 2. 업데이트된 최종 점수를 가져옵니다.
+    const finalScores = this.engine.getRoundWins();
 
+    // 3. DB에 최종 점수를 업데이트합니다.
+    await this.gameRepository.updatePlayerScore(this.gameId, players[0].id, finalScores.left);
+    await this.gameRepository.updatePlayerScore(this.gameId, players[1].id, finalScores.right);
+
+    // 4. 라운드 종료 이벤트를 전송합니다.
+    this.onGameEvent({ event: 'round_end', data: { winnerId: winner.id } });
+
+    // 5. 게임이 완전히 종료되었는지 확인합니다.
     if (result.gameEnded && result.matchWinner) {
-      const matchWinnerPlayer =
-        result.matchWinner === 'left' ? players[0] : players[1];
-      
-      // DB에 게임 승자 설정
+      const matchWinnerPlayer = result.matchWinner === 'left' ? players[0] : players[1];
       await this.gameRepository.setGameWinner(this.gameId, matchWinnerPlayer.id);
       
-      // 마지막 라운드 종료 이벤트를 먼저 보내서 클라이언트가 점수를 업데이트하도록 함
-      this.onGameEvent({
-        event: 'round_end',
-        data: {},
-      });
+      const finalGameState = this._createGameStateDto();
+      this.onGameStateUpdate(finalGameState);
       
-      // 최종 점수가 반영된 게임 상태를 바로 보냄
-      this.onGameEvent({
-        event: 'game_state',
-        data: this._createGameStateDto(),
-      });
-      
-      // 그 다음에 'game_end' 이벤트를 보냄
       this.onGameEvent({
         event: 'game_end',
         data: { 
           winnerId: matchWinnerPlayer.id,
-          finalScores: {
-            player1: scores.left,
-            player2: scores.right
+          finalScores: { // ✅ 이제 여기에 최종 점수가 정확히 담깁니다.
+            player1: finalScores.left,
+            player2: finalScores.right
           }
         },
       });
-      // 그 다음에 게임 루프를 중지시킵니다.
+
       await this.stop('normal');
+
     } else {
-      // 다음 라운드 준비
       this.engine.resetRound();
     }
   }
