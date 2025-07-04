@@ -114,7 +114,7 @@ export class GamePage {
             </div>
         `;
         this.container.querySelector('#cancel-game-btn')?.addEventListener('click', () => {
-            this.onGameEndCallback(); // 취소 시 페이지 닫기
+            this.cancelGame(); // 게임 취소 후 페이지 닫기
         });
     }
 
@@ -214,5 +214,20 @@ export class GamePage {
         };
 
         return finalRequest;
+    }
+
+    /**
+     * [신규] 게임을 명시적으로 취소하는 메서드
+     */
+    private cancelGame() {
+        console.log('Game canceled by user');
+        
+        // GameClient가 있으면 연결 해제 (백엔드에 disconnect 신호 전송)
+        if (this.gameClient) {
+            this.gameClient.destroy();
+        }
+        
+        // 페이지 닫기
+        this.onGameEndCallback();
     }
 }
