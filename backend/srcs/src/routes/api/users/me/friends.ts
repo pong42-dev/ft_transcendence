@@ -1,8 +1,8 @@
 import { FastifyPluginAsyncTypebox, Type } from '@fastify/type-provider-typebox'
-import { UserProfileResponseSchema } from '../../../../schemas/users.js'
 import { IdSchema } from '../../../../schemas/common.js'
-import { Profiles, UserData, UserFriendSchema } from '../../../../schemas/auth.js'
-import { FriendProfileResponseSchema } from '../../../../schemas/profile.js'
+import { Profiles } from '../../../../schemas/tables/user-profiles.js'
+import { UserData } from '../../../../schemas/users/common.js'
+import { FriendProfileResponseSchema } from '../../../../schemas/users/me/friend.js'
 
 const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 	const { config, 
@@ -163,6 +163,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 			try {
 				const userId = request.user.user_id;
 				const friendId = request.params.id;
+				console.log("userId:", userId, "friendId:", friendId);
 				if (!friendId || userId === friendId)
 					return reply.status(409).send({ msg: 'Invalid friend ID.' });
 				const isFollowing = await friendsRepository.isFollowing(Number(userId), Number(friendId));
@@ -245,8 +246,9 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 		},
 		async (request, reply): Promise<void> => {
 			try {
-				const { user_id: userId } = request.user as UserData;
+				const userId = request.user.user_id;
 				const friendId = request.params.id;
+				console.log("userId:", userId, "friendId:", friendId);
 				if (!friendId || userId === friendId)
 					return reply.status(409).send({ msg: 'Invalid friend ID.' });
 				const isFollowing = await friendsRepository.isFollowing(Number(userId), Number(friendId));

@@ -1,6 +1,6 @@
 import { FastifyInstance } from 'fastify'
 import fp from 'fastify-plugin'
-import { UserProfile } from '../../../schemas/auth.js'
+import { UserProfile } from '../../schemas/users/table/user-profiles.js'
 
 declare module 'fastify' {
 	interface FastifyInstance {

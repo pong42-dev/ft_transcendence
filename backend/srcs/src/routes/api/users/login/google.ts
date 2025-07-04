@@ -1,6 +1,6 @@
 import { FastifyPluginAsyncTypebox, Type } from '@fastify/type-provider-typebox';
 import { FastifyRequest } from 'fastify';
-import { GoogleCallbackQuerySchema } from '../../../../schemas/auth.js'
+import { GoogleCallbackQuerySchema } from '../../../../schemas/users/login/google.js'
 
 const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 	const { config } = fastify;

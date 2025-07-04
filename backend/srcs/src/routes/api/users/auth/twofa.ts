@@ -1,5 +1,5 @@
 import { FastifyPluginAsyncTypebox, Type } from '@fastify/type-provider-typebox'
-import { InitUser2FASchema } from '../../../../schemas/auth.js';
+import { InitUser2FASchema } from '../../../../schemas/users/auth/twofa.js';
 
 const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 	const { config, 

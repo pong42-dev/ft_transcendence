@@ -1,6 +1,6 @@
 import { FastifyRequest, FastifyInstance } from 'fastify'
 import fp from 'fastify-plugin'
-import { GoogleCallbackQuery, GoogleUserProfile, GoogleTokenResponse } from '../../../schemas/auth.js'
+import { GoogleCallbackQuery, GoogleUserProfile, GoogleTokenResponse } from '../../schemas/users/login/google.js'
 
 declare module 'fastify' {
 	interface FastifyInstance {

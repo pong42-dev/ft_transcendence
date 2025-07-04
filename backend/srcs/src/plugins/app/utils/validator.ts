@@ -1,6 +1,6 @@
 import fp from "fastify-plugin";
 import { FastifyInstance } from "fastify";
-import { RegisterFormData} from "../../../schemas/register.js";
+import { RegisterFormData} from '../../schemas/users/register.js';
 import { MultipartFile } from "@fastify/multipart";
 
 declare module "fastify" {

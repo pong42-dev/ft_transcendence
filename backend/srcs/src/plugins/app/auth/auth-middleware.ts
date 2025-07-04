@@ -1,6 +1,7 @@
 import fp from 'fastify-plugin';
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { TokenData, UserData, UserProfile } from '../../../schemas/auth.js';
+import { TokenData } from '../../../schemas/users/refresh-token.js';
+import { UserData } from '../../../schemas/users/common.js';
 
 declare module 'fastify' {
 	interface FastifyInstance {

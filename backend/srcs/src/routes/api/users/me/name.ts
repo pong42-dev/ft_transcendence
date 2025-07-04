@@ -1,6 +1,6 @@
 import { FastifyPluginAsyncTypebox, Type } from '@fastify/type-provider-typebox'
 import { FastifyRequest, FastifyReply } from 'fastify'
-import { UserData } from '../../../../schemas/auth.js'
+import { UserData } from '../../../../schemas/users/common.js'
 
 const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 	const { config,

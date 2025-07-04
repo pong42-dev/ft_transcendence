@@ -1,6 +1,7 @@
 import fp from 'fastify-plugin';
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { InitUser2FA, UserData, UserProfile } from '../../../schemas/auth.js';
+import { InitUser2FA } from '../../schemas/users/table/user-2fa.js';
+import { UserData } from '../../schemas/users/common.js';
 
 declare module 'fastify' {
 	interface FastifyInstance {

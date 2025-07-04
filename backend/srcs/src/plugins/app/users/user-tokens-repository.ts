@@ -1,7 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import fp from 'fastify-plugin';
 import { Knex } from 'knex';
-import { UserToken } from '../../../schemas/auth.js';
+import { UserToken } from '../../schemas/users/table/user-tokens.js';
 
 declare module 'fastify' {
 	interface FastifyInstance {

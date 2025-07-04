@@ -1,6 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import fp from 'fastify-plugin';
-import { TokenData } from '../../../schemas/auth.js';
+import { TokenData } from '../../../schemas/users/refresh-token.js';
 import { CookieSerializeOptions } from '@fastify/cookie';
 
 declare module 'fastify' {

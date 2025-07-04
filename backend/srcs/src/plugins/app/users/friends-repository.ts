@@ -1,6 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import fp from 'fastify-plugin';
-import { Friend } from '../../../schemas/auth.js';
+import { Friend } from '../../schemas/users/table/friends.js';
 
 declare module 'fastify' {
 	interface FastifyInstance {

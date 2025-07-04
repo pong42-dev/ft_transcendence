@@ -1,6 +1,5 @@
 import { Static, Type } from '@sinclair/typebox'
-import { EmailSchema, StringSchema } from './common.js'
-
+import { EmailSchema, StringSchema } from '../common.js'
 import { MultipartFile } from '@fastify/multipart';
 
 export const RegisterSchema = Type.Object({

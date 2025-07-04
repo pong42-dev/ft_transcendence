@@ -1,5 +1,5 @@
 import { FastifyPluginAsyncTypebox, Type } from '@fastify/type-provider-typebox'
-import { UserProfileResponseSchema } from '../../../../schemas/profile.js'
+import { UserProfileResponseSchema } from '../../../../schemas/users/me/me.js'
 
 const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 	const { config, 
