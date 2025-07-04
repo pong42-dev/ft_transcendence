@@ -1,4 +1,5 @@
 import { GameSession } from './GameSession.js';
+import { AIDifficulty } from '../schemas/AITypes.js';
 import {
   GameMode,
   PlayerResponseDto,
@@ -49,7 +50,8 @@ export class GameManager {
   public async createGame(
     mode: GameMode, 
     players: PlayerResponseDto[],
-    customCallbacks?: {onStateUpdate: GameStateUpdateCallback; onEvent: GameEventCallback}
+    customCallbacks?: {onStateUpdate: GameStateUpdateCallback; onEvent: GameEventCallback},
+    aiSettings?: { difficulty: AIDifficulty }
   ): Promise<string> {
     try {
       console.log(`[GameManager] Creating game - Mode: ${mode}, Players: ${players.length}`);
@@ -64,11 +66,11 @@ export class GameManager {
       const gameId = dbGameId.toString();
 
       // 3. customCallbacks가 있으면 그것을 사용하고, 없으면 기존의 webSocketHandler를 사용합니다.
-      const onStateUpdate = customCallbacks ? customCallbacks.onStateUpdate : (gameState) => {
+      const onStateUpdate = customCallbacks ? customCallbacks.onStateUpdate : (gameState: GameStateDto) => {
         this.webSocketHandler?.broadcastGameState(gameId, gameState);
       };
       
-      const onEvent = customCallbacks ? customCallbacks.onEvent : (gameEvent) => {
+      const onEvent = customCallbacks ? customCallbacks.onEvent : (gameEvent: GameEventDto) => {
         this.webSocketHandler?.broadcastGameEvent(gameId, gameEvent);
         if (gameEvent.event === 'game_end') {
           this._handleGameEnd(gameId, gameEvent.data?.winnerId);
@@ -76,13 +78,16 @@ export class GameManager {
       };
       
       // 4. GameSession 인스턴스 생성
+      const aiDifficulty = aiSettings?.difficulty || 'medium';
+      
       const session = new GameSession(
         gameId,
         dbGameId,
         mode,
         this.gameRepository,
         onStateUpdate,
-        onEvent
+        onEvent,
+        aiDifficulty
       );
 
       players.forEach((p) => {

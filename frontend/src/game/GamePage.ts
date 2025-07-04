@@ -202,6 +202,11 @@ export class GamePage {
             opponents: opponents? opponents : undefined, // opponents가 비어있으면 undefined로 처리
         };
 
+        // AI 설정이 있으면 추가
+        if (setupResult.aiSettings) {
+            finalRequest.aiSettings = setupResult.aiSettings;
+        }
+
         return finalRequest;
     }
 
