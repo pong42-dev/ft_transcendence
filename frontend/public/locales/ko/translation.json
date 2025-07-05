@@ -195,8 +195,8 @@
   "helpCommand": {
     "api_status": "API 상태",
     "full_help_text": {
-      "true": 사용 가능한 명령:\n  help       - 이 도움말 메시지 표시\n  profile    - 사용자 프로필 보기 (profile <username>)\n  play       - 퐁 게임 시작\n  tournament - 토너먼트 테스트 모달 열기\n  logout     - 현재 세션에서 로그아웃\n  friend     - 친구 관리 (friend follow|unfollow|list)\n  2fa        - 2단계 인증 관리 (2fa enable|disable|status)\n  set        - 프로필 설정 업데이트 (set avatar|name)\n  clear      - 터미널 화면 지우기",
-      "false": 사용 가능한 명령:\n  help       - 이 도움말 메시지 표시\n  login      - 계정에 로그인\n  register   - 새 계정 생성\n  clear      - 터미널 화면 지우기"
+      "true": "사용 가능한 명령:\n  help       - 이 도움말 메시지 표시\n  profile    - 사용자 프로필 보기 (profile <username>)\n  play       - 퐁 게임 시작\n  tournament - 토너먼트 테스트 모달 열기\n  logout     - 현재 세션에서 로그아웃\n  friend     - 친구 관리 (friend follow|unfollow|list)\n  2fa        - 2단계 인증 관리 (2fa enable|disable|status)\n  set        - 프로필 설정 업데이트 (set avatar|name)\n  clear      - 터미널 화면 지우기",
+      "false": "사용 가능한 명령:\n  help       - 이 도움말 메시지 표시\n  login      - 계정에 로그인\n  register   - 새 계정 생성\n  clear      - 터미널 화면 지우기"
     }
   },
   "loginCommand": {
