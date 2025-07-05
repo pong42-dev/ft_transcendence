@@ -6,6 +6,7 @@
 
 import { GameResult } from '../../types/types.js';
 import { BaseModal } from './BaseModal.js';
+import { i18n } from '../../services/i18n';
 
 export class GameEndModal extends BaseModal {
   private onProfileClick: () => void;
@@ -53,14 +54,14 @@ export class GameEndModal extends BaseModal {
         <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-terminal-gray bg-opacity-10 mb-3">
           <div class="text-3xl">${userWon ? '🏆' : '💪'}</div>
         </div>
-        <h3 class="text-terminal-green text-2xl font-bold mb-1">${userWon ? 'Victory!' : 'Good Game!'}</h3>
-        <div class="text-sm opacity-70">${userWon ? 'Congratulations!' : `${winnerName} wins!`}</div>
+        <h3 class="text-terminal-green text-2xl font-bold mb-1">${userWon ? i18n.t('gameEndModal.victory') : i18n.t('gameEndModal.good_game')}</h3>
+        <div class="text-sm opacity-70">${userWon ? i18n.t('gameEndModal.congratulations') : i18n.t('gameEndModal.winner_announcement', { winnerName })}</div>
       </div>
       
       <div class="bg-terminal-gray bg-opacity-5 rounded-lg p-4 mb-6">
         <div class="flex justify-between items-center mb-3">
-          <div class="text-lg font-bold">Match Stats</div>
-          <div class="text-sm opacity-50">Final Score</div>
+          <div class="text-lg font-bold">${i18n.t('gameEndModal.match_stats')}</div>
+          <div class="text-sm opacity-50">${i18n.t('gameEndModal.final_score')}</div>
         </div>
         
         <div class="grid grid-cols-3 gap-4 text-center">
@@ -69,7 +70,7 @@ export class GameEndModal extends BaseModal {
             <div class="text-sm opacity-70">${this.gameResult.leftPlayer.nickname}</div>
           </div>
           <div class="flex items-center justify-center">
-            <div class="text-terminal-gray">VS</div>
+            <div class="text-terminal-gray">${i18n.t('common.vs')}</div>
           </div>
           <div>
             <div class="text-2xl font-bold text-terminal-green">${this.gameResult.rightPlayer.score}</div>
@@ -81,11 +82,11 @@ export class GameEndModal extends BaseModal {
           <div class="grid grid-cols-2 gap-4 text-center text-sm">
             <div>
               <div class="text-terminal-green font-bold">${this.gameResult.totalRounds}</div>
-              <div class="opacity-70">Total Rounds</div>
+              <div class="opacity-70">${i18n.t('gameEndModal.total_rounds')}</div>
             </div>
             <div>
               <div class="text-terminal-green font-bold">${this.gameResult.gameMode}</div>
-              <div class="opacity-70">Game Mode</div>
+              <div class="opacity-70">${i18n.t('gameEndModal.game_mode')}</div>
             </div>
           </div>
         </div>
@@ -110,7 +111,7 @@ export class GameEndModal extends BaseModal {
             id="next-match-btn"
             class="w-full bg-terminal-green text-terminal-black py-3 rounded-lg font-medium hover:bg-opacity-80 transition-all"
           >
-            Next Match
+            ${i18n.t('gameEndModal.next_match')}
           </button>
         `;
       } else if (this.isFinal) {
@@ -119,7 +120,7 @@ export class GameEndModal extends BaseModal {
             id="tournament-results-btn"
             class="w-full bg-terminal-green text-terminal-black py-3 rounded-lg font-medium hover:bg-opacity-80 transition-all"
           >
-            View Tournament Results
+            ${i18n.t('gameEndModal.view_tournament_results')}
           </button>
         `;
       }
@@ -131,13 +132,13 @@ export class GameEndModal extends BaseModal {
         id="profile-btn"
         class="w-full border border-terminal-gray text-terminal-green py-3 rounded-lg font-medium hover:bg-terminal-gray hover:bg-opacity-10 transition-all"
       >
-        View Profile
+        ${i18n.t('gameEndModal.view_profile')}
       </button>
       <button 
         id="close-btn"
         class="w-full border border-terminal-gray text-terminal-gray py-3 rounded-lg font-medium hover:bg-terminal-gray hover:bg-opacity-10 transition-all"
       >
-        Close
+        ${i18n.t('common.close')}
       </button>
     `;
 

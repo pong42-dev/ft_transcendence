@@ -10,6 +10,7 @@ import { DOMUpdater } from '../../utils/DOMUpdater.js';
 import { ErrorHandler } from '../../utils/ErrorHandler.js';
 import { ValidationResult } from '../../utils/validators.js';
 import { ApiError } from '../../services/ApiClient.js';
+import { i18n } from '../../services/i18n';
 
 export abstract class BaseModal {
   protected modalManager: ModalManager;
@@ -183,7 +184,7 @@ export abstract class BaseModal {
   // Validation helper
   protected handleValidationResult(field: string, validation: ValidationResult): boolean {
     if (!validation.isValid) {
-      this.showFieldError(field, validation.error ?? 'Invalid input');
+      this.showFieldError(field, validation.error ?? i18n.t('common.invalid_input'));
       return false;
     }
     this.hideFieldError(field);
@@ -192,7 +193,7 @@ export abstract class BaseModal {
 
   // Error handling with ErrorHandler integration
   protected handleError(error: unknown, context: string, customMessage?: string): void {
-    let message = customMessage || 'An error occurred. Please try again.';
+    let message = customMessage || i18n.t('common.error_occurred_try_again');
     
     if (error instanceof ApiError) {
       message = error.data?.message || message;

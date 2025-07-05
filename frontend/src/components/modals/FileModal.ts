@@ -4,6 +4,7 @@
 
 import { ModalManager, ModalContent } from '../../managers/ModalManager.js';
 import { DOMUpdater } from '../../utils/DOMUpdater.js';
+import { i18n } from '../../services/i18n';
 
 export class FileModal {
   private onFileSelect: (file: File) => void;
@@ -14,7 +15,7 @@ export class FileModal {
   private modalManager: ModalManager;
 
   constructor(
-    title: string = 'Select File',
+    title: string = i18n.t('fileModal.select_file'),
     accept: string = 'image/*',
     maxSize: number = 5 * 1024 * 1024, // 5MB
     onFileSelect: (file: File) => void
@@ -70,9 +71,9 @@ export class FileModal {
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
             </svg>
             <div>
-              <p class="text-terminal-green font-medium">Click to select or drag & drop</p>
+              <p class="text-terminal-green font-medium">${i18n.t('fileModal.click_or_drag_drop')}</p>
               <p class="text-sm text-terminal-gray mt-1">
-                Max size: ${this.formatFileSize(this.maxSize)} • ${this.accept}
+                ${i18n.t('fileModal.max_size_formats', { size: this.formatFileSize(this.maxSize), formats: this.accept })}
               </p>
             </div>
           </div>
@@ -93,7 +94,7 @@ export class FileModal {
               <button 
                 id="remove-file"
                 class="text-terminal-red hover:bg-terminal-red hover:bg-opacity-10 p-1 rounded transition-colors"
-                title="Remove file"
+                title="${i18n.t('fileModal.remove_file')}"
               >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -112,14 +113,14 @@ export class FileModal {
             id="cancel-btn"
             class="flex-1 px-4 py-2 text-sm border border-terminal-gray text-terminal-gray rounded hover:bg-terminal-gray hover:bg-opacity-10 transition-colors"
           >
-            Cancel
+            ${i18n.t('common.cancel')}
           </button>
           <button 
             id="upload-btn"
             class="flex-1 px-4 py-2 text-sm bg-terminal-green text-terminal-black rounded hover:bg-opacity-80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             disabled
           >
-            Select
+            ${i18n.t('common.select')}
           </button>
         </div>
       </div>

@@ -7,6 +7,7 @@
 
 import { Friend, GameSetupResult } from '../../types/types.js';
 import { BaseModal } from './BaseModal.js';
+import { i18n } from '../../services/i18n';
 
 export class GameSetupModal extends BaseModal {
   private resolvePromise: ((value: GameSetupResult | null) => void) | null = null;
@@ -52,28 +53,28 @@ export class GameSetupModal extends BaseModal {
 
     this.contentElement.innerHTML = `
       <div class="flex items-center justify-between mb-6">
-        <h3 class="text-terminal-green text-xl font-bold">Select Game Mode</h3>
+        <h3 class="text-terminal-green text-xl font-bold">${i18n.t('gameSetupModal.select_game_mode')}</h3>
         <button class="text-terminal-gray hover:text-terminal-green transition-all" id="close-btn">
           ✕
         </button>
       </div>
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <button data-mode="vs ai" class="rounded-lg border border-terminal-gray p-4 text-left transition-all hover:bg-terminal-gray hover:bg-opacity-10">
-          <div class="text-lg font-bold mb-2">VS AI</div>
-          <div class="text-sm opacity-70">Challenge AI opponent</div>
+          <div class="text-lg font-bold mb-2">${i18n.t('gameSetupModal.vs_ai')}</div>
+          <div class="text-sm opacity-70">${i18n.t('gameSetupModal.challenge_ai_opponent')}</div>
         </button>
         <button data-mode="local" class="rounded-lg border border-terminal-gray p-4 text-left transition-all hover:bg-terminal-gray hover:bg-opacity-10">
-          <div class="text-lg font-bold mb-2">Local</div>
-          <div class="text-sm opacity-70">Play with friends</div>
+          <div class="text-lg font-bold mb-2">${i18n.t('gameSetupModal.local')}</div>
+          <div class="text-sm opacity-70">${i18n.t('gameSetupModal.play_with_friends')}</div>
         </button>
         <button data-mode="remote" class="rounded-lg border border-terminal-gray p-4 text-left transition-all hover:bg-terminal-gray hover:bg-opacity-10">
-          <div class="text-lg font-bold mb-2">Remote</div>
-          <div class="text-sm opacity-70">Play online</div>
+          <div class="text-lg font-bold mb-2">${i18n.t('gameSetupModal.remote')}</div>
+          <div class="text-sm opacity-70">${i18n.t('gameSetupModal.play_online')}</div>
         </button>
       </div>
       <div class="flex justify-end gap-2 mt-6">
         <button id="cancel-btn" class="px-4 py-2 text-terminal-gray border border-terminal-gray rounded hover:bg-terminal-gray hover:bg-opacity-10 transition-all">
-          Cancel
+          ${i18n.t('common.cancel')}
         </button>
       </div>
     `;
@@ -156,7 +157,7 @@ export class GameSetupModal extends BaseModal {
 
     this.contentElement.innerHTML = `
       <div class="flex items-center justify-between mb-6">
-        <h3 class="text-terminal-green text-xl font-bold">Select Opponent</h3>
+        <h3 class="text-terminal-green text-xl font-bold">${i18n.t('gameSetupModal.select_opponent')}</h3>
         <button class="text-terminal-gray hover:text-terminal-green transition-all" id="close-btn">
           ✕
         </button>
@@ -166,7 +167,7 @@ export class GameSetupModal extends BaseModal {
         <input 
           type="text" 
           id="friend-search" 
-          placeholder="Search friends..."
+          placeholder="${i18n.t('gameSetupModal.search_friends')}"
           class="w-full px-4 py-2 bg-terminal-black border border-terminal-gray rounded-lg text-terminal-green focus:outline-none focus:border-terminal-green"
         />
       </div>
@@ -179,14 +180,14 @@ export class GameSetupModal extends BaseModal {
       
       <div class="flex justify-between gap-2">
         <button id="back-btn" class="px-4 py-2 text-terminal-gray border border-terminal-gray rounded hover:bg-terminal-gray hover:bg-opacity-10 transition-all">
-          Back
+          ${i18n.t('common.back')}
         </button>
         <div class="flex gap-2">
           <button id="cancel-btn" class="px-4 py-2 text-terminal-gray border border-terminal-gray rounded hover:bg-terminal-gray hover:bg-opacity-10 transition-all">
-            Cancel
+            ${i18n.t('common.cancel')}
           </button>
           <button id="invite-btn" class="px-4 py-2 bg-terminal-green text-terminal-black rounded hover:bg-opacity-80 transition-all disabled:opacity-50 disabled:cursor-not-allowed" disabled>
-            Send Invite
+            ${i18n.t('gameSetupModal.send_invite')}
           </button>
         </div>
       </div>
@@ -216,7 +217,7 @@ export class GameSetupModal extends BaseModal {
     if (friends.length === 0) {
       friendsList.innerHTML = `
         <div class="text-center text-terminal-gray py-8">
-          <p>No friends found</p>
+          <p>${i18n.t('gameSetupModal.no_friends_found')}</p>
         </div>
       `;
       return;
@@ -230,7 +231,7 @@ export class GameSetupModal extends BaseModal {
           </div>
           <div>
             <div class="font-medium">${friend.username}</div>
-            <div class="text-sm text-terminal-gray">${friend.status === 'online' ? 'Online' : 'Offline'}</div>
+            <div class="text-sm text-terminal-gray">${friend.status === 'online' ? i18n.t('common.online') : i18n.t('common.offline')}</div>
           </div>
         </div>
         <div class="text-terminal-green opacity-0 friend-check">✓</div>

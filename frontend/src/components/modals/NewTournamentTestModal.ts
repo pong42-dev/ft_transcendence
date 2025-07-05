@@ -3,6 +3,7 @@ import { UserApiService } from '../../services/api/UserApiService.js';
 import { TournamentApiService } from '../../services/api/TournamentApiService.js';
 import { tournamentWebSocketService } from '../../services/websocket/TournamentWebSocketService.js';
 import { TournamentServerMessage } from '../../types/tournament-websocket.js';
+import i18n from '../../services/i18n';
 
 type TournamentStep =
   | 'init'
@@ -35,7 +36,7 @@ export class NewTournamentTestModal {
 
   show(): void {
     const modalContent: ModalContent = {
-      title: 'Tournament 수직 플로우 테스트',
+      title: i18n.t('newTournamentTestModal.title'),
       content: () => this.createContent(),
       onShow: () => this.onShow(),
       onClose: () => this.onClose(),
@@ -78,19 +79,19 @@ export class NewTournamentTestModal {
     
     html += `<div class="mb-4 flex items-center gap-4">
       <div>
-        <label class="text-terminal-gray text-sm">Logged-in User: </label>
-        <span class="text-terminal-green font-mono">${this.currentUserInfo.name ?? 'Not Logged In'}</span>
+        <label class="text-terminal-gray text-sm">${i18n.t('newTournamentTestModal.logged_in_user')}</label>
+        <span class="text-terminal-green font-mono">${this.currentUserInfo.name ?? i18n.t('newTournamentTestModal.not_logged_in')}</span>
       </div>
     </div>`;
     
     if (!this.currentUserInfo.email && !this.currentUserInfo.name) {
-      html += `<div class='text-terminal-red text-xs mb-2'>로그인된 사용자 정보가 없습니다. 로그인 후 이용하세요.</div>`;
+      html += `<div class='text-terminal-red text-xs mb-2'>${i18n.t('newTournamentTestModal.login_required')}</div>`;
       this.contentElement.innerHTML = html;
       this.attachEventListeners();
       return;
     }
     
-    html += `<div class="mb-4"><label class="text-terminal-gray text-sm">Tournament ID: </label><span class="text-terminal-green font-mono">${this.tournamentId ?? '-'}</span></div>`;
+    html += `<div class="mb-4"><label class="text-terminal-gray text-sm">${i18n.t('newTournamentTestModal.tournament_id')}</label><span class="text-terminal-green font-mono">${this.tournamentId ?? i18n.t('common.dash')}</span></div>`;
     
     if (this.errorMsg) {
       html += `<div class="text-terminal-red text-xs mb-2">${this.errorMsg}</div>`;
@@ -98,22 +99,22 @@ export class NewTournamentTestModal {
     
     // 단계별 UI
     if (this.step === 'init') {
-      html += `<button id="start-tournament-btn" class="bg-terminal-green text-terminal-black px-4 py-2 rounded">토너먼트 시작</button>`;
+      html += `<button id="start-tournament-btn" class="bg-terminal-green text-terminal-black px-4 py-2 rounded">${i18n.t('newTournamentTestModal.start_tournament')}</button>`;
     } else if (this.step === 'input_names') {
-      html += `<div class="mb-4">참가자 닉네임 입력:</div>`;
+      html += `<div class="mb-4">${i18n.t('newTournamentTestModal.enter_participant_names')}</div>`;
       html += `<div class="mb-2 flex items-center gap-2">
-        <span class="text-terminal-green text-sm">로그인된 유저: ${this.currentUserInfo.name}</span>
+        <span class="text-terminal-green text-sm">${i18n.t('newTournamentTestModal.logged_in_user_name', { username: this.currentUserInfo.name })}</span>
       </div>`;
       // 게스트 3명 입력받음
       for (let i = 0; i < this.participants.length; i++) {
-        html += `<div class="mb-2 flex items-center gap-2"><input type="text" class="bg-terminal-black border border-terminal-gray text-terminal-green px-2 py-1 rounded text-sm" id="name-input-${i}" value="${this.participants[i]}" placeholder="게스트 ${i + 1}" /></div>`;
+        html += `<div class="mb-2 flex items-center gap-2"><input type="text" class="bg-terminal-black border border-terminal-gray text-terminal-green px-2 py-1 rounded text-sm" id="name-input-${i}" value="${this.participants[i]}" placeholder="${i18n.t('newTournamentTestModal.guest', { guestNum: i + 1 })}" /></div>`;
       }
-      html += `<button id="confirm-names-btn" class="bg-terminal-green text-terminal-black px-4 py-2 rounded mt-2">확인</button>`;
+      html += `<button id="confirm-names-btn" class="bg-terminal-green text-terminal-black px-4 py-2 rounded mt-2">${i18n.t('common.confirm')}</button>`;
     } else if (this.step === 'show_bracket' || this.step === 'match1' || this.step === 'match2' || this.step === 'final') {
       html += this.renderBracketSection();
     } else if (this.step === 'result') {
-      html += `<div class="mb-4 text-terminal-green font-bold">최종 우승자: ${this.getFinalWinnerName()}</div>`;
-      html += `<div class="mb-2">토너먼트 상세 정보:</div>`;
+      html += `<div class="mb-4 text-terminal-green font-bold">${i18n.t('newTournamentTestModal.final_winner', { winnerName: this.getFinalWinnerName() })}</div>`;
+      html += `<div class="mb-2">${i18n.t('newTournamentTestModal.tournament_details')}</div>`;
       html += `<pre class="bg-terminal-black text-terminal-green text-xs p-2 rounded border border-terminal-gray max-h-64 overflow-y-auto">${JSON.stringify(this.tournamentDetails || {}, null, 2)}</pre>`;
     }
     
@@ -138,7 +139,7 @@ export class NewTournamentTestModal {
     this.contentElement.querySelectorAll('[data-start-match-btn]').forEach(btn => {
       btn.addEventListener('click', async (e: any) => {
         const match = btn.getAttribute('data-match');
-        await this.handleStartMatch(match);
+        await this.handleStartMatch(match!);
       });
     });
     
@@ -147,7 +148,7 @@ export class NewTournamentTestModal {
       btn.addEventListener('click', async (e: any) => {
         const match = btn.getAttribute('data-match');
         const winnerIdx = Number(btn.getAttribute('data-winner-idx'));
-        await this.handleSelectWinner(match, winnerIdx);
+        await this.handleSelectWinner(match!, winnerIdx);
       });
     });
     
@@ -185,7 +186,7 @@ export class NewTournamentTestModal {
   private async handleConfirmNames(): Promise<void> {
     // 게스트 3명 모두 입력되었는지 확인
     if (this.participants.some(name => !name.trim())) {
-      this.errorMsg = '모든 게스트 닉네임을 입력하세요.';
+      this.errorMsg = i18n.t('newTournamentTestModal.enter_all_guest_names');
       this.updateContent();
       return;
     }
@@ -214,7 +215,7 @@ export class NewTournamentTestModal {
           const match2Participants = firstRoundMatches[1].participants.map((p: any) => p.name);
           
           // 전체 참가자 목록에서 인덱스 찾기
-          const allParticipants = [this.currentUserInfo.name ?? 'User1', ...this.participants];
+          const allParticipants = [this.currentUserInfo.name ?? i18n.t('newTournamentTestModal.default_user_name'), ...this.participants];
           this.bracket = {
             match1: [
               allParticipants.findIndex((name: string) => name === match1Participants[0]) ?? 0,
@@ -264,7 +265,7 @@ export class NewTournamentTestModal {
         };
         this.matchIds = {};
       }
-      
+
       // --- WebSocket 연결 ---
       if (this.tournamentId !== null && typeof this.tournamentId !== 'undefined' && this.currentUserInfo.id !== undefined && this.currentUserInfo.id !== null) {
         tournamentWebSocketService.connect(String(this.tournamentId!), this.currentUserInfo.id!);
@@ -290,56 +291,55 @@ export class NewTournamentTestModal {
       }
       
       this.step = 'match1';
-      this.updateContent();
     } catch (e: any) {
-      this.errorMsg = e?.message || '토너먼트 생성 실패';
-      this.updateContent();
+      this.errorMsg = e?.message || i18n.t('newTournamentTestModal.tournament_creation_failed');
     }
+    this.updateContent();
   }
 
   private renderBracketSection(): string {
-    let html = '<div class="mb-4 font-bold text-terminal-green">대진표</div>';
+    let html = `<div class="mb-4 font-bold text-terminal-green">${i18n.t('newTournamentTestModal.bracket_title')}</div>`;
     // 1번 유저 + 게스트 3명으로 표시
-    const allParticipants = [this.currentUserInfo.name ?? 'User1', ...this.participants];
-    html += `<div class="mb-2">Match 1: ${allParticipants[this.bracket.match1[0]]} vs ${allParticipants[this.bracket.match1[1]]}</div>`;
-    html += `<div class="mb-2">Match 2: ${allParticipants[this.bracket.match2[0]]} vs ${allParticipants[this.bracket.match2[1]]}</div>`;
-    
+    const allParticipants = [this.currentUserInfo.name ?? i18n.t('newTournamentTestModal.default_user_name'), ...this.participants];
+    html += `<div class="mb-2">${i18n.t('newTournamentTestModal.match_detail', { matchNum: 1, player1: allParticipants[this.bracket.match1[0]], player2: allParticipants[this.bracket.match1[1]] })}</div>`;
+    html += `<div class="mb-2">${i18n.t('newTournamentTestModal.match_detail', { matchNum: 2, player1: allParticipants[this.bracket.match2[0]], player2: allParticipants[this.bracket.match2[1]] })}</div>`;
+
     if (this.step === 'match1') {
       if (this.matchStates.match1 === 'waiting') {
-        html += `<div class="mb-2">Match 1 시작:</div>`;
-        html += `<button data-start-match-btn data-match="match1" class="bg-terminal-green text-terminal-black px-3 py-1 rounded">Match 1 시작</button>`;
+        html += `<div class="mb-2">${i18n.t('newTournamentTestModal.match_start_prompt', { matchNum: 1 })}</div>`;
+        html += `<button data-start-match-btn data-match="match1" class="bg-terminal-green text-terminal-black px-3 py-1 rounded">${i18n.t('newTournamentTestModal.start_match_button', { matchNum: 1 })}</button>`;
       } else if (this.matchStates.match1 === 'playing') {
-        html += `<div class="mb-2">Match 1 승자 선택:</div>`;
+        html += `<div class="mb-2">${i18n.t('newTournamentTestModal.select_winner_prompt', { matchNum: 1 })}</div>`;
         html += `<button data-match-winner-btn data-match="match1" data-winner-idx="${this.bracket.match1[0]}" class="bg-terminal-green text-terminal-black px-3 py-1 rounded mr-2">${allParticipants[this.bracket.match1[0]]}</button>`;
         html += `<button data-match-winner-btn data-match="match1" data-winner-idx="${this.bracket.match1[1]}" class="bg-terminal-green text-terminal-black px-3 py-1 rounded">${allParticipants[this.bracket.match1[1]]}</button>`;
       }
     } else if (this.step === 'match2') {
       if (this.matchStates.match2 === 'waiting') {
-        html += `<div class="mb-2">Match 2 시작:</div>`;
-        html += `<button data-start-match-btn data-match="match2" class="bg-terminal-green text-terminal-black px-3 py-1 rounded">Match 2 시작</button>`;
+        html += `<div class="mb-2">${i18n.t('newTournamentTestModal.match_start_prompt', { matchNum: 2 })}</div>`;
+        html += `<button data-start-match-btn data-match="match2" class="bg-terminal-green text-terminal-black px-3 py-1 rounded">${i18n.t('newTournamentTestModal.start_match_button', { matchNum: 2 })}</button>`;
       } else if (this.matchStates.match2 === 'playing') {
-        html += `<div class="mb-2">Match 2 승자 선택:</div>`;
+        html += `<div class="mb-2">${i18n.t('newTournamentTestModal.select_winner_prompt', { matchNum: 2 })}</div>`;
         html += `<button data-match-winner-btn data-match="match2" data-winner-idx="${this.bracket.match2[0]}" class="bg-terminal-green text-terminal-black px-3 py-1 rounded mr-2">${allParticipants[this.bracket.match2[0]]}</button>`;
         html += `<button data-match-winner-btn data-match="match2" data-winner-idx="${this.bracket.match2[1]}" class="bg-terminal-green text-terminal-black px-3 py-1 rounded">${allParticipants[this.bracket.match2[1]]}</button>`;
       }
     } else if (this.step === 'final') {
       const winner1 = this.matchWinners.match1;
       const winner2 = this.matchWinners.match2;
-      html += `<div class="mb-2">결승: ${allParticipants[winner1!]} vs ${allParticipants[winner2!]}</div>`;
+      html += `<div class="mb-2">${i18n.t('newTournamentTestModal.final_match_detail', { player1: allParticipants[winner1!], player2: allParticipants[winner2!] })}</div>`;
       if (this.matchStates.final === 'waiting') {
-        html += `<div class="mb-2">결승 시작:</div>`;
-        html += `<button data-start-match-btn data-match="final" class="bg-terminal-green text-terminal-black px-3 py-1 rounded">결승 시작</button>`;
+        html += `<div class="mb-2">${i18n.t('newTournamentTestModal.final_start_prompt')}</div>`;
+        html += `<button data-start-match-btn data-match="final" class="bg-terminal-green text-terminal-black px-3 py-1 rounded">${i18n.t('newTournamentTestModal.start_final_button')}</button>`;
       } else if (this.matchStates.final === 'playing') {
-        html += `<div class="mb-2">결승 승자 선택:</div>`;
+        html += `<div class="mb-2">${i18n.t('newTournamentTestModal.select_final_winner_prompt')}</div>`;
         html += `<button data-match-winner-btn data-match="final" data-winner-idx="${winner1}" class="bg-terminal-green text-terminal-black px-3 py-1 rounded mr-2">${allParticipants[winner1!]}</button>`;
         html += `<button data-match-winner-btn data-match="final" data-winner-idx="${winner2}" class="bg-terminal-green text-terminal-black px-3 py-1 rounded">${allParticipants[winner2!]}</button>`;
       }
     }
-    
+
     if (this.step === 'final') {
-      html += `<button id="fetch-details-btn" class="bg-terminal-gray text-terminal-green px-3 py-1 rounded ml-4">토너먼트 상세 정보 확인</button>`;
+      html += `<button id="fetch-details-btn" class="bg-terminal-gray text-terminal-green px-3 py-1 rounded ml-4">${i18n.t('newTournamentTestModal.view_tournament_details_button')}</button>`;
     }
-    
+
     return html;
   }
 
@@ -383,7 +383,7 @@ export class NewTournamentTestModal {
 
   private getFinalWinnerName(): string {
     if (this.matchWinners.final !== undefined) {
-      const allParticipants = [this.currentUserInfo.name ?? 'User1', ...this.participants];
+      const allParticipants = [this.currentUserInfo.name ?? i18n.t('newTournamentTestModal.default_user_name'), ...this.participants];
       return allParticipants[this.matchWinners.final];
     }
     return '-';

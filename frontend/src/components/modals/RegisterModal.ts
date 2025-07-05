@@ -7,6 +7,7 @@ import { User } from '../../types/types.js';
 import { validateEmail, validatePassword, validateNickname } from '../../utils/validators.js';
 import { ModalManager, ModalContent } from '../../managers/ModalManager.js';
 import { DOMUpdater } from '../../utils/DOMUpdater.js';
+import i18n from '../../services/i18n';
 
 export interface RegisterModalCallbacks {
   onRegisterSuccess: (user: User, avatarFile?: File) => void;
@@ -65,8 +66,8 @@ export class RegisterModal {
     container.innerHTML = `
       <div class="flex items-center justify-between mb-8">
         <div class="text-center flex-1">
-          <h2 class="text-2xl font-bold text-terminal-green mb-2">Create Account</h2>
-          <p class="text-terminal-gray">Join our community</p>
+          <h2 class="text-2xl font-bold text-terminal-green mb-2">${i18n.t('registerModal.create_account')}</h2>
+          <p class="text-terminal-gray">${i18n.t('registerModal.join_community')}</p>
         </div>
         <button class="text-terminal-gray hover:text-terminal-green transition-all" id="close-btn">
           ✕
@@ -75,12 +76,12 @@ export class RegisterModal {
       
       <form class="space-y-6" id="register-form">
         <div>
-          <label class="block text-sm font-medium mb-2 text-terminal-green">Email</label>
+          <label class="block text-sm font-medium mb-2 text-terminal-green">${i18n.t('registerModal.email')}</label>
           <input 
             type="email" 
             id="email-input" 
             class="w-full px-4 py-3 bg-terminal-black border border-terminal-gray rounded-lg text-terminal-green focus:outline-none focus:border-terminal-green focus:ring-1 focus:ring-terminal-green"
-            placeholder="Enter your email"
+            placeholder="${i18n.t('registerModal.enter_email')}"
             autocomplete="email"
             required
           />
@@ -88,12 +89,12 @@ export class RegisterModal {
         </div>
         
         <div>
-          <label class="block text-sm font-medium mb-2 text-terminal-green">Password</label>
+          <label class="block text-sm font-medium mb-2 text-terminal-green">${i18n.t('registerModal.password')}</label>
           <input 
             type="password" 
             id="password-input" 
             class="w-full px-4 py-3 bg-terminal-black border border-terminal-gray rounded-lg text-terminal-green focus:outline-none focus:border-terminal-green focus:ring-1 focus:ring-terminal-green"
-            placeholder="Enter your password"
+            placeholder="${i18n.t('registerModal.enter_password')}"
             autocomplete="new-password"
             required
           />
@@ -101,12 +102,12 @@ export class RegisterModal {
         </div>
         
         <div>
-          <label class="block text-sm font-medium mb-2 text-terminal-green">Confirm Password</label>
+          <label class="block text-sm font-medium mb-2 text-terminal-green">${i18n.t('registerModal.confirm_password')}</label>
           <input 
             type="password" 
             id="confirm-password-input" 
             class="w-full px-4 py-3 bg-terminal-black border border-terminal-gray rounded-lg text-terminal-green focus:outline-none focus:border-terminal-green focus:ring-1 focus:ring-terminal-green"
-            placeholder="Confirm your password"
+            placeholder="${i18n.t('registerModal.confirm_your_password')}"
             autocomplete="new-password"
             required
           />
@@ -114,12 +115,12 @@ export class RegisterModal {
         </div>
         
         <div>
-          <label class="block text-sm font-medium mb-2 text-terminal-green">Username</label>
+          <label class="block text-sm font-medium mb-2 text-terminal-green">${i18n.t('registerModal.username')}</label>
           <input 
             type="text" 
             id="name-input" 
             class="w-full px-4 py-3 bg-terminal-black border border-terminal-gray rounded-lg text-terminal-green focus:outline-none focus:border-terminal-green focus:ring-1 focus:ring-terminal-green"
-            placeholder="Enter your username"
+            placeholder="${i18n.t('registerModal.enter_username')}"
             autocomplete="username"
             required
           />
@@ -128,7 +129,7 @@ export class RegisterModal {
         
         <!-- Avatar Upload Section -->
         <div>
-          <label class="block text-sm font-medium mb-2 text-terminal-green">Profile Picture (Optional)</label>
+          <label class="block text-sm font-medium mb-2 text-terminal-green">${i18n.t('registerModal.profile_picture_optional')}</label>
           <div class="flex items-center space-x-4">
             <!-- Avatar Preview -->
             <div class="w-16 h-16 rounded-full bg-terminal-gray bg-opacity-20 border border-terminal-gray flex items-center justify-center overflow-hidden">
@@ -152,19 +153,19 @@ export class RegisterModal {
                 id="avatar-upload-btn"
                 class="px-4 py-2 text-sm border border-terminal-gray text-terminal-green rounded hover:bg-terminal-gray hover:bg-opacity-10 transition-colors"
               >
-                Choose Image
+                ${i18n.t('registerModal.choose_image')}
               </button>
               <button 
                 type="button"
                 id="avatar-remove-btn"
                 class="ml-2 px-4 py-2 text-sm text-terminal-red hover:bg-terminal-red hover:bg-opacity-10 transition-colors hidden"
               >
-                Remove
+                ${i18n.t('common.remove')}
               </button>
             </div>
           </div>
           <div class="text-xs text-terminal-gray mt-1">
-            Max file size: 5MB. Supported formats: JPG, PNG, GIF
+            ${i18n.t('registerModal.file_size_formats')}
           </div>
           <div class="text-xs text-terminal-red mt-1 hidden" id="avatar-error"></div>
         </div>
@@ -176,7 +177,7 @@ export class RegisterModal {
           id="register-btn"
           class="w-full bg-terminal-green text-terminal-black py-3 rounded-lg font-medium hover:bg-opacity-80 transition-all focus:outline-none focus:ring-2 focus:ring-terminal-green focus:ring-offset-2 focus:ring-offset-terminal-black"
         >
-          Create Account
+          ${i18n.t('registerModal.create_account')}
         </button>
       </form>
       
@@ -185,7 +186,7 @@ export class RegisterModal {
           <div class="w-full border-t border-terminal-gray"></div>
         </div>
         <div class="relative flex justify-center text-sm">
-          <span class="px-2 bg-terminal-black text-terminal-gray">OR</span>
+          <span class="px-2 bg-terminal-black text-terminal-gray">${i18n.t('common.or')}</span>
         </div>
       </div>
       
@@ -200,14 +201,14 @@ export class RegisterModal {
             <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
             <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
           </svg>
-          Sign up with Google
+          ${i18n.t('registerModal.sign_up_with_google')}
         </button>
         
         <button 
           id="login-btn"
           class="w-full text-terminal-green hover:text-terminal-green hover:bg-terminal-green hover:bg-opacity-10 py-3 rounded-lg font-medium transition-all"
         >
-          Already have an account? Sign in
+          ${i18n.t('registerModal.already_have_account_signin')}
         </button>
       </div>
     `;
@@ -315,7 +316,7 @@ export class RegisterModal {
     // 검증 중인 필드가 있으면 대기
     const isAnyFieldChecking = Array.from(this.validationStates.values()).some(state => state.isChecking);
     if (isAnyFieldChecking) {
-      this.showGeneralError('Please wait for validation to complete');
+      this.showGeneralError(i18n.t('registerModal.please_wait_validation'));
       return;
     }
 
@@ -345,7 +346,7 @@ export class RegisterModal {
     } catch (error: any) {
       console.error('Registration error:', error);
       this.showGeneralError(
-        error.message || 'Registration failed. Please try again.'
+        error.message || i18n.t('registerModal.registration_failed_try_again')
       );
     } finally {
       this.isSubmitting = false;
@@ -361,8 +362,8 @@ export class RegisterModal {
       // AuthApiService의 loginWithGoogle 메서드 사용 (회원가입도 같은 엔드포인트)
       this.apiClient.auth.loginWithGoogle();
     } catch (error) {
-      console.error('Google register error:', error);
-      this.showGeneralError('Failed to initiate Google registration. Please try again.');
+      console.error('Google registration initiation failed:', error);
+      this.showGeneralError(i18n.t('registerModal.failed_initiate_google_registration'));
     }
   }
 
@@ -383,7 +384,7 @@ export class RegisterModal {
     const name = nameInput.value.trim();
     
     if (!name) {
-      const result = { isValid: false, message: 'Username is required' };
+      const result = { isValid: false, message: i18n.t('validation.username_required') };
       DOMUpdater.updateValidationResult('name-input', result);
       this.validationStates.set('name', { isValid: false, isChecking: false });
       return false;
@@ -392,14 +393,14 @@ export class RegisterModal {
     // 1. 형식 검증
     const formatResult = validateNickname(name);
     if (!formatResult.isValid) {
-      DOMUpdater.updateValidationResult('name-input', { isValid: formatResult.isValid, message: formatResult.error });
+      DOMUpdater.updateValidationResult('name-input', { isValid: formatResult.isValid, message: i18n.t(formatResult.error || 'validation.unknown_error_format') });
       this.validationStates.set('name', { isValid: false, isChecking: false });
       return false;
     }
     
     // 2. 중복 체크
     this.validationStates.set('name', { isValid: false, isChecking: true });
-    this.showValidationLoading('name-input', 'Checking availability...');
+    this.showValidationLoading('name-input', i18n.t('validation.checking_availability'));
     
     try {
       console.log('[Debug] Calling checkNicknameExists API for:', name);
@@ -408,7 +409,7 @@ export class RegisterModal {
       
       if (isDuplicate) {
         console.log('[Debug] Username is duplicate, showing error');
-        const result = { isValid: false, message: 'Username already exists' };
+        const result = { isValid: false, message: i18n.t('validation.username_already_taken') };
         DOMUpdater.updateValidationResult('name-input', result);
         
         // DOMUpdater가 제대로 작동하지 않을 수 있으니 직접 업데이트도 시도
@@ -431,13 +432,13 @@ export class RegisterModal {
         return false;
       } else {
         console.log('[Debug] Username is available, showing success');
-        this.showValidationSuccess('name-input', 'Username is available');
+        this.showValidationSuccess('name-input', i18n.t('validation.username_available'));
         this.validationStates.set('name', { isValid: true, isChecking: false });
         return true;
       }
     } catch (error) {
       console.error('Name duplicate check error:', error);
-      const result = { isValid: false, message: 'Unable to check username availability' };
+      const result = { isValid: false, message: i18n.t('validation.unable_to_check_availability') };
       DOMUpdater.updateValidationResult('name-input', result);
       this.validationStates.set('name', { isValid: false, isChecking: false });
       return false;
@@ -452,7 +453,7 @@ export class RegisterModal {
     const email = emailInput.value.trim();
     
     if (!email) {
-      const result = { isValid: false, message: 'Email is required' };
+      const result = { isValid: false, message: i18n.t('validation.email_required') };
       DOMUpdater.updateValidationResult('email-input', result);
       this.validationStates.set('email', { isValid: false, isChecking: false });
       return false;
@@ -461,14 +462,14 @@ export class RegisterModal {
     // 1. 형식 검증
     const formatResult = validateEmail(email);
     if (!formatResult.isValid) {
-      DOMUpdater.updateValidationResult('email-input', { isValid: formatResult.isValid, message: formatResult.error });
+      DOMUpdater.updateValidationResult('email-input', { isValid: formatResult.isValid, message: i18n.t(formatResult.error || 'validation.unknown_error_format') });
       this.validationStates.set('email', { isValid: false, isChecking: false });
       return false;
     }
     
     // 2. 중복 체크
     this.validationStates.set('email', { isValid: false, isChecking: true });
-    this.showValidationLoading('email-input', 'Checking availability...');
+    this.showValidationLoading('email-input', i18n.t('validation.checking_availability'));
     
     try {
       console.log('[Debug] Calling checkEmailExists API for:', email);
@@ -477,7 +478,7 @@ export class RegisterModal {
       
       if (isDuplicate) {
         console.log('[Debug] Email is duplicate, showing error');
-        const result = { isValid: false, message: 'Email already exists' };
+        const result = { isValid: false, message: i18n.t('validation.email_already_registered') };
         console.log('[Debug] Calling DOMUpdater.updateValidationResult with:', result);
         DOMUpdater.updateValidationResult('email-input', result);
         
@@ -503,13 +504,13 @@ export class RegisterModal {
         return false;
       } else {
         console.log('[Debug] Email is available, showing success');
-        this.showValidationSuccess('email-input', 'Email is available');
+        this.showValidationSuccess('email-input', i18n.t('validation.email_available'));
         this.validationStates.set('email', { isValid: true, isChecking: false });
         return true;
       }
     } catch (error) {
       console.error('Email duplicate check error:', error);
-      const result = { isValid: false, message: 'Unable to check email availability' };
+      const result = { isValid: false, message: i18n.t('validation.unable_to_check_availability') };
       DOMUpdater.updateValidationResult('email-input', result);
       this.validationStates.set('email', { isValid: false, isChecking: false });
       return false;
@@ -773,7 +774,7 @@ export class RegisterModal {
     const isValid = passwordInput.value === confirmPasswordInput.value;
     const result = {
       isValid,
-      message: isValid ? undefined : 'Passwords do not match'
+      message: isValid ? undefined : i18n.t('validation.passwords_do_not_match')
     };
     
     console.log('[Debug] validateConfirmPassword:', { 
@@ -792,7 +793,7 @@ export class RegisterModal {
     
     if (!isValid) {
       if (errorElement) {
-        errorElement.textContent = 'Passwords do not match';
+        errorElement.textContent = i18n.t('validation.passwords_do_not_match');
         errorElement.classList.remove('hidden');
         errorElement.classList.add('text-terminal-red');
         errorElement.classList.remove('text-terminal-gray', 'text-terminal-green');
@@ -806,7 +807,7 @@ export class RegisterModal {
     } else {
       // 비밀번호가 일치하는 경우 성공 상태 표시
       if (errorElement) {
-        errorElement.textContent = 'Passwords match';
+        errorElement.textContent = i18n.t('validation.passwords_match');
         errorElement.classList.remove('hidden');
         errorElement.classList.add('text-terminal-green');
         errorElement.classList.remove('text-terminal-red', 'text-terminal-gray');
@@ -903,14 +904,14 @@ export class RegisterModal {
     // 파일 크기 검증 (5MB)
     const maxSize = 5 * 1024 * 1024;
     if (file.size > maxSize) {
-      DOMUpdater.showError('#avatar-error', 'File size must be less than 5MB');
+      DOMUpdater.showError('#avatar-error', i18n.t('registerModal.file_size_limit'));
       input.value = '';
       return;
     }
 
     // 파일 타입 검증
     if (!file.type.startsWith('image/')) {
-      DOMUpdater.showError('#avatar-error', 'Please select a valid image file');
+      DOMUpdater.showError('#avatar-error', i18n.t('registerModal.invalid_image_file'));
       input.value = '';
       return;
     }

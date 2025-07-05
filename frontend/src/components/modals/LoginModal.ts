@@ -8,6 +8,7 @@ import { User } from '../../types/types.js';
 import { validateEmail, validatePassword } from '../../utils/validators.js';
 import { ModalManager, ModalContent } from '../../managers/ModalManager.js';
 import { DOMUpdater } from '../../utils/DOMUpdater.js';
+import { i18n } from '../../services/i18n';
 
 export interface LoginModalCallbacks {
   onLoginSuccess: (user: User) => void;
@@ -62,8 +63,8 @@ export class LoginModal {
     container.innerHTML = `
       <div class="flex items-center justify-between mb-8">
         <div class="text-center flex-1">
-          <h2 class="text-2xl font-bold text-terminal-green mb-2">Welcome Back</h2>
-          <p class="text-terminal-gray">Sign in to your account</p>
+          <h2 class="text-2xl font-bold text-terminal-green mb-2">${i18n.t('loginModal.welcome_back')}</h2>
+          <p class="text-terminal-gray">${i18n.t('loginModal.sign_in_account')}</p>
         </div>
         <button class="text-terminal-gray hover:text-terminal-green transition-all" id="close-btn">
           ✕
@@ -72,12 +73,12 @@ export class LoginModal {
       
       <form class="space-y-6" id="login-form">
         <div>
-          <label class="block text-sm font-medium mb-2 text-terminal-green">Email</label>
+          <label class="block text-sm font-medium mb-2 text-terminal-green">${i18n.t('loginModal.email')}</label>
           <input 
             type="email" 
             id="email-input" 
             class="w-full px-4 py-3 bg-terminal-black border border-terminal-gray rounded-lg text-terminal-green focus:outline-none focus:border-terminal-green focus:ring-1 focus:ring-terminal-green"
-            placeholder="Enter your email"
+            placeholder="${i18n.t('loginModal.enter_email')}"
             autocomplete="email"
             required
           />
@@ -85,12 +86,12 @@ export class LoginModal {
         </div>
         
         <div>
-          <label class="block text-sm font-medium mb-2 text-terminal-green">Password</label>
+          <label class="block text-sm font-medium mb-2 text-terminal-green">${i18n.t('loginModal.password')}</label>
           <input 
             type="password" 
             id="password-input" 
             class="w-full px-4 py-3 bg-terminal-black border border-terminal-gray rounded-lg text-terminal-green focus:outline-none focus:border-terminal-green focus:ring-1 focus:ring-terminal-green"
-            placeholder="Enter your password"
+            placeholder="${i18n.t('loginModal.enter_password')}"
             autocomplete="current-password"
             required
           />
@@ -104,7 +105,7 @@ export class LoginModal {
           id="login-btn"
           class="w-full bg-terminal-green text-terminal-black py-3 rounded-lg font-medium hover:bg-opacity-80 transition-all focus:outline-none focus:ring-2 focus:ring-terminal-green focus:ring-offset-2 focus:ring-offset-terminal-black"
         >
-          Sign In
+          ${i18n.t('loginModal.sign_in')}
         </button>
       </form>
       
@@ -113,7 +114,7 @@ export class LoginModal {
           <div class="w-full border-t border-terminal-gray"></div>
         </div>
         <div class="relative flex justify-center text-sm">
-          <span class="px-2 bg-terminal-black text-terminal-gray">OR</span>
+          <span class="px-2 bg-terminal-black text-terminal-gray">${i18n.t('common.or')}</span>
         </div>
       </div>
       
@@ -128,14 +129,14 @@ export class LoginModal {
             <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
             <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
           </svg>
-          Continue with Google
+          ${i18n.t('loginModal.continue_with_google')}
         </button>
         
         <button 
           id="register-btn"
           class="w-full text-terminal-green hover:text-terminal-green hover:bg-terminal-green hover:bg-opacity-10 py-3 rounded-lg font-medium transition-all"
         >
-          Don't have an account? Sign up
+          ${i18n.t('loginModal.no_account_signup')}
         </button>
       </div>
     `;

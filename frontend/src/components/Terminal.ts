@@ -1,5 +1,6 @@
 // Removed unused import
 import { DOMUpdater } from '../utils/DOMUpdater.js';
+import { i18n } from '../services/i18n';
 
 export class Terminal {
   private terminalElement: HTMLElement;
@@ -9,9 +10,7 @@ export class Terminal {
   private historyIndex: number = -1;
   private commandCallback: (command: string) => void;
   private outputContent: string = '';
-  private initialMessage: string = `PONG-CLI v1.0.0 (c) 2025 PongDevs
-Type "help" for available commands.
-Please login to continue.`;
+  private initialMessage: string = i18n.t('terminal.initial_message_logged_out');
 
   constructor(commandCallback: (command: string) => void) {
     this.commandCallback = commandCallback;
@@ -33,7 +32,7 @@ Please login to continue.`;
     
     const promptSpan = document.createElement('span');
     promptSpan.className = 'mr-2 text-sm opacity-90';
-    promptSpan.textContent = '$ ';
+    promptSpan.textContent = i18n.t('terminal.prompt');
     
     this.inputElement = document.createElement('input');
     this.inputElement.className = 'bg-terminal-black text-terminal-green outline-none border-none flex-grow font-jetbrains text-sm opacity-90';
@@ -95,18 +94,14 @@ Please login to continue.`;
   }
 
   public updateWelcomeMessage(isLoggedIn: boolean, username?: string): void {
-    const welcomeMessage = isLoggedIn && username 
-      ? `PONG-CLI v1.0.0 (c) 2025 PongDevs
-Type "help" for available commands.
-Welcome ${username}!`
-      : `PONG-CLI v1.0.0 (c) 2025 PongDevs
-Type "help" for available commands.
-Please login to continue.`;
+    const welcomeMessage = isLoggedIn && username
+      ? i18n.t('terminal.welcome_message_logged_in', { username })
+      : i18n.t('terminal.initial_message_logged_out');
     
     this.initialMessage = welcomeMessage;
     
     // 현재 터미널이 초기 상태라면 메시지 업데이트
-    if (this.outputContent === this.initialMessage || this.outputContent.includes('Please login to continue') || this.outputContent.includes('Welcome back')) {
+    if (this.outputContent === this.initialMessage || this.outputContent.includes(i18n.t('terminal.please_login_continue')) || this.outputContent.includes(i18n.t('terminal.welcome_back'))) {
       DOMUpdater.updateHTML(this.outputElement, welcomeMessage, {
         animate: true,
         duration: 300,

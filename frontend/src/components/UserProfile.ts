@@ -1,4 +1,5 @@
 import { User, MatchHistory } from '../types/types.js';
+import { i18n } from '../services/i18n';
 
 export class UserProfile {
   private user: User;
@@ -52,7 +53,7 @@ export class UserProfile {
     
     const username = document.createElement('div');
     username.className = 'text-xl text-terminal-green font-bold truncate';
-    username.textContent = this.user.nickname || 'Player607';
+    username.textContent = this.user.nickname || i18n.t('userProfile.default_username');
     
     nameContainer.appendChild(username);
 
@@ -70,13 +71,13 @@ export class UserProfile {
       const statusInfo = document.createElement('div');
       statusInfo.className = 'flex items-center text-sm';
       statusInfo.innerHTML = `
-        2FA ${this.user.twoFactorEnabled ? 'Enabled' : 'Disabled'}
+        ${i18n.t('userProfile.two_fa_status', { status: this.user.twoFactorEnabled ? i18n.t('common.enabled') : i18n.t('common.disabled') })}
         <div class="ml-2 w-2 h-2 rounded-full ${this.user.twoFactorEnabled ? 'bg-terminal-green' : 'bg-terminal-red'}"></div>
       `;
       
       const terminalHint = document.createElement('div');
       terminalHint.className = 'text-xs text-terminal-gray opacity-70 ml-4';
-      terminalHint.textContent = 'Use "2fa enable/disable" in terminal';
+      terminalHint.textContent = i18n.t('userProfile.two_fa_hint');
       
       securityStatus.appendChild(statusInfo);
       securityStatus.appendChild(terminalHint);
@@ -97,15 +98,15 @@ export class UserProfile {
     
     const statsTitle = document.createElement('div');
     statsTitle.className = 'text-lg text-terminal-green mb-2 font-bold';
-    statsTitle.textContent = 'Game Stats';
+    statsTitle.textContent = i18n.t('userProfile.game_stats_title');
     
     const statsContainer = document.createElement('div');
     statsContainer.className = 'grid grid-cols-3 gap-3';
     
     const statsItems = [
-      { value: this.user.gamesPlayed.toString(), label: 'Games' },
-      { value: this.user.gamesWon.toString(), label: 'Wins' },
-      { value: `${Math.round((this.user.gamesWon / this.user.gamesPlayed) * 100 || 0)}%`, label: 'Win Rate' }
+      { value: this.user.gamesPlayed.toString(), label: i18n.t('userProfile.stats_games') },
+      { value: this.user.gamesWon.toString(), label: i18n.t('userProfile.stats_wins') },
+      { value: `${Math.round((this.user.gamesWon / this.user.gamesPlayed) * 100 || 0)}%`, label: i18n.t('userProfile.stats_win_rate') }
     ];
     
     statsItems.forEach(item => {
@@ -137,7 +138,7 @@ export class UserProfile {
     
     const matchHistoryTitle = document.createElement('div');
     matchHistoryTitle.className = 'text-lg text-terminal-green mb-3 font-bold';
-    matchHistoryTitle.textContent = 'Match History';
+    matchHistoryTitle.textContent = i18n.t('userProfile.match_history_title');
     
     // Create tab container
     const tabContainer = document.createElement('div');
@@ -145,12 +146,12 @@ export class UserProfile {
     
     const oneVsOneTab = document.createElement('button');
     oneVsOneTab.className = 'px-4 py-2 text-sm font-medium text-terminal-green border-b-2 border-terminal-green';
-    oneVsOneTab.textContent = '1vs1';
+    oneVsOneTab.textContent = i18n.t('userProfile.tab_1v1');
     oneVsOneTab.setAttribute('data-tab', '1v1');
     
     const tournamentTab = document.createElement('button');
     tournamentTab.className = 'px-4 py-2 text-sm font-medium text-terminal-gray border-b-2 border-transparent hover:text-terminal-green hover:border-terminal-green hover:border-opacity-50';
-    tournamentTab.textContent = 'Tournament';
+    tournamentTab.textContent = i18n.t('userProfile.tab_tournament');
     tournamentTab.setAttribute('data-tab', 'tournament');
     
     tabContainer.appendChild(oneVsOneTab);
@@ -221,14 +222,14 @@ export class UserProfile {
     if (oneVsOneMatches.length === 0) {
       const emptyState = document.createElement('div');
       emptyState.className = 'text-center py-8 text-terminal-gray opacity-70';
-      emptyState.textContent = 'No 1vs1 matches yet';
+      emptyState.textContent = i18n.t('userProfile.no_1v1_matches');
       oneVsOneList.appendChild(emptyState);
     }
 
     if (tournamentMatches.length === 0) {
       const emptyState = document.createElement('div');
       emptyState.className = 'text-center py-8 text-terminal-gray opacity-70';
-      emptyState.textContent = 'No tournament matches yet';
+      emptyState.textContent = i18n.t('userProfile.no_tournament_matches');
       tournamentList.appendChild(emptyState);
     }
 

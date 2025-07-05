@@ -1,3 +1,5 @@
+import i18n from '../services/i18n';
+
 export interface ValidationResult {
   isValid: boolean;
   error?: string;
@@ -5,11 +7,11 @@ export interface ValidationResult {
 
 export const validateEmail = (email: string): ValidationResult => {
   if (!email) {
-    return { isValid: false, error: 'Email is required' };
+    return { isValid: false, error: i18n.t('validation.email_required') };
   }
   
   if (email.length < 6 || email.length > 50) {
-    return { isValid: false, error: 'Please enter a valid email address' };
+    return { isValid: false, error: i18n.t('validation.invalid_email_format') };
   }
   
   return { isValid: true };
@@ -17,7 +19,7 @@ export const validateEmail = (email: string): ValidationResult => {
 
 export const validatePassword = (password: string): ValidationResult => {
   if (!password) {
-    return { isValid: false, error: 'Password is required' };
+    return { isValid: false, error: i18n.t('validation.password_required') };
   }
   
   // 백엔드와 일치하는 검증 규칙
@@ -28,23 +30,23 @@ export const validatePassword = (password: string): ValidationResult => {
   const hasSpecialChar = /[@#%&!$*]/.test(password);
   
   if (!lengthValid) {
-    return { isValid: false, error: 'Password must be 8-15 characters long' };
+    return { isValid: false, error: i18n.t('validation.password_length_invalid') };
   }
   
   if (!hasDigit) {
-    return { isValid: false, error: 'Password must contain at least one digit (0-9)' };
+    return { isValid: false, error: i18n.t('validation.password_no_digit') };
   }
   
   if (!hasLowerCase) {
-    return { isValid: false, error: 'Password must contain at least one lowercase letter (a-z)' };
+    return { isValid: false, error: i18n.t('validation.password_no_lowercase') };
   }
   
   if (!hasUpperCase) {
-    return { isValid: false, error: 'Password must contain at least one uppercase letter (A-Z)' };
+    return { isValid: false, error: i18n.t('validation.password_no_uppercase') };
   }
   
   if (!hasSpecialChar) {
-    return { isValid: false, error: 'Password must contain at least one special character (@#%&!$*)' };
+    return { isValid: false, error: i18n.t('validation.password_no_special_char') };
   }
   
   return { isValid: true };
@@ -52,17 +54,17 @@ export const validatePassword = (password: string): ValidationResult => {
 
 export const validateNickname = (nickname: string): ValidationResult => {
   if (!nickname) {
-    return { isValid: false, error: 'Nickname is required' };
+    return { isValid: false, error: i18n.t('validation.nickname_required') };
   }
   
   if (nickname.length < 2 || nickname.length > 16) {
-    return { isValid: false, error: 'Nickname must be between 2 and 16 characters' };
+    return { isValid: false, error: i18n.t('validation.nickname_length_invalid') };
   }
   
   // Check for valid characters (alphanumeric, spaces, underscores, hyphens)
   const nicknameRegex = /^[a-zA-Z0-9\s_-]+$/;
   if (!nicknameRegex.test(nickname)) {
-    return { isValid: false, error: 'Nickname can only contain letters, numbers, spaces, underscores, and hyphens' };
+    return { isValid: false, error: i18n.t('validation.nickname_invalid_chars') };
   }
   
   return { isValid: true };
@@ -77,6 +79,6 @@ export const validateUrl = (url: string): ValidationResult => {
     new URL(url);
     return { isValid: true };
   } catch {
-    return { isValid: false, error: 'Please enter a valid URL' };
+    return { isValid: false, error: i18n.t('validation.invalid_url_format') };
   }
 };
