@@ -18,7 +18,9 @@
     "tab_1v1": "1대1",
     "tab_tournament": "토너먼트",
     "no_1v1_matches": "아직 1대1 경기가 없습니다",
-    "no_tournament_matches": "아직 토너먼트 경기가 없습니다"
+    "no_tournament_matches": "아직 토너먼트 경기가 없습니다",
+    "victory": "승리",
+    "defeat": "패배"
   },
   "loginModal": {
     "welcome_back": "다시 오신 것을 환영합니다",

@@ -18,7 +18,9 @@
     "tab_1v1": "1vs1",
     "tab_tournament": "Tournament",
     "no_1v1_matches": "No 1vs1 matches yet",
-    "no_tournament_matches": "No tournament matches yet"
+    "no_tournament_matches": "No tournament matches yet",
+    "victory": "Victory",
+    "defeat": "Defeat"
   },
   "loginModal": {
     "welcome_back": "Welcome Back",

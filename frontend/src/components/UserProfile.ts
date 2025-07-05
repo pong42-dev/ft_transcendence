@@ -299,7 +299,7 @@ export class UserProfile {
         </div>
         <div class="flex items-center gap-2">
           <div class="text-xs px-2 py-0.5 rounded-full ${match.rank === 1 ? 'bg-terminal-green bg-opacity-20 text-terminal-green' : 'bg-terminal-red bg-opacity-20 text-terminal-red'}">
-            ${match.rank === 1 ? 'Victory' : 'Defeat'}
+            ${match.rank === 1 ? i18n.t('userProfile.victory') : i18n.t('userProfile.defeat')}
           </div>
         </div>
       `;

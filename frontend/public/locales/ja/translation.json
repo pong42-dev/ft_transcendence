@@ -18,7 +18,9 @@
     "tab_1v1": "1対1",
     "tab_tournament": "トーナメント",
     "no_1v1_matches": "まだ1対1の対戦はありません",
-    "no_tournament_matches": "まだトーナメントの対戦はありません"
+    "no_tournament_matches": "まだトーナメントの対戦はありません",
+    "victory": "勝利",
+    "defeat": "敗北"
   },
   "loginModal": {
     "welcome_back": "おかえりなさい",
