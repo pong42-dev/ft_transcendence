@@ -1,6 +1,6 @@
 // Removed unused import
 import { DOMUpdater } from '../utils/DOMUpdater.js';
-import { i18n } from '../services/i18n';
+import i18n from '../services/i18n';
 
 export class Terminal {
   private terminalElement: HTMLElement;

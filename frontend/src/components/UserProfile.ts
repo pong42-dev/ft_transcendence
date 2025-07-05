@@ -1,5 +1,5 @@
 import { User, MatchHistory } from '../types/types.js';
-import { i18n } from '../services/i18n';
+import i18n from '../services/i18n';
 
 export class UserProfile {
   private user: User;

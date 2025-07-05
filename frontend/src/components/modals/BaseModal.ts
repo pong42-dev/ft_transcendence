@@ -10,7 +10,7 @@ import { DOMUpdater } from '../../utils/DOMUpdater.js';
 import { ErrorHandler } from '../../utils/ErrorHandler.js';
 import { ValidationResult } from '../../utils/validators.js';
 import { ApiError } from '../../services/ApiClient.js';
-import { i18n } from '../../services/i18n';
+import i18n from '../../services/i18n';
 
 export abstract class BaseModal {
   protected modalManager: ModalManager;

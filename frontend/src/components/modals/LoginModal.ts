@@ -8,7 +8,7 @@ import { User } from '../../types/types.js';
 import { validateEmail, validatePassword } from '../../utils/validators.js';
 import { ModalManager, ModalContent } from '../../managers/ModalManager.js';
 import { DOMUpdater } from '../../utils/DOMUpdater.js';
-import { i18n } from '../../services/i18n';
+import i18n from '../../services/i18n';
 
 export interface LoginModalCallbacks {
   onLoginSuccess: (user: User) => void;

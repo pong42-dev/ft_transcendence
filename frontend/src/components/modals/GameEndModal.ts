@@ -6,7 +6,7 @@
 
 import { GameResult } from '../../types/types.js';
 import { BaseModal } from './BaseModal.js';
-import { i18n } from '../../services/i18n';
+import i18n from '../../services/i18n';
 
 export class GameEndModal extends BaseModal {
   private onProfileClick: () => void;

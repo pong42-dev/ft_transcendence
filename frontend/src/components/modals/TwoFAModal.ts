@@ -7,7 +7,7 @@ import { TwoFAInitResponse } from '../../types/types.js';
 import { ModalManager, ModalContent } from '../../managers/ModalManager.js';
 import { DOMUpdater } from '../../utils/DOMUpdater.js';
 import { authStore } from '../../store/index.js';
-import { i18n } from '../../services/i18n';
+import i18n from '../../services/i18n';
 
 export interface TwoFAModalCallbacks {
   onComplete: (code?: string) => void;
