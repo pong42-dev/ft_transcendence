@@ -70,8 +70,8 @@ export class CommandHandler {
   }
 
   private handleHelpCommand(): void {
-    const apiStatus = this.deps.apiClient.shouldUseMockData() ? 'MOCK DATA' : 'LIVE API';
-    const baseHelp = `API Status: ${apiStatus}\n\n`;
+    const apiStatus = this.deps.apiClient.shouldUseMockData() ? i18next.t('common.mock_data') : i18next.t('common.live_api');
+    const baseHelp = `${i18next.t('helpCommand.api_status')}: ${apiStatus}\n\n`;
     
     const isLoggedIn = authStore.getIsLoggedIn();
     
