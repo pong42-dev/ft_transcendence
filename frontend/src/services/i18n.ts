@@ -1,7 +1,8 @@
 import i18next from 'i18next';
 import HttpBackend from 'i18next-http-backend';
 
-i18next
+async function initI18n() {
+  await i18next
   .use(HttpBackend)
   .init({
     lng: localStorage.getItem('language') || navigator.language.split('-')[0] || 'en',
@@ -14,5 +15,7 @@ i18next
       escapeValue: false, // not needed for react as it escapes by default
     },
   });
+}
 
-export default i18next; 
+export { initI18n };
+export default i18next;
