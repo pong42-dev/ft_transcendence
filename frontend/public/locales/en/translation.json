@@ -159,7 +159,9 @@
     "disabled": "Disabled",
     "verifying": "Verifying...",
     "invalid_input": "Invalid input",
-    "error_occurred_try_again": "An error occurred. Please try again."
+    "error_occurred_try_again": "An error occurred. Please try again.",
+    "mock_data": "MOCK DATA",
+    "live_api": "LIVE API"
   },
   "validation": {
     "passwords_match": "Passwords match",
@@ -189,5 +191,96 @@
     "username_available": "Username is available.",
     "email_available": "Email is available.",
     "unable_to_check_availability": "Unable to check availability. Please try again."
+  },
+  "helpCommand": {
+    "api_status": "API Status",
+    "full_help_text": {
+      "true": "Available commands:\n  help       - Display this help message\n  profile    - View user profile (profile <username>)\n  play       - Start a game of Pong\n  tournament - Open tournament test modal\n  logout     - Log out of current session\n  friend     - Manage friends (friend follow|unfollow|list)\n  2fa        - Manage two-factor authentication (2fa enable|disable|status)\n  set        - Update profile settings (set avatar|name)\n  clear      - Clear the terminal screen",
+      "false": "Available commands:\n  help       - Display this help message\n  login      - Log into your account\n  register   - Create a new account\n  clear      - Clear the terminal screen"
+    }
+  },
+  "loginCommand": {
+    "already_logged_in": "You are already logged in.",
+    "failed_show_modal": "Failed to show login modal."
+  },
+  "registerCommand": {
+    "logout_first": "Please logout first to register a new account.",
+    "failed_show_modal": "Failed to show register modal."
+  },
+  "logoutCommand": {
+    "not_logged_in": "You are not logged in.",
+    "logged_out_success": "You have been logged out."
+  },
+  "friendCommand": {
+    "login_first": "Please login first to manage friends.",
+    "usage": "Usage: friend <follow|unfollow|list> [username]",
+    "follow_usage": "  friend follow <username>   - Follow a user",
+    "unfollow_usage": "  friend unfollow <username> - Unfollow a user",
+    "list_usage": "  friend list                - Show friends list",
+    "unknown_command": "Unknown friend command: {{subCommand}}",
+    "specify_username_to_follow": "Please specify a username to follow.",
+    "following_user": "Following user: {{username}}...",
+    "follow_success": "✅ Successfully followed {{username}}.",
+    "follow_failed": "❌ Failed to follow {{username}}. User may not exist or you may already be following them.",
+    "specify_username_to_unfollow": "Please specify a username to unfollow.",
+    "unfollowing_user": "Unfollowing user: {{username}}...",
+    "not_following": "You are not following {{username}}.",
+    "unfollow_success": "✅ Successfully unfollowed {{username}}.",
+    "unfollow_failed": "❌ Failed to unfollow {{username}}. You may not be following this user.",
+    "loading_friends": "Loading friends list...",
+    "empty_friends_list": "📝 Your friends list is empty.",
+    "add_friends_hint": "   Use \"friend follow <username>\" to add friends.",
+    "your_friends": "📋 Your Friends ({{count}}):",
+    "failed_load_friends": "❌ Failed to load friends list. Please try again."
+  },
+  "profileCommand": {
+    "login_first": "Please login first to view profiles."
+  },
+  "playCommand": {
+    "login_first": "Please login first to play the game.",
+    "game_cancelled": "Game cancelled.",
+    "failed_start_game": "❌ Failed to start game. Please try again."
+  },
+  "tournamentCommand": {
+    "failed_open_modal": "❌ Failed to open tournament modal. Please try again."
+  },
+  "twoFACommand": {
+    "login_first": "Please login first to manage 2FA settings.",
+    "google_2fa_not_available_1": "❌ 2FA is not available for Google OAuth users.",
+    "google_2fa_not_available_2": "Google accounts already use secure OAuth authentication.",
+    "google_2fa_not_available_3": "Additional 2FA setup is not required.",
+    "usage": "Usage: 2fa <enable|disable|status>",
+    "enable_usage": "  2fa enable  - Enable two-factor authentication",
+    "disable_usage": "  2fa disable - Disable two-factor authentication",
+    "status_usage": "  2fa status  - Check current 2FA status",
+    "twofa_already_enabled": "2FA is already enabled. Use \"2fa disable\" to disable it first.",
+    "starting_setup": "Starting 2FA setup process...",
+    "enable_success": "✅ 2FA has been successfully enabled!",
+    "account_more_secure": "Your account is now more secure.",
+    "setup_cancelled": "2FA setup cancelled.",
+    "failed_start_setup": "❌ Failed to start 2FA setup. Please try again.",
+    "twofa_already_disabled": "2FA is already disabled.",
+    "starting_disable": "Starting 2FA disable process...",
+    "disable_success": "✅ 2FA has been successfully disabled!",
+    "account_security_updated": "Your account security has been updated.",
+    "disable_cancelled": "2FA disable cancelled.",
+    "failed_start_disable": "❌ Failed to start 2FA disable process. Please try again.",
+    "status_unavailable": "Unable to check 2FA status - user data not available.",
+    "current_status": "{{statusIcon}} Two-Factor Authentication: {{status}}",
+    "account_protected": "Your account is protected with 2FA.",
+    "consider_enabling": "Consider enabling 2FA for better security. Use \"2fa enable\" to set it up."
+  },
+  "setCommand": {
+    "login_first": "Please login first to update profile settings.",
+    "usage": "Usage: set <avatar|name> [value]",
+    "avatar_usage": "  set avatar        - Upload a new avatar image",
+    "name_usage": "  set name <name>   - Update your display name",
+    "failed_open_avatar_upload": "❌ Failed to open avatar upload. Please try again.",
+    "set_name_usage": "Usage: set name <new_name>",
+    "set_name_example": "Example: set name \"John Doe\"",
+    "provide_valid_name": "Please provide a valid name.",
+    "updating_name": "Updating name to: \"{{newName}}\"",
+    "name_update_success": "✅ Name updated successfully to: \"{{nickname}}\"",
+    "failed_update_name": "❌ Failed to update name. Please try again."
   }
 } 

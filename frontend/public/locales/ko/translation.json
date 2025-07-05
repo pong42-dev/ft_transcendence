@@ -159,7 +159,9 @@
     "disabled": "비활성화됨",
     "verifying": "인증 중...",
     "invalid_input": "잘못된 입력",
-    "error_occurred_try_again": "오류가 발생했습니다. 다시 시도해주세요."
+    "error_occurred_try_again": "오류가 발생했습니다. 다시 시도해주세요.",
+    "mock_data": "모의 데이터",
+    "live_api": "실시간 API"
   },
   "validation": {
     "passwords_match": "비밀번호가 일치합니다",
@@ -189,5 +191,96 @@
     "username_available": "사용자 이름은 사용 가능합니다.",
     "email_available": "이메일은 사용 가능합니다.",
     "unable_to_check_availability": "사용 가능 여부를 확인할 수 없습니다. 다시 시도해주세요."
+  },
+  "helpCommand": {
+    "api_status": "API 상태",
+    "full_help_text": {
+      "true": 사용 가능한 명령:\n  help       - 이 도움말 메시지 표시\n  profile    - 사용자 프로필 보기 (profile <username>)\n  play       - 퐁 게임 시작\n  tournament - 토너먼트 테스트 모달 열기\n  logout     - 현재 세션에서 로그아웃\n  friend     - 친구 관리 (friend follow|unfollow|list)\n  2fa        - 2단계 인증 관리 (2fa enable|disable|status)\n  set        - 프로필 설정 업데이트 (set avatar|name)\n  clear      - 터미널 화면 지우기",
+      "false": 사용 가능한 명령:\n  help       - 이 도움말 메시지 표시\n  login      - 계정에 로그인\n  register   - 새 계정 생성\n  clear      - 터미널 화면 지우기"
+    }
+  },
+  "loginCommand": {
+    "already_logged_in": "이미 로그인되어 있습니다.",
+    "failed_show_modal": "로그인 모달을 표시하지 못했습니다."
+  },
+  "registerCommand": {
+    "logout_first": "새 계정을 등록하려면 먼저 로그아웃하십시오.",
+    "failed_show_modal": "등록 모달을 표시하지 못했습니다."
+  },
+  "logoutCommand": {
+    "not_logged_in": "로그인되어 있지 않습니다.",
+    "logged_out_success": "로그아웃되었습니다."
+  },
+  "friendCommand": {
+    "login_first": "친구를 관리하려면 먼저 로그인하십시오.",
+    "usage": "사용법: friend <follow|unfollow|list> [username]",
+    "follow_usage": "  friend follow <username>   - 사용자 팔로우",
+    "unfollow_usage": "  friend unfollow <username> - 사용자 언팔로우",
+    "list_usage": "  friend list                - 친구 목록 보기",
+    "unknown_command": "알 수 없는 친구 명령: {{subCommand}}",
+    "specify_username_to_follow": "팔로우할 사용자 이름을 지정하십시오.",
+    "following_user": "사용자 팔로우 중: {{username}}...",
+    "follow_success": "✅ {{username}}을(를) 성공적으로 팔로우했습니다.",
+    "follow_failed": "❌ {{username}} 팔로우에 실패했습니다. 사용자가 존재하지 않거나 이미 팔로우하고 있을 수 있습니다.",
+    "specify_username_to_unfollow": "언팔로우할 사용자 이름을 지정하십시오.",
+    "unfollowing_user": "사용자 언팔로우 중: {{username}}...",
+    "not_following": "{{username}}을(를) 팔로우하고 있지 않습니다.",
+    "unfollow_success": "✅ {{username}}을(를) 성공적으로 언팔로우했습니다.",
+    "unfollow_failed": "❌ {{username}} 언팔로우에 실패했습니다. 이 사용자를 팔로우하고 있지 않을 수 있습니다.",
+    "loading_friends": "친구 목록 로드 중...",
+    "empty_friends_list": "📝 친구 목록이 비어 있습니다.",
+    "add_friends_hint": "   친구를 추가하려면 \"friend follow <username>\"을(를) 사용하십시오.",
+    "your_friends": "📋 친구 ({{count}}명):",
+    "failed_load_friends": "❌ 친구 목록을 로드하지 못했습니다. 다시 시도하십시오."
+  },
+  "profileCommand": {
+    "login_first": "프로필을 보려면 먼저 로그인하십시오."
+  },
+  "playCommand": {
+    "login_first": "게임을 플레이하려면 먼저 로그인하십시오.",
+    "game_cancelled": "게임이 취소되었습니다.",
+    "failed_start_game": "❌ 게임을 시작하지 못했습니다. 다시 시도하십시오."
+  },
+  "tournamentCommand": {
+    "failed_open_modal": "❌ 토너먼트 모달을 열지 못했습니다. 다시 시도하십시오."
+  },
+  "twoFACommand": {
+    "login_first": "2단계 인증 설정을 관리하려면 먼저 로그인하십시오.",
+    "google_2fa_not_available_1": "❌ Google OAuth 사용자는 2단계 인증을 사용할 수 없습니다.",
+    "google_2fa_not_available_2": "Google 계정은 이미 보안 OAuth 인증을 사용합니다.",
+    "google_2fa_not_available_3": "추가 2단계 인증 설정은 필요하지 않습니다.",
+    "usage": "사용법: 2fa <enable|disable|status>",
+    "enable_usage": "  2fa enable  - 2단계 인증 활성화",
+    "disable_usage": "  2fa disable - 2단계 인증 비활성화",
+    "status_usage": "  2fa status  - 현재 2단계 인증 상태 확인",
+    "twofa_already_enabled": "2단계 인증이 이미 활성화되어 있습니다. 비활성화하려면 \"2fa disable\"을(를) 사용하십시오.",
+    "starting_setup": "2단계 인증 설정 프로세스 시작 중...",
+    "enable_success": "✅ 2단계 인증이 성공적으로 활성화되었습니다!",
+    "account_more_secure": "계정 보안이 강화되었습니다.",
+    "setup_cancelled": "2단계 인증 설정이 취소되었습니다.",
+    "failed_start_setup": "❌ 2단계 인증 설정을 시작하지 못했습니다. 다시 시도하십시오.",
+    "twofa_already_disabled": "2단계 인증이 이미 비활성화되어 있습니다.",
+    "starting_disable": "2단계 인증 비활성화 프로세스 시작 중...",
+    "disable_success": "✅ 2단계 인증이 성공적으로 비활성화되었습니다!",
+    "account_security_updated": "계정 보안이 업데이트되었습니다.",
+    "disable_cancelled": "2단계 인증 비활성화가 취소되었습니다.",
+    "failed_start_disable": "❌ 2단계 인증 비활성화 프로세스를 시작하지 못했습니다. 다시 시도하십시오.",
+    "status_unavailable": "2단계 인증 상태를 확인할 수 없습니다 - 사용자 데이터를 사용할 수 없습니다.",
+    "current_status": "{{statusIcon}} 2단계 인증: {{status}}",
+    "account_protected": "계정은 2단계 인증으로 보호됩니다.",
+    "consider_enabling": "보안 강화를 위해 2단계 인증을 활성화하는 것을 고려하십시오. 설정하려면 \"2fa enable\"을(를) 사용하십시오."
+  },
+  "setCommand": {
+    "login_first": "프로필 설정을 업데이트하려면 먼저 로그인하십시오.",
+    "usage": "사용법: set <avatar|name> [value]",
+    "avatar_usage": "  set avatar        - 새 아바타 이미지 업로드",
+    "name_usage": "  set name <name>   - 표시 이름 업데이트",
+    "failed_open_avatar_upload": "❌ 아바타 업로드를 열지 못했습니다. 다시 시도하십시오.",
+    "set_name_usage": "사용법: set name <new_name>",
+    "set_name_example": "예: set name \"John Doe\"",
+    "provide_valid_name": "유효한 이름을 제공하십시오.",
+    "updating_name": "이름 업데이트 중: \"{{newName}}\"",
+    "name_update_success": "✅ 이름이 성공적으로 업데이트되었습니다: \"{{nickname}}\"",
+    "failed_update_name": "❌ 이름을 업데이트하지 못했습니다. 다시 시도하십시오."
   }
 } 

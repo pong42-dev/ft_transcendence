@@ -6,6 +6,7 @@ import { ErrorHandler } from '../utils/ErrorHandler.js';
 import { authStore } from '../store/index.js';
 import { User, Player } from '../types/types.js';
 import { UserStateCache } from '../services/UserStateCache.js';
+import i18next from '../services/i18n.js';
 
 export interface CommandHandlerDependencies {
   apiClient: ApiClient;
@@ -74,55 +75,40 @@ export class CommandHandler {
     
     const isLoggedIn = authStore.getIsLoggedIn();
     
-    const helpText = isLoggedIn
-      ? baseHelp + 'Available commands:\n' +
-        '  help       - Display this help message\n' +
-        '  profile    - View user profile (profile <username>)\n' +
-        '  play       - Start a game of Pong\n' +
-        '  tournament - Open tournament test modal\n' +
-        '  logout     - Log out of current session\n' +
-        '  friend     - Manage friends (friend follow|unfollow|list)\n' +
-        '  2fa        - Manage two-factor authentication (2fa enable|disable|status)\n' +
-        '  set        - Update profile settings (set avatar|name)\n' +
-        '  clear      - Clear the terminal screen'
-      : baseHelp + 'Available commands:\n' +
-        '  help       - Display this help message\n' +
-        '  login      - Log into your account\n' +
-        '  register   - Create a new account\n' +
-        '  clear      - Clear the terminal screen';
+    const helpText = baseHelp + i18next.t(`helpCommand.full_help_text.${isLoggedIn}`);
 
     this.deps.terminal.appendOutput(helpText);
   }
 
   private async handleLoginCommand(): Promise<void> {
     if (authStore.getIsLoggedIn()) {
-      this.deps.terminal.appendOutput('You are already logged in.');
+      this.deps.terminal.appendOutput(i18next.t('loginCommand.already_logged_in'));
       return;
     }
     
     try {
       await this.deps.onShowModal('login');
     } catch (error) {
-      this.deps.terminal.appendOutput('Failed to show login modal.');
+      this.deps.terminal.appendOutput(i18next.t('loginCommand.failed_show_modal'));
     }
   }
 
   private async handleRegisterCommand(): Promise<void> {
     if (authStore.getIsLoggedIn()) {
-      this.deps.terminal.appendOutput('Please logout first to register a new account.');
+      this.deps.terminal.appendOutput(i18next.t('registerCommand.logout_first'));
       return;
     }
     
     try {
       await this.deps.onShowModal('register');
     } catch (error) {
-      this.deps.terminal.appendOutput('Failed to show register modal.');
+      this.deps.terminal.appendOutput(i18next.t('registerCommand.failed_show_modal'));
     }
   }
 
   private async handleLogoutCommand(): Promise<void> {
     if (!authStore.getIsLoggedIn()) {
-      this.deps.terminal.appendOutput('You are not logged in.');
+      this.deps.terminal.appendOutput(i18next.t('logoutCommand.not_logged_in'));
       return;
     }
 
@@ -138,21 +124,21 @@ export class CommandHandler {
     this.deps.terminal.reset();
     this.deps.router.navigate('/');
     
-    this.deps.terminal.appendOutput('You have been logged out.');
+    this.deps.terminal.appendOutput(i18next.t('logoutCommand.logged_out_success'));
   }
 
   private async handleFriendCommand(args?: string[]): Promise<void> {
     if (!authStore.getIsLoggedIn()) {
-      this.deps.terminal.appendOutput('Please login first to manage friends.');
+      this.deps.terminal.appendOutput(i18next.t('friendCommand.login_first'));
       return;
     }
 
     // If no arguments provided, show help
     if (!args || args.length === 0) {
-      this.deps.terminal.appendOutput('Usage: friend <follow|unfollow|list> [username]');
-      this.deps.terminal.appendOutput('  friend follow <username>   - Follow a user');
-      this.deps.terminal.appendOutput('  friend unfollow <username> - Unfollow a user');
-      this.deps.terminal.appendOutput('  friend list                - Show friends list');
+      this.deps.terminal.appendOutput(i18next.t('friendCommand.usage'));
+      this.deps.terminal.appendOutput(i18next.t('friendCommand.follow_usage'));
+      this.deps.terminal.appendOutput(i18next.t('friendCommand.unfollow_usage'));
+      this.deps.terminal.appendOutput(i18next.t('friendCommand.list_usage'));
       return;
     }
 
@@ -169,77 +155,77 @@ export class CommandHandler {
         await this.handleFriendList();
         break;
       default:
-        this.deps.terminal.appendOutput(`Unknown friend command: ${subCommand}`);
-        this.deps.terminal.appendOutput('Usage: friend <follow|unfollow|list> [username]');
+        this.deps.terminal.appendOutput(i18next.t('friendCommand.unknown_command', { subCommand: subCommand }));
+        this.deps.terminal.appendOutput(i18next.t('friendCommand.usage'));
     }
   }
 
   private async handleFriendFollow(args: string[]): Promise<void> {
     if (args.length === 0) {
-      this.deps.terminal.appendOutput('Usage: friend follow <username>');
+      this.deps.terminal.appendOutput(i18next.t('friendCommand.follow_usage'));
       return;
     }
 
     const username = args.join(' ').trim();
     if (!username) {
-      this.deps.terminal.appendOutput('Please specify a username to follow.');
+      this.deps.terminal.appendOutput(i18next.t('friendCommand.specify_username_to_follow'));
       return;
     }
 
     try {
-      this.deps.terminal.appendOutput(`Following user: ${username}...`);
+      this.deps.terminal.appendOutput(i18next.t('friendCommand.following_user', { username: username }));
       await this.deps.apiClient.friend.addFriend(username);
-      this.deps.terminal.appendOutput(`✅ Successfully followed ${username}.`);
+      this.deps.terminal.appendOutput(i18next.t('friendCommand.follow_success', { username: username }));
     } catch (error) {
-      this.deps.terminal.appendOutput(`❌ Failed to follow ${username}. User may not exist or you may already be following them.`);
+      this.deps.terminal.appendOutput(i18next.t('friendCommand.follow_failed', { username: username }));
       console.error('Friend follow error:', error);
     }
   }
 
   private async handleFriendUnfollow(args: string[]): Promise<void> {
     if (args.length === 0) {
-      this.deps.terminal.appendOutput('Usage: friend unfollow <username>');
+      this.deps.terminal.appendOutput(i18next.t('friendCommand.unfollow_usage'));
       return;
     }
 
     const username = args.join(' ').trim();
     if (!username) {
-      this.deps.terminal.appendOutput('Please specify a username to unfollow.');
+      this.deps.terminal.appendOutput(i18next.t('friendCommand.specify_username_to_unfollow'));
       return;
     }
 
     try {
-      this.deps.terminal.appendOutput(`Unfollowing user: ${username}...`);
+      this.deps.terminal.appendOutput(i18next.t('friendCommand.unfollowing_user', { username: username }));
       
       // Get friend list to find the friend ID
       const friends = await this.deps.apiClient.friend.getFriends();
       const friend = friends.find(f => f.username === username);
       
       if (!friend || !friend.id) {
-        this.deps.terminal.appendOutput(`You are not following ${username}.`);
+        this.deps.terminal.appendOutput(i18next.t('friendCommand.not_following', { username: username }));
         return;
       }
 
       await this.deps.apiClient.friend.removeFriend(friend.id);
-      this.deps.terminal.appendOutput(`✅ Successfully unfollowed ${username}.`);
+      this.deps.terminal.appendOutput(i18next.t('friendCommand.unfollow_success', { username: username }));
     } catch (error) {
-      this.deps.terminal.appendOutput(`❌ Failed to unfollow ${username}. You may not be following this user.`);
+      this.deps.terminal.appendOutput(i18next.t('friendCommand.unfollow_failed', { username: username }));
       console.error('Friend unfollow error:', error);
     }
   }
 
   private async handleFriendList(): Promise<void> {
     try {
-      this.deps.terminal.appendOutput('Loading friends list...');
+      this.deps.terminal.appendOutput(i18next.t('friendCommand.loading_friends'));
       const friends = await this.deps.apiClient.friend.getFriends();
       
       if (friends.length === 0) {
-        this.deps.terminal.appendOutput('📝 Your friends list is empty.');
-        this.deps.terminal.appendOutput('   Use "friend follow <username>" to add friends.');
+        this.deps.terminal.appendOutput(i18next.t('friendCommand.empty_friends_list'));
+        this.deps.terminal.appendOutput(i18next.t('friendCommand.add_friends_hint'));
         return;
       }
 
-      this.deps.terminal.appendOutput(`📋 Your Friends (${friends.length}):`);
+      this.deps.terminal.appendOutput(i18next.t('friendCommand.your_friends', { count: friends.length }));
       friends.forEach((friend: any, index: number) => {
         const statusIcon = friend.status === 'online' ? '🟢' : 
                           friend.status === 'inGame' ? '🎮' : '⚫';
@@ -254,7 +240,7 @@ export class CommandHandler {
 
   private handleProfileCommand(args: string[]): void {
     if (!authStore.getIsLoggedIn()) {
-      this.deps.terminal.appendOutput('Please login first to view profiles.');
+      this.deps.terminal.appendOutput(i18next.t('profileCommand.login_first'));
       return;
     }
 
@@ -268,7 +254,7 @@ export class CommandHandler {
 
   private async handlePlayCommand(): Promise<void> {
     if (!authStore.getIsLoggedIn()) {
-      this.deps.terminal.appendOutput('Please login first to play the game.');
+      this.deps.terminal.appendOutput(i18next.t('playCommand.login_first'));
       return;
     }
 
@@ -317,10 +303,10 @@ export class CommandHandler {
           }
         }
       } else {
-        this.deps.terminal.appendOutput('Game cancelled.');
+        this.deps.terminal.appendOutput(i18next.t('playCommand.game_cancelled'));
       }
     } catch (error) {
-      this.deps.terminal.appendOutput('❌ Failed to start game. Please try again.');
+      this.deps.terminal.appendOutput(i18next.t('playCommand.failed_start_game'));
       console.error('Play command error:', error);
     }
   }
@@ -329,23 +315,23 @@ export class CommandHandler {
     try {
       this.deps.onShowModal('tournament');
     } catch (error) {
-      this.deps.terminal.appendOutput('❌ Failed to open tournament modal. Please try again.');
+      this.deps.terminal.appendOutput(i18next.t('tournamentCommand.failed_open_modal'));
       console.error('Tournament command error:', error);
     }
   }
 
   private async handle2FACommand(args: string[]): Promise<void> {
     if (!authStore.getIsLoggedIn()) {
-      this.deps.terminal.appendOutput('Please login first to manage 2FA settings.');
+      this.deps.terminal.appendOutput(i18next.t('twoFACommand.login_first'));
       return;
     }
 
     // Google OAuth 사용자에 대한 2FA 제한 확인
     const currentUser = authStore.getCurrentUser();
     if (currentUser?.provider === 'google') {
-      this.deps.terminal.appendOutput('❌ 2FA is not available for Google OAuth users.');
-      this.deps.terminal.appendOutput('Google accounts already use secure OAuth authentication.');
-      this.deps.terminal.appendOutput('Additional 2FA setup is not required.');
+      this.deps.terminal.appendOutput(i18next.t('twoFACommand.google_2fa_not_available_1'));
+      this.deps.terminal.appendOutput(i18next.t('twoFACommand.google_2fa_not_available_2'));
+      this.deps.terminal.appendOutput(i18next.t('twoFACommand.google_2fa_not_available_3'));
       return;
     }
 
@@ -362,21 +348,21 @@ export class CommandHandler {
         this.handle2FAStatus();
         break;
       default:
-        this.deps.terminal.appendOutput('Usage: 2fa <enable|disable|status>');
-        this.deps.terminal.appendOutput('  2fa enable  - Enable two-factor authentication');
-        this.deps.terminal.appendOutput('  2fa disable - Disable two-factor authentication');
-        this.deps.terminal.appendOutput('  2fa status  - Check current 2FA status');
+        this.deps.terminal.appendOutput(i18next.t('twoFACommand.usage'));
+        this.deps.terminal.appendOutput(i18next.t('twoFACommand.enable_usage'));
+        this.deps.terminal.appendOutput(i18next.t('twoFACommand.disable_usage'));
+        this.deps.terminal.appendOutput(i18next.t('twoFACommand.status_usage'));
     }
   }
 
   private async handle2FAEnable(): Promise<void> {
     const currentUser = authStore.getCurrentUser();
     if (currentUser?.twoFactorEnabled) {
-      this.deps.terminal.appendOutput('2FA is already enabled. Use "2fa disable" to disable it first.');
+      this.deps.terminal.appendOutput(i18next.t('twoFACommand.twofa_already_enabled'));
       return;
     }
 
-    this.deps.terminal.appendOutput('Starting 2FA setup process...');
+    this.deps.terminal.appendOutput(i18next.t('twoFACommand.starting_setup'));
     
     try {
       // 모달을 통해 2FA 설정 처리 (초기화부터 완료까지 모달에서 처리)
@@ -384,16 +370,16 @@ export class CommandHandler {
         mode: 'enable',
         onComplete: async (_code: string) => {
           // 이 부분은 실제로는 TwoFAModal 내부에서 처리됨
-          this.deps.terminal.appendOutput('✅ 2FA has been successfully enabled!');
-          this.deps.terminal.appendOutput('Your account is now more secure.');
+          this.deps.terminal.appendOutput(i18next.t('twoFACommand.enable_success'));
+          this.deps.terminal.appendOutput(i18next.t('twoFACommand.account_more_secure'));
           return true;
         },
         onCancel: () => {
-          this.deps.terminal.appendOutput('2FA setup cancelled.');
+          this.deps.terminal.appendOutput(i18next.t('twoFACommand.setup_cancelled'));
         }
       });
     } catch (error) {
-      this.deps.terminal.appendOutput('❌ Failed to start 2FA setup. Please try again.');
+      this.deps.terminal.appendOutput(i18next.t('twoFACommand.failed_start_setup'));
       console.error('2FA enable error:', error);
     }
   }
@@ -401,26 +387,26 @@ export class CommandHandler {
   private async handle2FADisable(): Promise<void> {
     const currentUser = authStore.getCurrentUser();
     if (!currentUser?.twoFactorEnabled) {
-      this.deps.terminal.appendOutput('2FA is already disabled.');
+      this.deps.terminal.appendOutput(i18next.t('twoFACommand.twofa_already_disabled'));
       return;
     }
 
-    this.deps.terminal.appendOutput('Starting 2FA disable process...');
+    this.deps.terminal.appendOutput(i18next.t('twoFACommand.starting_disable'));
     
     try {
       await this.deps.onShowModal('2fa', { 
         mode: 'disable',
         onComplete: async (_code: string) => {
-          this.deps.terminal.appendOutput('✅ 2FA has been successfully disabled!');
-          this.deps.terminal.appendOutput('Your account security has been updated.');
+          this.deps.terminal.appendOutput(i18next.t('twoFACommand.disable_success'));
+          this.deps.terminal.appendOutput(i18next.t('twoFACommand.account_security_updated'));
           return true;
         },
         onCancel: () => {
-          this.deps.terminal.appendOutput('2FA disable cancelled.');
+          this.deps.terminal.appendOutput(i18next.t('twoFACommand.disable_cancelled'));
         }
       });
     } catch (error) {
-      this.deps.terminal.appendOutput('❌ Failed to start 2FA disable process. Please try again.');
+      this.deps.terminal.appendOutput(i18next.t('twoFACommand.failed_start_disable'));
       console.error('2FA disable error:', error);
     }
   }
@@ -428,25 +414,25 @@ export class CommandHandler {
   private handle2FAStatus(): void {
     const currentUser = authStore.getCurrentUser();
     if (!currentUser) {
-      this.deps.terminal.appendOutput('Unable to check 2FA status - user data not available.');
+      this.deps.terminal.appendOutput(i18next.t('twoFACommand.status_unavailable'));
       return;
     }
 
-    const status = currentUser.twoFactorEnabled ? 'Enabled' : 'Disabled';
+    const status = currentUser.twoFactorEnabled ? i18next.t('common.enabled') : i18next.t('common.disabled');
     const statusIcon = currentUser.twoFactorEnabled ? '🔒' : '🔓';
     
-    this.deps.terminal.appendOutput(`${statusIcon} Two-Factor Authentication: ${status}`);
+    this.deps.terminal.appendOutput(i18next.t('twoFACommand.current_status', { statusIcon: statusIcon, status: status }));
     
     if (currentUser.twoFactorEnabled) {
-      this.deps.terminal.appendOutput('Your account is protected with 2FA.');
+      this.deps.terminal.appendOutput(i18next.t('twoFACommand.account_protected'));
     } else {
-      this.deps.terminal.appendOutput('Consider enabling 2FA for better security. Use "2fa enable" to set it up.');
+      this.deps.terminal.appendOutput(i18next.t('twoFACommand.consider_enabling'));
     }
   }
 
   private async handleSetCommand(args: string[]): Promise<void> {
     if (!authStore.getIsLoggedIn()) {
-      this.deps.terminal.appendOutput('Please login first to update profile settings.');
+      this.deps.terminal.appendOutput(i18next.t('setCommand.login_first'));
       return;
     }
 
@@ -460,9 +446,9 @@ export class CommandHandler {
         await this.handleSetName(args.slice(1));
         break;
       default:
-        this.deps.terminal.appendOutput('Usage: set <avatar|name> [value]');
-        this.deps.terminal.appendOutput('  set avatar        - Upload a new avatar image');
-        this.deps.terminal.appendOutput('  set name <name>   - Update your display name');
+        this.deps.terminal.appendOutput(i18next.t('setCommand.usage'));
+        this.deps.terminal.appendOutput(i18next.t('setCommand.avatar_usage'));
+        this.deps.terminal.appendOutput(i18next.t('setCommand.name_usage'));
     }
   }
 
@@ -470,26 +456,26 @@ export class CommandHandler {
     try {
       await this.deps.onShowModal('file');
     } catch (error) {
-      this.deps.terminal.appendOutput('❌ Failed to open avatar upload. Please try again.');
+      this.deps.terminal.appendOutput(i18next.t('setCommand.failed_open_avatar_upload'));
       console.error('Avatar upload error:', error);
     }
   }
 
   private async handleSetName(args: string[]): Promise<void> {
     if (args.length === 0) {
-      this.deps.terminal.appendOutput('Usage: set name <new_name>');
-      this.deps.terminal.appendOutput('Example: set name "John Doe"');
+      this.deps.terminal.appendOutput(i18next.t('setCommand.set_name_usage'));
+      this.deps.terminal.appendOutput(i18next.t('setCommand.set_name_example'));
       return;
     }
     
     const newName = args.join(' ').trim();
     if (!newName) {
-      this.deps.terminal.appendOutput('Please provide a valid name.');
+      this.deps.terminal.appendOutput(i18next.t('setCommand.provide_valid_name'));
       return;
     }
     
     try {
-      this.deps.terminal.appendOutput(`Updating name to: "${newName}"...`);
+      this.deps.terminal.appendOutput(i18next.t('setCommand.updating_name', { newName: newName }));
       
       // Call API to update name
       const updatedUser = await this.deps.apiClient.user.updateName(newName);
@@ -511,10 +497,10 @@ export class CommandHandler {
         UserStateCache.cache(userToCache);
       }
       
-      this.deps.terminal.appendOutput(`✅ Name updated successfully to: "${updatedUser.nickname}"`);
+      this.deps.terminal.appendOutput(i18next.t('setCommand.name_update_success', { nickname: updatedUser.nickname }));
       
     } catch (error) {
-      this.deps.terminal.appendOutput('❌ Failed to update name. Please try again.');
+      this.deps.terminal.appendOutput(i18next.t('setCommand.failed_update_name'));
       console.error('Name update error:', error);
     }
   }

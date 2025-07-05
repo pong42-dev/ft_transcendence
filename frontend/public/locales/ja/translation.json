@@ -159,7 +159,9 @@
     "disabled": "無効",
     "verifying": "確認中...",
     "invalid_input": "無効な入力",
-    "error_occurred_try_again": "エラーが発生しました。もう一度お試しください。"
+    "error_occurred_try_again": "エラーが発生しました。もう一度お試しください。",
+    "mock_data": "モックデータ",
+    "live_api": "ライブAPI"
   },
   "validation": {
     "passwords_match": "パスワードが一致します",
@@ -189,5 +191,96 @@
     "username_available": "ユーザー名は利用可能です。",
     "email_available": "メールアドレスは利用可能です。",
     "unable_to_check_availability": "利用可能か確認できませんでした。もう一度お試しください。"
+  },
+  "helpCommand": {
+    "api_status": "APIステータス",
+    "full_help_text": {
+      "true": "利用可能なコマンド:\n  help       - このヘルプメッセージを表示\n  profile    - ユーザープロフィールを表示 (profile <username>)\n  play       - ポンゲームを開始\n  tournament - トーナメントテストモーダルを開く\n  logout     - 現在のセッションからログアウト\n  friend     - 友達を管理 (friend follow|unfollow|list)\n  2fa        - 2要素認証を管理 (2fa enable|disable|status)\n  set        - プロフィール設定を更新 (set avatar|name)\n  clear      - ターミナル画面をクリア",
+      "false": "利用可能なコマンド:\n  help       - このヘルプメッセージを表示\n  login      - アカウントにログイン\n  register   - 新しいアカウントを作成\n  clear      - ターミナル画面をクリア"
+    }
+  },
+  "loginCommand": {
+    "already_logged_in": "すでにログインしています。",
+    "failed_show_modal": "ログインモーダルの表示に失敗しました。"
+  },
+  "registerCommand": {
+    "logout_first": "新しいアカウントを登録するには、まずログアウトしてください。",
+    "failed_show_modal": "登録モーダルの表示に失敗しました。"
+  },
+  "logoutCommand": {
+    "not_logged_in": "ログインしていません。",
+    "logged_out_success": "ログアウトしました。"
+  },
+  "friendCommand": {
+    "login_first": "友達を管理するには、まずログインしてください。",
+    "usage": "使用法: friend <follow|unfollow|list> [username]",
+    "follow_usage": "  friend follow <username>   - ユーザーをフォロー",
+    "unfollow_usage": "  friend unfollow <username> - ユーザーのフォローを解除",
+    "list_usage": "  friend list                - 友達リストを表示",
+    "unknown_command": "不明な友達コマンド: {{subCommand}}",
+    "specify_username_to_follow": "フォローするユーザー名を指定してください。",
+    "following_user": "ユーザーをフォロー中: {{username}}...",
+    "follow_success": "✅ {{username}}を正常にフォローしました。",
+    "follow_failed": "❌ {{username}}のフォローに失敗しました。ユーザーが存在しないか、すでにフォローしている可能性があります。",
+    "specify_username_to_unfollow": "フォロー解除するユーザー名を指定してください。",
+    "unfollowing_user": "ユーザーのフォローを解除中: {{username}}...",
+    "not_following": "{{username}}をフォローしていません。",
+    "unfollow_success": "✅ {{username}}のフォローを正常に解除しました。",
+    "unfollow_failed": "❌ {{username}}のフォロー解除に失敗しました。このユーザーをフォローしていない可能性があります。",
+    "loading_friends": "友達リストを読み込み中...",
+    "empty_friends_list": "📝 あなたの友達リストは空です。",
+    "add_friends_hint": "   友達を追加するには\"friend follow <username>\"を使用してください。",
+    "your_friends": "📋 あなたの友達 ({{count}}):",
+    "failed_load_friends": "❌ 友達リストの読み込みに失敗しました。もう一度お試しください。"
+  },
+  "profileCommand": {
+    "login_first": "プロフィールを表示するには、まずログインしてください。"
+  },
+  "playCommand": {
+    "login_first": "ゲームをプレイするには、まずログインしてください。",
+    "game_cancelled": "ゲームはキャンセルされました。",
+    "failed_start_game": "❌ ゲームの開始に失敗しました。もう一度お試しください。"
+  },
+  "tournamentCommand": {
+    "failed_open_modal": "❌ トーナメントモーダルを開けませんでした。もう一度お試しください。"
+  },
+  "twoFACommand": {
+    "login_first": "2FA設定を管理するには、まずログインしてください。",
+    "google_2fa_not_available_1": "❌ Google OAuthユーザーは2FAを利用できません。",
+    "google_2fa_not_available_2": "Googleアカウントはすでに安全なOAuth認証を使用しています。",
+    "google_2fa_not_available_3": "追加の2FA設定は不要です。",
+    "usage": "使用法: 2fa <enable|disable|status>",
+    "enable_usage": "  2fa enable  - 2要素認証を有効にする",
+    "disable_usage": "  2fa disable - 2要素認証を無効にする",
+    "status_usage": "  2fa status  - 現在の2FAステータスを確認",
+    "twofa_already_enabled": "2FAはすでに有効です。無効にするには\"2fa disable\"を使用してください。",
+    "starting_setup": "2FAセットアッププロセスを開始中...",
+    "enable_success": "✅ 2FAが正常に有効になりました！",
+    "account_more_secure": "あなたのアカウントはより安全になりました。",
+    "setup_cancelled": "2FAセットアップがキャンセルされました。",
+    "failed_start_setup": "❌ 2FAセットアップの開始に失敗しました。もう一度お試しください。",
+    "twofa_already_disabled": "2FAはすでに無効です。",
+    "starting_disable": "2FA無効化プロセスを開始中...",
+    "disable_success": "✅ 2FAが正常に無効になりました！",
+    "account_security_updated": "あなたのアカウントのセキュリティが更新されました。",
+    "disable_cancelled": "2FA無効化がキャンセルされました。",
+    "failed_start_disable": "❌ 2FA無効化プロセスの開始に失敗しました。もう一度お試しください。",
+    "status_unavailable": "2FAステータスを確認できません - ユーザーデータが利用できません。",
+    "current_status": "{{statusIcon}} 2要素認証: {{status}}",
+    "account_protected": "あなたのアカウントは2FAで保護されています。",
+    "consider_enabling": "セキュリティを向上させるために2FAを有効にすることを検討してください。設定するには\"2fa enable\"を使用してください。"
+  },
+  "setCommand": {
+    "login_first": "プロフィール設定を更新するには、まずログインしてください。",
+    "usage": "使用法: set <avatar|name> [value]",
+    "avatar_usage": "  set avatar        - 新しいアバター画像をアップロード",
+    "name_usage": "  set name <name>   - 表示名を更新",
+    "failed_open_avatar_upload": "❌ アバターのアップロードを開けませんでした。もう一度お試しください。",
+    "set_name_usage": "使用法: set name <new_name>",
+    "set_name_example": "例: set name \"John Doe\"",
+    "provide_valid_name": "有効な名前を入力してください。",
+    "updating_name": "名前を更新中: \"{{newName}}\"",
+    "name_update_success": "✅ 名前が正常に更新されました: \"{{nickname}}\"",
+    "failed_update_name": "❌ 名前の更新に失敗しました。もう一度お試しください。"
   }
 } 
