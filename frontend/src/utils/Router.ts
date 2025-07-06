@@ -42,6 +42,10 @@ export class Router {
 
   navigate(path: string): void {
       window.location.hash = '#' + path;
+      // 해시 변경 이벤트가 즉시 발생하지 않을 수 있으므로 직접 처리
+      setTimeout(() => {
+          this.handleRouteChange();
+      }, 0);
   }
 
   private handleRouteChange(): void {

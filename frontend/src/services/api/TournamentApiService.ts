@@ -1,4 +1,5 @@
 import { BaseApiService } from './BaseApiService';
+import { GameMode } from '../../types/types';
 import type { UserTournamentHistory } from '../../types/types';
 
 export class TournamentApiService extends BaseApiService {
@@ -6,11 +7,7 @@ export class TournamentApiService extends BaseApiService {
     super('http://localhost:3000', 'TournamentApiService');
   }
 
-  async createTournament(data: { participants: Array<{
-    type: 'user' | 'guest';
-    userId?: number;
-    displayName?: string;
-  }> }): Promise<any> {
+  async createTournament(data: { type: GameMode; opponents?: string[] }): Promise<any> {
     return this.post<any>('/api/tournaments', data);
   }
 

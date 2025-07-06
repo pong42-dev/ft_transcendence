@@ -28,25 +28,28 @@ export class TournamentWebSocketHandler {
       this.fastify.log.info(`[Handler] New session created for tournament: ${tournamentId}`);
     }
 
-    // 2. userId로 playerId를 찾는다 (DB 조회)
+    // 2. 모든 참가자 조회 (사용자 + 게스트)
     const participants = await (this.fastify as any).tournamentsRepository.getTournamentParticipants(Number(tournamentId));
-    const participant = participants.find((p: any) => p.user_id === Number(userId));
-    if (!participant) {
-      this.fastify.log.error(`User ${userId} is not a participant of tournament ${tournamentId}`);
-      socket.close(1008, 'User is not a participant of this tournament');
-      return;
-    }
-    const playerId = participant.id;
-
-    // 3. 플레이어를 세션에 추가
-    session.addPlayer(playerId, socket);
+    this.fastify.log.info(`[Handler] All participants for tournament ${tournamentId}:`, participants);
+    
+    // 3. 모든 참가자를 세션에 추가 (1vs1 게임과 같은 방식)
+    participants.forEach((participant: any) => {
+      session.addPlayer(participant.id, socket);
+      this.fastify.log.info(`[Handler] Added Player ${participant.id} (${participant.name}) to tournament session`);
+    });
+    
+    this.fastify.log.info(`[Handler] User ${userId} connected to tournament ${tournamentId} with ${participants.length} participants`);
 
     // 연결이 끊어졌을 때 세션이 비면 맵에서 제거
     socket.on('close', () => {
-      if (session?.players.size === 0) {
-        this.sessions.delete(tournamentId);
-        this.fastify.log.info(`[Handler] Session for tournament ${tournamentId} is empty and has been removed.`);
-      }
+      // 세션에서 플레이어 제거
+      session?.removePlayer(Number(userId));
+      
+      // 세션이 비었는지 확인 (players Map의 크기를 직접 확인할 수 없으므로 다른 방법 사용)
+      setTimeout(() => {
+        // 세션이 비었는지 확인하는 로직을 추가할 수 있음
+        // 현재는 단순히 세션을 유지
+      }, 1000);
     });
   }
 }
