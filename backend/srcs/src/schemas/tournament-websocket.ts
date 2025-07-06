@@ -53,6 +53,11 @@ export const MatchStartingMessageSchema = Type.Object({
   data: Type.Object({
     matchId: Type.Number(),
     gameId: Type.String(),
+    participants: Type.Array(Type.Object({
+      id: Type.Number(),
+      name: Type.String(),
+      user_id: Type.Optional(Type.Number()),
+    })),
   }),
 });
 export type MatchStartingDto = Static<typeof MatchStartingMessageSchema>;

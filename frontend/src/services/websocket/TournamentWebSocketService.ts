@@ -5,12 +5,35 @@ export class TournamentWebSocketService {
   private listeners: { [key: string]: ((data: any) => void)[] } = {};
 
   connect(tournamentId: string, playerId: number) {
-    const url = `/ws/tournament/${tournamentId}?playerId=${playerId}`;
+    const backendHost = 'localhost:3000';
+    const url = `ws://${backendHost}/ws/tournament/${tournamentId}?userId=${playerId}`;
+    console.log('Connecting to tournament WebSocket:', url);
     this.socket = new WebSocket(url, []);
+
+    this.socket.onopen = () => {
+      console.log('Tournament WebSocket connected successfully');
+      if (this.listeners['open']) {
+        this.listeners['open'].forEach(cb => cb(null));
+      }
+    };
 
     this.socket.onmessage = (event) => {
       const message: TournamentServerMessage = JSON.parse(event.data);
       this.handleMessage(message);
+    };
+
+    this.socket.onerror = (error) => {
+      console.error('Tournament WebSocket error:', error);
+      if (this.listeners['error']) {
+        this.listeners['error'].forEach(cb => cb(error));
+      }
+    };
+
+    this.socket.onclose = (event) => {
+      console.log('Tournament WebSocket closed:', event.code, event.reason);
+      if (this.listeners['close']) {
+        this.listeners['close'].forEach(cb => cb(event));
+      }
     };
   }
 

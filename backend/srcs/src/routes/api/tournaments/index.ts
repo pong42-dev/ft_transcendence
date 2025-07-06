@@ -24,10 +24,8 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 		{
 			schema: {
 				body: Type.Object({
-					participants: Type.Array(Type.Object({
-						type: Type.Literal('guest'),
-						displayName: Type.String(),
-					}), { minItems: 3, maxItems: 3 })
+					type: Type.Literal('tournament'),
+					opponents: Type.Array(Type.String(), { minItems: 3, maxItems: 3 })
 				}),
 				response: {
 					201: TournamentResponseDtoSchema,
@@ -47,17 +45,22 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 			let response, statusCode;
 			let shouldCommit = false;
 			try {
-				// 1. 요청 본문에서 3명의 게스트 참가자 정보를 가져옵니다.
-				const { participants: guestParticipants } = request.body as { participants: Array<{ type: 'guest'; displayName: string; }> };
-				if (guestParticipants.length !== 3) {
-					response = { message: 'Tournament must have exactly 3 guest participants' };
+				// 1. 요청 본문에서 GamePage의 CreateGameRequestDto 구조로 받습니다.
+				const { type, opponents } = request.body as { type: 'tournament'; opponents: string[] };
+				if (type !== 'tournament') {
+					response = { message: 'Invalid tournament type' };
+					statusCode = 400;
+					return;
+				}
+				if (opponents.length !== 3) {
+					response = { message: 'Tournament must have exactly 3 opponents' };
 					statusCode = 400;
 					return;
 				}
 				// 게스트 닉네임 유효성 검증
-				for (const guest of guestParticipants) {
-					if (!guest.displayName || guest.displayName.trim().length === 0) {
-						response = { message: 'displayName is required for guest type participants' };
+				for (const opponent of opponents) {
+					if (!opponent || opponent.trim().length === 0) {
+						response = { message: 'Opponent names are required' };
 						statusCode = 400;
 						return;
 					}
@@ -69,10 +72,26 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 					statusCode = 400;
 					return;
 				}
+
+				// 3. 중복 토너먼트 생성 방지 - 최근 10초 내에 같은 사용자가 같은 게스트들과 토너먼트를 생성했는지 확인
+				const recentTournaments = await trx('tournaments')
+					.join('games', 'tournaments.id', 'games.tournament_id')
+					.join('game_participants', 'games.id', 'game_participants.game_id')
+					.join('players', 'game_participants.player_id', 'players.id')
+					.where('players.user_id', loggedInUser.user_id)
+					.where('tournaments.created_at', '>', new Date(Date.now() - 10000).toISOString())
+					.select('tournaments.id', 'tournaments.created_at');
+
+				if (recentTournaments.length > 0) {
+					fastify.log.warn(`Duplicate tournament creation attempt by user ${loggedInUser.user_id}`);
+					response = { message: 'Tournament creation in progress, please wait...' };
+					statusCode = 429; // Too Many Requests
+					return;
+				}
 				// 3. 전체 참가자 목록 (인증된 사용자 1명 + 게스트 3명)을 구성합니다.
 				const allParticipants = [
 					{ type: 'user', userId: loggedInUser.user_id },
-					...guestParticipants.map(g => ({ type: 'guest', displayName: g.displayName }))
+					...opponents.map(opponent => ({ type: 'guest', displayName: opponent }))
 				];
 				// 4. 토너먼트를 생성합니다.
 				const [tournamentId] = await trx('tournaments').insert({

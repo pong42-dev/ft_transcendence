@@ -23,7 +23,7 @@ export interface WSBracketUpdateMessage {
 
 export interface WSMatchStartingMessage {
   type: 'match_starting';
-  data: { matchId: number; gameId: string };
+  data: { matchId: number; gameId: string; participants: any[] };
 }
 
 export interface WSTournamentEndMessage {

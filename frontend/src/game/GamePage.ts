@@ -1,8 +1,10 @@
 import { GameClient } from '../game/GameClient';
 import { GameRenderer } from '../game/GameRenderer';
 import { InputHandler } from '../game/InputHandler';
+import { TournamentClient } from '../game/TournamentClient';
 import { ApiClient } from '../services/ApiClient'; // ApiClient를 직접 import
-import { webSocketService } from '../services/websocket/WebSocketService';
+import { WebSocketService } from '../services/websocket/WebSocketService';
+import { tournamentWebSocketService } from '../services/websocket/TournamentWebSocketService';
 import { GameMode, GameSetupResult, CreateGameRequestDto, GameResponseDto } from '../types/types';
 
 export class GamePage {
@@ -11,12 +13,14 @@ export class GamePage {
     private onGameEndCallback: () => void;
 
     private gameClient: GameClient | null = null;
+    private tournamentClient: TournamentClient | null = null;
     private currentSetupResult: GameSetupResult | null = null; // 게임 설정 결과 저장
 
     private renderer: GameRenderer | null = null;
     
     // 브라우저 이벤트 리스너들을 추적하기 위한 변수들
     private isGameActive: boolean = false;
+    private isInitializing: boolean = false; // 초기화 중복 방지
     private beforeUnloadHandler?: (e: BeforeUnloadEvent) => void;
     private visibilityChangeHandler?: () => void;
     private popStateHandler?: (event: PopStateEvent) => void;
@@ -36,19 +40,33 @@ export class GamePage {
     }
 
     private async init(gameSetupResult?: GameSetupResult | null) {
+        // 중복 초기화 방지
+        if (this.isInitializing) {
+            console.log('GamePage is already initializing, skipping...');
+            return;
+        }
+        this.isInitializing = true;
+
+        console.log('=== GAME PAGE INIT START ===');
+        console.log('Game setup result:', gameSetupResult);
+        
         let setupResult = gameSetupResult;
         
         if (!setupResult) {
+            console.log('No setup result, ending game');
             this.onGameEndCallback();
             return;
         }
 
         // 게임 설정 결과 저장
         this.currentSetupResult = setupResult;
+        console.log('Setup result saved');
 
         const gameSettings = this._createGameRequestFromSetup(setupResult);
+        console.log('Game settings created:', gameSettings);
 
         if (!gameSettings) {
+            console.log('Failed to create game settings, ending game');
             this.onGameEndCallback();
             return;
         }
@@ -64,21 +82,49 @@ export class GamePage {
             } else if (gameSettings.type === 'tournament') {
 
                 // 2. 토너먼트 모드일 경우: TournamentApiService를 호출합니다.
+                console.log('=== TOURNAMENT MODE DETECTED ===');
+                console.log('Game settings:', gameSettings);
                 console.log('Requesting to create a tournament...');
-                // TournamentApiService의 DTO에 맞게 데이터를 변환합니다.
-                // const tournamentRequestData = { participants: gameSettings.players };
-                // const tournamentInfo = await this.apiClient.tournament.createTournament(gameSettings);
+                
+                // 사용자 ID를 JWT에서 직접 추출
+                const userId = this.decodeUserIdFromAccessToken();
+                console.log('Decoded user ID from JWT:', userId);
+                if (!userId) {
+                    console.error('User must be logged in to participate in tournament');
+                    alert('토너먼트에 참가하려면 로그인이 필요합니다.');
+                    this.onGameEndCallback();
+                    return;
+                }
+                
+                // GamePage의 CreateGameRequestDto를 그대로 백엔드에 전송
+                console.log('Tournament request data:', gameSettings);
 
-                // 나중에 구현될 TournamentClient를 여기서 시작합니다.
-                // this.startTournament(tournamentInfo); 
-                alert('토너먼트 모드는 아직 준비 중입니다.');
-                this.onGameEndCallback();
+                // 토너먼트 생성 API 호출
+                try {
+                    const tournamentInfo = await this.apiClient.tournament.createTournament(gameSettings);
+                    console.log('Tournament created:', tournamentInfo);
+                    
+                    // TournamentClient 시작
+                    this.startTournament(tournamentInfo);
+                } catch (error: any) {
+                    if (error.status === 429) {
+                        console.log('Tournament creation in progress, retrying...');
+                        // 잠시 후 재시도
+                        setTimeout(() => {
+                            this.init(gameSetupResult);
+                        }, 2000);
+                        return;
+                    }
+                    throw error; // 다른 에러는 다시 던짐
+                }
 
             }
         } catch (error) {
             console.error('Failed to create game or tournament:', error);
             alert('게임을 시작하는 중 오류가 발생했습니다.');
             this.onGameEndCallback();
+        } finally {
+            this.isInitializing = false;
         }
     }
     /**
@@ -98,7 +144,10 @@ export class GamePage {
         // 4. 대기 화면을 먼저 렌더링합니다.
         this.renderWaitingScreen();
 
-        // 5. GameClient를 생성하고 콜백을 전달합니다.
+        // 5. WebSocketService 생성
+        const webSocketService = new WebSocketService();
+
+        // 6. GameClient를 생성하고 콜백을 전달합니다.
         this.gameClient = new GameClient(
             gameInfo,
             webSocketService,
@@ -112,7 +161,7 @@ export class GamePage {
             this.currentSetupResult?.aiSettings?.difficulty // AI 난이도 전달
         );
 
-        // 6. GameClient에 연결 및 이벤트 수신 시작을 지시합니다.
+        // 7. GameClient에 연결 및 이벤트 수신 시작을 지시합니다.
         this.gameClient.connectAndListen();
     }
 
@@ -158,6 +207,7 @@ export class GamePage {
         this.isGameActive = false;
         this.removeBrowserEventListeners();
         this.gameClient?.destroy();
+        this.tournamentClient?.destroy();
         this.container.innerHTML = '';
     }
 
@@ -166,16 +216,22 @@ export class GamePage {
         let opponents: string[] = [];
 
         // GameSetupModal에서 넘어온 mode ('vs ai', 'local', 'tournament')에 따라 분기합니다.
+        console.log('=== CREATING GAME REQUEST ===');
+        console.log('Setup result mode:', setupResult.mode);
+        console.log('Setup result opponents:', setupResult.opponents);
+        
         switch (setupResult.mode) {
             case 'vs ai':
                 // AI 모드에서는 'type'만 필요하고 opponents 배열은 비워둡니다.
                 gameMode = 'ai_1v1';
+                console.log('AI mode selected');
                 break;
 
             case 'local':
                 // 로컬 1:1 모드에서는 opponents 배열에 게스트 닉네임 1명을 담습니다.
                 gameMode = 'local_1v1';
                 const guestNickname = setupResult.opponents[0];
+                console.log('Local mode selected, guest nickname:', guestNickname);
 
                 if (!guestNickname) {
                     console.error('Guest nickname is required for local mode.');
@@ -187,12 +243,14 @@ export class GamePage {
             case 'tournament':
                 // 토너먼트 모드에서는 opponents 배열에 게스트 닉네임 3명을 담습니다.
                 gameMode = 'tournament';
+                console.log('Tournament mode selected');
 
                 if (setupResult.opponents.length < 3) { // 3명으로 가정
                     console.error('Three guest nicknames are required for tournament mode.');
                     return null;
                 }
                 opponents = setupResult.opponents;
+                console.log('Tournament opponents:', opponents);
                 break;
 
             default:
@@ -232,6 +290,11 @@ export class GamePage {
             this.gameClient.destroy();
         }
         
+        // TournamentClient가 있으면 연결 해제
+        if (this.tournamentClient) {
+            this.tournamentClient.destroy();
+        }
+        
         // 페이지 닫기
         this.onGameEndCallback();
     }
@@ -246,7 +309,7 @@ export class GamePage {
 
         // beforeunload 이벤트: 페이지를 떠나려고 할 때 (새로고침, 창 닫기 등)
         this.beforeUnloadHandler = (e: BeforeUnloadEvent) => {
-            if (this.isGameActive && this.gameClient) {
+            if (this.isGameActive && (this.gameClient || this.tournamentClient)) {
                 // 게임이 진행 중이면 경고 메시지 표시
                 e.preventDefault();
                 e.returnValue = '게임이 진행 중입니다. 정말 나가시겠습니까?';
@@ -260,7 +323,7 @@ export class GamePage {
 
         // popstate 이벤트: 브라우저 뒤로가기/앞으로가기 버튼 클릭 시
         this.popStateHandler = (_event: PopStateEvent) => {
-            if (this.isGameActive && this.gameClient) {
+            if (this.isGameActive && (this.gameClient || this.tournamentClient)) {
                 console.log('Browser back/forward button detected during active game, canceling...');
                 // 뒤로가기를 시도했을 때 게임 취소
                 this.handleUnexpectedExit();
@@ -276,7 +339,7 @@ export class GamePage {
 
         // pagehide 이벤트: 페이지가 숨겨질 때 (뒤로가기, 탭 닫기 등 - beforeunload보다 확실함)
         this.pageHideHandler = () => {
-            if (this.isGameActive && this.gameClient) {
+            if (this.isGameActive && (this.gameClient || this.tournamentClient)) {
                 console.log('Page hide detected during active game, canceling...');
                 this.handleUnexpectedExit();
             }
@@ -284,7 +347,7 @@ export class GamePage {
 
         // visibilitychange 이벤트: 탭이 숨겨지거나 브라우저가 최소화될 때
         this.visibilityChangeHandler = () => {
-            if (document.hidden && this.isGameActive && this.gameClient) {
+            if (document.hidden && this.isGameActive && (this.gameClient || this.tournamentClient)) {
                 console.log('Page became hidden during active game, canceling...');
                 this.handleUnexpectedExit();
             }
@@ -301,11 +364,54 @@ export class GamePage {
      * [신규] 예상치 못한 종료 상황을 처리합니다.
      */
     private handleUnexpectedExit() {
-        if (this.gameClient && this.isGameActive) {
-            console.log('Handling unexpected exit - destroying game client');
-            this.gameClient.destroy();
+        if ((this.gameClient || this.tournamentClient) && this.isGameActive) {
+            console.log('Handling unexpected exit - destroying game/tournament client');
+            this.gameClient?.destroy();
+            this.tournamentClient?.destroy();
             this.isGameActive = false;
         }
+    }
+
+    /**
+     * [신규] 토너먼트 클라이언트를 시작하는 메서드
+     */
+    private startTournament(tournamentInfo: any) {
+        if (!this.container) return;
+
+        // 기존 토너먼트 클라이언트가 있다면 정리
+        if (this.tournamentClient) {
+            console.log('Destroying existing tournament client');
+            this.tournamentClient.destroy();
+            this.tournamentClient = null;
+        }
+
+        // 게임이 활성 상태로 설정
+        this.isGameActive = true;
+
+        // 브라우저 이벤트 리스너 설정
+        this.setupBrowserEventListeners();
+
+        // GamePage의 UI를 비우고 토너먼트 UI를 렌더링할 준비
+        this.container.innerHTML = '';
+
+        // GameRenderer와 InputHandler 생성
+        this.renderer = new GameRenderer();
+        const inputHandler = new InputHandler();
+        
+        // tournamentId와 userId를 TournamentClient에 전달
+        const tournamentId = tournamentInfo.id; 
+        const userId = this.decodeUserIdFromAccessToken();
+        console.log('Tournament client - Decoded user ID from JWT:', userId);
+        
+        this.tournamentClient = new TournamentClient(
+            this.container,
+            tournamentId,
+            Number(userId), // JWT에서 추출한 user_id를 number로 변환
+            this.renderer,
+            inputHandler
+        );
+        
+        this.tournamentClient.start();
     }
 
     /**
@@ -336,6 +442,37 @@ export class GamePage {
         if (this.visibilityChangeHandler) {
             document.removeEventListener('visibilitychange', this.visibilityChangeHandler);
             this.visibilityChangeHandler = undefined;
+        }
+    }
+
+    /**
+     * JWT에서 user_id 추출하는 메서드
+     */
+    private decodeUserIdFromAccessToken(): string | undefined {
+        try {
+            const accessToken = sessionStorage.getItem('access_token_session');
+            console.log('Access token from session storage:', accessToken ? 'exists' : 'not found');
+            if (!accessToken) return undefined;
+            
+            const payloadBase64 = accessToken.split('.')[1];
+            if (!payloadBase64) return undefined;
+            
+            const base64 = payloadBase64.replace(/-/g, '+').replace(/_/g, '/');
+            const jsonPayload = decodeURIComponent(
+                atob(base64)
+                    .split('')
+                    .map(function(c) {
+                        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                    })
+                    .join('')
+            );
+            const payload = JSON.parse(jsonPayload);
+            console.log('JWT payload:', payload);
+            console.log('JWT user_id:', payload.user_id);
+            return payload.user_id ? String(payload.user_id) : undefined;
+        } catch (e) {
+            console.error('Error decoding JWT:', e);
+            return undefined;
         }
     }
 }
