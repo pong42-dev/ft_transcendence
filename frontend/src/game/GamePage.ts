@@ -111,6 +111,7 @@ export class GamePage {
                         console.log('Tournament creation in progress, retrying...');
                         // 잠시 후 재시도
                         setTimeout(() => {
+                            console.log('여기 왔기 때문에 재호출');
                             this.init(gameSetupResult);
                         }, 2000);
                         return;

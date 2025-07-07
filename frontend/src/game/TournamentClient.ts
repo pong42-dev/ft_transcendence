@@ -344,94 +344,39 @@ export class TournamentClient {
   }
 
   private handleMatchStarting(data: any): void {
-    console.log('Match starting:', data);
+    // 서버에서 받은 데이터 파싱
     const { matchId, gameId, participants } = data;
-    
-    // 중복 처리 방지
-    if (this.processedMatchIds.has(matchId)) {
-      console.log('Match already processed, skipping:', matchId);
-      return;
-    }
-    this.processedMatchIds.add(matchId);
-    
-    // 매치 정보 생성
-    this.currentMatch = {
-      id: matchId,
-      round_number: 1, // 임시값
-      status: 'starting',
-      participants: participants || [],
-      winner_id: undefined,
-      started_at: undefined
-    };
-    
-    console.log('Current match created:', this.currentMatch);
-    console.log('Participants:', participants);
-    
-    // 현재 사용자가 이 매치에 참여하는지 확인
-    const userParticipant = participants?.find((p: any) => p.user_id === this.currentUserId);
-    if (!userParticipant) {
-      console.log('Current user is not participating in this match, skipping...');
-      console.log('Available participants:', participants);
-      console.log('Current user ID:', this.currentUserId);
-      return;
-    }
-    
-    // 매치 화면 렌더링
-    this.renderMatchScreen(this.currentMatch);
-    
-    // 게임 클라이언트 시작
-    if (gameId) {
-      this.startGameForMatch(gameId);
-    } else {
-      console.error('No game ID provided for match:', matchId);
-    }
-  }
-
-  private handleTournamentEnd(data: any): void {
-    console.log('Tournament ended:', data);
-    this.renderTournamentEndScreen(data.winner);
-  }
-
-  private startGameForMatch(gameId: string): void {
-    // 게임 컨테이너 찾기
-    const gameContainer = this.container.querySelector('#game-container');
-    if (!gameContainer) return;
 
     // 기존 게임 클라이언트 정리
-    this.gameClient?.destroy();
+    if (this.gameClient) {
+      this.gameClient.destroy();
+      this.gameClient = null;
+    }
 
-    // 현재 매치의 플레이어 정보로 게임 정보 생성
-    // 백엔드에서 전송된 모든 필드를 그대로 사용
-    const players = this.currentMatch?.participants.map(p => {
-      return {
-        id: p.id,
-        name: p.display_name || p.name || `Player${p.id}`,
-        type: p.type || (p.user_id ? 'user' : 'guest') as 'user' | 'guest',
-        avatarUrl: undefined,
-        user_id: p.user_id, // user 타입인 경우에만 값이 있음
-        display_name: p.display_name // guest 타입인 경우에만 값이 있음
-      };
-    }) || [];
+    // 게임 컨테이너 찾기 (없으면 생성)
+    let gameContainer = this.container.querySelector('#game-container');
+    if (!gameContainer) {
+      // 컨테이너가 없으면 새로 생성해서 붙임
+      gameContainer = document.createElement('div');
+      gameContainer.id = 'game-container';
+      gameContainer.className = 'flex-1 flex items-center justify-center';
+      this.container.innerHTML = '';
+      this.container.appendChild(gameContainer);
+    } else {
+      gameContainer.innerHTML = '';
+    }
 
-    console.log('Game players for match:', players);
-    console.log('Current user ID:', this.currentUserId);
-    console.log('Current match participants:', this.currentMatch?.participants);
-    console.log('Looking for user player with user_id:', this.currentUserId);
-    const userPlayer = players.find(p => p.type === 'user');
-    console.log('Found user player:', userPlayer);
-
-    // 새로운 게임 클라이언트 생성 - 게임용 WebSocketService 사용
-    const gameWebSocketService = new WebSocketService();
+    // GameClient 인스턴스 생성 (일반 게임과 동일한 방식)
     this.gameClient = new GameClient(
-      { 
-        gameId: gameId, 
-        type: 'tournament', 
-        status: 'waiting', 
-        players: players 
+      {
+        gameId: gameId,
+        type: 'tournament',
+        status: 'waiting',
+        players: participants
       },
-      gameWebSocketService,
-      this.renderer,
-      this.inputHandler,
+      new WebSocketService(), // 실제 게임용 WebSocketService
+      this.renderer,          // GameRenderer 인스턴스
+      this.inputHandler,      // InputHandler 인스턴스
       {
         onPreGameCountdown: () => {},
         onGameStart: () => {},
@@ -441,12 +386,16 @@ export class TournamentClient {
       }
     );
 
-    // 게임 렌더러를 게임 컨테이너에 추가
-    gameContainer.innerHTML = '';
+    // 게임 화면 렌더링
     gameContainer.appendChild(this.renderer.render());
 
     // 게임 클라이언트 연결 시작
     this.gameClient.connectAndListen();
+  }
+
+  private handleTournamentEnd(data: any): void {
+    console.log('Tournament ended:', data);
+    this.renderTournamentEndScreen(data.winner);
   }
 
   private handleMatchFinish(winner: any): void {
