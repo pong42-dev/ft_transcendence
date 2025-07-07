@@ -1,9 +1,9 @@
 import { Type, Static } from '@sinclair/typebox'
-import { StringSchema, EmailSchema } from '../../common'
+import { StringSchema } from '../../common'
 import { UserGameStatsSchema, OneOnOneHistorySchema, TournHistorySchema} from './me.js'
 
 export const FriendInfoSchema = Type.Object({
-  name: EmailSchema,
+  name: StringSchema,
   avatar: StringSchema,
 })
 export type FriendInfo = Static<typeof FriendInfoSchema>;

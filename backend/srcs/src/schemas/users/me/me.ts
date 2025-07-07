@@ -3,8 +3,8 @@ import { IdSchema, StringSchema, DateTimeSchema, BooleanSchema, EmailSchema } fr
 
 // User Info
 export const UserInfoSchema = Type.Object({
-  email: StringSchema,
-  name: EmailSchema,
+  email: EmailSchema,
+  name: StringSchema,
   avatar: StringSchema,
   twoFA: BooleanSchema,
   provider: StringSchema
