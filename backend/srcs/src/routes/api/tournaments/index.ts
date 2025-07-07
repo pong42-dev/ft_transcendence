@@ -1,5 +1,5 @@
 import { FastifyPluginAsyncTypebox, Type } from '@fastify/type-provider-typebox'
-import { 
+import {
 	CreateTournamentRequestDtoSchema,
 	TournamentResponseDtoSchema,
 	TournamentDetailsResponseDtoSchema,
@@ -12,7 +12,7 @@ import historyPlugin from './history.js'
 const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 	// matches 플러그인 등록
 	await fastify.register(matchesPlugin, { prefix: '/' })
-	
+
 	// history 플러그인 등록
 	await fastify.register(historyPlugin, { prefix: '/' })
 
@@ -43,34 +43,36 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 		async (request, reply) => {
 			const trx = await fastify.knex.transaction();
 			let response, statusCode;
-			let shouldCommit = false;
+			let shouldCommit: boolean | null = false;
 			try {
 				// 1. 요청 본문에서 GamePage의 CreateGameRequestDto 구조로 받습니다.
 				const { type, opponents } = request.body as { type: 'tournament'; opponents: string[] };
 				if (type !== 'tournament') {
-					response = { message: 'Invalid tournament type' };
-					statusCode = 400;
-					return;
+					shouldCommit = null;
+					await trx.rollback();
+					return reply.status(400).send({ message: 'Invalid tournament type' });
 				}
+
 				if (opponents.length !== 3) {
-					response = { message: 'Tournament must have exactly 3 opponents' };
-					statusCode = 400;
-					return;
+					shouldCommit = null;
+					await trx.rollback();
+					return reply.status(400).send({ message: 'Tournament must have exactly 3 opponents' });
 				}
+
 				// 게스트 닉네임 유효성 검증
 				for (const opponent of opponents) {
 					if (!opponent || opponent.trim().length === 0) {
-						response = { message: 'Opponent names are required' };
-						statusCode = 400;
-						return;
+						shouldCommit = null;
+						await trx.rollback();
+						return reply.status(400).send({ message: 'Opponent names are required' });
 					}
 				}
 				// 2. 인증된 사용자 정보를 request.user에서 가져옵니다.
 				const loggedInUser = request.user;
 				if (!loggedInUser || !loggedInUser.user_id) {
-					response = { message: '로그인된 사용자 정보가 필요합니다.' };
-					statusCode = 400;
-					return;
+					shouldCommit = null;
+					await trx.rollback();
+					return reply.status(400).send({ message: '로그인된 사용자 정보가 필요합니다.' });
 				}
 
 				// 3. 중복 토너먼트 생성 방지 - 최근 10초 내에 같은 사용자가 같은 게스트들과 토너먼트를 생성했는지 확인
@@ -83,10 +85,10 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 					.select('tournaments.id', 'tournaments.created_at');
 
 				if (recentTournaments.length > 0) {
+					shouldCommit = null;
+					await trx.rollback();
 					fastify.log.warn(`Duplicate tournament creation attempt by user ${loggedInUser.user_id}`);
-					response = { message: 'Tournament creation in progress, please wait...' };
-					statusCode = 429; // Too Many Requests
-					return;
+					return reply.status(429).send({ message: 'Tournament creation in progress, please wait...' });
 				}
 				// 3. 전체 참가자 목록 (인증된 사용자 1명 + 게스트 3명)을 구성합니다.
 				const allParticipants = [
@@ -127,9 +129,9 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 					.where('id', tournamentId)
 					.first();
 				if (!tournament) {
-					response = { message: 'Failed to retrieve created tournament' };
-					statusCode = 500;
-					return;
+					shouldCommit = null;
+					await trx.rollback();
+					return reply.status(500).send({ message: 'Failed to retrieve created tournament' });
 				}
 				shouldCommit = true;
 				response = tournament;
@@ -147,9 +149,9 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 					statusCode = 500;
 				}
 			} finally {
-				if (shouldCommit) {
+				if (shouldCommit === true) {
 					await trx.commit();
-				} else {
+				} else if (shouldCommit === false) {
 					await trx.rollback();
 				}
 			}
@@ -165,8 +167,8 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				response: {
 					200: TournamentListResponseDtoSchema,
 					500: Type.Object({
-							message: Type.String()
-						})
+						message: Type.String()
+					})
 				},
 				tags: ["Tournaments"]
 			},
@@ -179,8 +181,8 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 
 			} catch (error: any) {
 				fastify.log.error('Error fetching tournaments:', error);
-				return reply.status(500).send({ 
-					message: 'Internal server error' 
+				return reply.status(500).send({
+					message: 'Internal server error'
 				});
 			}
 		}
@@ -214,8 +216,8 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				const tournamentDetails = await fastify.tournamentsRepository.getTournamentWithDetails(tournamentId);
 
 				if (!tournamentDetails) {
-					return reply.status(404).send({ 
-						message: 'Tournament not found' 
+					return reply.status(404).send({
+						message: 'Tournament not found'
 					});
 				}
 
@@ -223,8 +225,8 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 
 			} catch (error: any) {
 				fastify.log.error('Error fetching tournament details:', error);
-				return reply.status(500).send({ 
-					message: 'Internal server error' 
+				return reply.status(500).send({
+					message: 'Internal server error'
 				});
 			}
 		}
@@ -264,29 +266,29 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				const tournament = await fastify.tournamentsRepository.getTournament(tournamentId);
 
 				if (!tournament) {
-					return reply.status(404).send({ 
-						message: 'Tournament not found' 
+					return reply.status(404).send({
+						message: 'Tournament not found'
 					});
 				}
 
 				// 이미 종료된 토너먼트는 취소할 수 없음
 				if (tournament.status === 'ended' || tournament.status === 'canceled') {
-					return reply.status(400).send({ 
-						message: 'Cannot cancel tournament that is already ended or canceled' 
+					return reply.status(400).send({
+						message: 'Cannot cancel tournament that is already ended or canceled'
 					});
 				}
 
 				// 토너먼트 취소
 				await fastify.tournamentsRepository.updateTournamentStatus(tournamentId, 'canceled');
 
-				return reply.status(200).send({ 
-					message: 'Tournament canceled successfully' 
+				return reply.status(200).send({
+					message: 'Tournament canceled successfully'
 				});
 
 			} catch (error: any) {
 				fastify.log.error('Error canceling tournament:', error);
-				return reply.status(500).send({ 
-					message: 'Internal server error' 
+				return reply.status(500).send({
+					message: 'Internal server error'
 				});
 			}
 		}
@@ -303,15 +305,15 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				response: {
 					200: Type.Array(ParticipantResponseDtoSchema),
 					404: Type.Object({
-							message: Type.String()
-						}),
+						message: Type.String()
+					}),
 					500: Type.Object({
-							message: Type.String()
-						})
+						message: Type.String()
+					})
 				},
 				tags: ["Tournaments"]
 			},
-					// preHandler: [authenticate]
+			// preHandler: [authenticate]
 		},
 		async (request, reply) => {
 			try {
@@ -320,8 +322,8 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				// 토너먼트 존재 여부 확인
 				const tournament = await fastify.tournamentsRepository.getTournament(tournamentId);
 				if (!tournament) {
-					return reply.status(404).send({ 
-						message: 'Tournament not found' 
+					return reply.status(404).send({
+						message: 'Tournament not found'
 					});
 				}
 
@@ -332,8 +334,8 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 
 			} catch (error: any) {
 				fastify.log.error('Error fetching tournament participants:', error);
-				return reply.status(500).send({ 
-					message: 'Internal server error' 
+				return reply.status(500).send({
+					message: 'Internal server error'
 				});
 			}
 		}
