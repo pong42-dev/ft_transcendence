@@ -4,6 +4,8 @@ import { InputHandler } from './InputHandler';
 import { TournamentWebSocketService } from '../services/websocket/TournamentWebSocketService';
 import { WebSocketService } from '../services/websocket/WebSocketService';
 import { authStore } from '../store/authStore';
+import { ModalManager } from '../managers/ModalManager';
+import { GameEndModal } from '../components/modals/GameEndModal';
 
 export interface TournamentMatch {
   id: number;
@@ -45,6 +47,10 @@ export class TournamentClient {
   private tournamentWebSocketService: TournamentWebSocketService | null = null;
   private currentMatch: TournamentMatch | null = null; // 현재 매치 정보를 단일 인스턴스로 관리
   private bracketMatches: TournamentMatch[] | null = null; // 브라켓 정보를 저장할 배열
+  private modalManager: ModalManager;
+  private matchModalId: string | null = null;
+  private resultModalId: string | null = null;
+  private bracketModalId: string | null = null;
 
   constructor(
     container: HTMLElement,
@@ -58,10 +64,10 @@ export class TournamentClient {
     this.currentUserId = currentUserId;
     this.renderer = renderer;
     this.inputHandler = inputHandler;
+    this.modalManager = ModalManager.getInstance();
   }
 
   public start(): void {
-    this.renderTournamentWaitingScreen();
     this.connectToTournament();
   }
 
@@ -69,6 +75,62 @@ export class TournamentClient {
     this.gameClient?.destroy();
     this.tournamentWebSocketService?.disconnect();
     this.container.innerHTML = '';
+  }
+
+  private renderMainView({ status, message }: { status: string; message?: string }) {
+    // 항상 브라켓을 메인에 렌더링, 상태 메시지는 오버레이로 표시
+    this.container.innerHTML = `
+      <div id="tournament-bracket-root" class="relative w-full h-full flex flex-col items-center justify-center bg-terminal-black text-terminal-green p-8">
+        <div id="bracket-container" class="w-full max-w-4xl flex flex-col items-center justify-center mb-8">
+          <!-- 브라켓이 여기에 렌더링됨 -->
+        </div>
+        <div id="tournament-status-overlay" class="absolute top-0 left-0 w-full flex justify-center z-20 pointer-events-none">
+          ${message ? `<div class="bg-terminal-black bg-opacity-80 px-6 py-3 rounded-lg text-terminal-yellow text-xl font-bold shadow-lg mt-8">${message}</div>` : ''}
+        </div>
+      </div>
+    `;
+    if (this.bracketMatches) {
+      this.updateBracketDisplay();
+    }
+  }
+
+  private openBracketModal(status: string, message?: string) {
+    // 기존 모달 닫기
+    if (this.bracketModalId) {
+      this.modalManager.hide();
+      this.bracketModalId = null;
+    }
+    const modalContent = {
+      title: '토너먼트 브라켓',
+      content: () => {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'w-[700px] min-h-[400px] flex flex-col items-center justify-center';
+        const bracketDiv = document.createElement('div');
+        bracketDiv.id = 'bracket-container';
+        bracketDiv.className = 'w-full max-w-4xl flex flex-col items-center justify-center mb-8';
+        if (this.bracketMatches) {
+          const bracket = { rounds: [this.bracketMatches.filter(m => m.round_number === 1), this.bracketMatches.filter(m => m.round_number === 2)] };
+          bracketDiv.innerHTML = this.generateBracketHTML(bracket);
+        }
+        wrapper.appendChild(bracketDiv);
+        if (message) {
+          const msgDiv = document.createElement('div');
+          msgDiv.className = 'bg-terminal-black bg-opacity-80 px-6 py-3 rounded-lg text-terminal-yellow text-xl font-bold shadow-lg mt-8';
+          msgDiv.textContent = message;
+          wrapper.appendChild(msgDiv);
+        }
+        return wrapper;
+      },
+      onShow: () => {},
+      onClose: () => {},
+      config: {
+        closable: false,
+        closeOnOutsideClick: false,
+        sizeClass: 'max-w-[750px] w-[95%] min-h-[400px] flex items-center justify-center'
+      }
+    };
+    this.modalManager.show(modalContent);
+    this.bracketModalId = null;
   }
 
   private connectToTournament(): void {
@@ -85,9 +147,6 @@ export class TournamentClient {
     this.tournamentWebSocketService = new TournamentWebSocketService();
     this.tournamentWebSocketService.connect(this.tournamentId.toString(), this.currentUserId);
 
-    this.tournamentWebSocketService.on('open', () => {
-      this.startCountdown();
-    });
     this.tournamentWebSocketService.on('tournament_bracket', (data: any) => {
       this.handleTournamentBracket(data);
     });
@@ -182,52 +241,44 @@ export class TournamentClient {
   }
 
   private generateBracketHTML(bracket: any): string {
-    console.log('Generating bracket HTML with data:', bracket);
-    
-    if (!bracket || !bracket.rounds || !Array.isArray(bracket.rounds)) {
+    // 2열 준결승 + 중앙 결승 구조로 브라켓을 렌더링
+    if (!bracket || !bracket.rounds || !Array.isArray(bracket.rounds) || bracket.rounds.length < 2) {
       return '<div class="text-center text-red-500">Invalid bracket data</div>';
     }
-
-    let html = '<div class="grid grid-cols-1 gap-6">';
-    
-    // 각 라운드 처리
-    bracket.rounds.forEach((round: any[], roundIndex: number) => {
-      const roundNumber = roundIndex + 1;
-      const isFinal = roundIndex === bracket.rounds.length - 1;
-      
-      html += `
-        <div class="text-center p-6 border-2 ${isFinal ? 'border-terminal-yellow' : 'border-terminal-green'} rounded-lg bg-terminal-black bg-opacity-50">
-          <h3 class="text-2xl font-bold mb-4 text-terminal-yellow">
-            ${isFinal ? '🏆 Final 🏆' : `Round ${roundNumber}`}
-          </h3>
-          <div class="space-y-3">
-      `;
-      
-      // 각 매치 처리
-      round.forEach((match: any, matchIndex: number) => {
-        const player1Name = match.player1?.nickname || 'Unknown Player';
-        const player2Name = match.player2?.nickname || 'Unknown Player';
-        const matchId = match.matchId || `match-${roundIndex}-${matchIndex}`;
-        
-        html += `
-          <div class="p-3 border ${isFinal ? 'border-terminal-yellow' : 'border-terminal-green'} rounded bg-terminal-black bg-opacity-30">
-            <span class="font-bold">Match ${matchIndex + 1}:</span> 
-            <span class="text-terminal-cyan">${player1Name}</span> 
-            <span class="text-terminal-green">vs</span> 
-            <span class="text-terminal-cyan">${player2Name}</span>
-            <div class="text-xs text-terminal-gray mt-1">ID: ${matchId}</div>
-          </div>
-        `;
-      });
-      
-      html += `
-          </div>
+    const semiFinals = bracket.rounds[0];
+    const final = bracket.rounds[1][0];
+    // 준결승 2경기, 결승 1경기 가정
+    return `
+      <div class="grid grid-cols-3 gap-8 items-center justify-center w-full">
+        <div class="flex flex-col gap-8 items-center">
+          ${this.renderBracketMatch(semiFinals[0], '준결승 1')}
         </div>
-      `;
-    });
-    
-    html += '</div>';
-    return html;
+        <div class="flex flex-col gap-8 items-center">
+          ${this.renderBracketMatch(final, '결승')}
+        </div>
+        <div class="flex flex-col gap-8 items-center">
+          ${this.renderBracketMatch(semiFinals[1], '준결승 2')}
+        </div>
+      </div>
+    `;
+  }
+
+  private renderBracketMatch(match: any, label: string): string {
+    const player1Name = match?.player1?.nickname || match?.player1?.name || 'Unknown';
+    const player2Name = match?.player2?.nickname || match?.player2?.name || 'Unknown';
+    const matchId = match?.matchId || match?.id || '';
+    const winner = match?.winnerId || match?.winner_id;
+    return `
+      <div class="p-4 border-2 rounded-lg bg-terminal-black bg-opacity-50 w-56 text-center ${label === '결승' ? 'border-terminal-yellow' : 'border-terminal-green'}">
+        <div class="text-lg font-bold mb-2">${label}</div>
+        <div class="flex flex-col gap-2">
+          <div class="${winner === match?.player1?.id ? 'text-terminal-yellow font-bold' : ''}">${player1Name}</div>
+          <div class="text-terminal-green">vs</div>
+          <div class="${winner === match?.player2?.id ? 'text-terminal-yellow font-bold' : ''}">${player2Name}</div>
+        </div>
+        <div class="text-xs text-terminal-gray mt-2">ID: ${matchId}</div>
+      </div>
+    `;
   }
 
   private renderMatchScreen(match: TournamentMatch): void {
@@ -289,89 +340,50 @@ export class TournamentClient {
   }
 
   private handleTournamentBracket(data: any): void {
-    console.log('Tournament bracket received:', data);
-    
-    // 중복 처리 방지 - 이미 브라켓이 렌더링되었는지 확인
-    if (this.container.querySelector('#bracket-container')) {
-      console.log('Bracket already rendered, skipping...');
-      return;
-    }
-    
-    this.renderTournamentBracket(data.bracket);
-    
-    // 토너먼트가 시작되었으므로 시작 버튼 상태 업데이트
-    const startButton = this.container.querySelector('#start-tournament-btn');
-    if (startButton) {
-      startButton.textContent = '🏆 Tournament Started';
-      startButton.setAttribute('disabled', 'true');
-      startButton.classList.add('opacity-50', 'text-terminal-yellow');
-    }
+    this.bracketMatches = data.matches;
+    this.updateBracketDisplay();
+    this.openBracketModal('waiting', '토너먼트 대기 중...');
   }
 
   private handleBracketUpdate(data: any): void {
-    console.log('Bracket update received:', data);
     if (data && data.matches) {
       this.bracketMatches = data.matches;
-    }
-    if (this.currentMatch && this.currentMatch.status === 'starting') {
-      console.log('Match in progress, skipping bracket update. currentMatch:', this.currentMatch);
-      return;
-    }
-    if (!this.currentMatch) {
-      console.log('No current match, skipping bracket update.');
-      return;
-    }
-    const matchId = this.currentMatch.id;
-    if (this.currentMatch.resultSent) {
-      console.log('Match result already sent, skipping update. currentMatch:', this.currentMatch);
-      return;
-    }
-    if (data.matchId && data.matchId === matchId) {
-      if (data.status) {
-        this.currentMatch.status = data.status;
-      }
-      if (data.winnerId) {
-        this.currentMatch.winner_id = data.winnerId;
-        this.currentMatch.resultSent = true;
-      }
       this.updateBracketDisplay();
     }
   }
 
   private handleMatchStarting(data: any): void {
-    console.log('[LOG] handleMatchStarting 진입', data);
-    const { matchId, gameId, participants, round_number } = data;
-    // round_number 우선순위: data.round_number → bracketMatches에서 찾기 → 1
-    let roundNum = round_number;
-    if (roundNum === undefined && this.bracketMatches) {
-      const match = this.bracketMatches.find((m: any) => m.id == matchId);
-      if (match && match.round_number !== undefined) {
-        roundNum = match.round_number;
-      }
+    // 매치 시작 시 브라켓 모달 닫고, 메인 컨테이너에 게임 전체화면 렌더
+    if (this.bracketModalId) {
+      this.modalManager.hide();
+      this.bracketModalId = null;
     }
-    if (roundNum === undefined) roundNum = 1;
-    // === currentMatch를 항상 새 매치 정보로 갱신 ===
+    const { matchId, gameId, participants, round_number } = data;
     this.currentMatch = {
       id: matchId,
-      round_number: roundNum,
+      round_number: round_number,
       status: 'starting',
       participants: participants || [],
       winner_id: undefined,
       started_at: undefined,
-      resultSent: false // 반드시 false로 초기화
+      resultSent: false
     };
-    console.log('[LOG] handleMatchStarting 후 currentMatch:', this.currentMatch);
-    if (this.gameClient) {
-      this.gameClient.destroy();
-      this.gameClient = null;
+    this.renderGameToMain({ gameId, participants });
+  }
+
+  private handleTournamentEnd = (data: any): void => {
+    // 최종 결과 모달만 띄우고, 브라켓은 그대로 유지
+    this.handleMatchFinish(data.winner);
+  };
+
+  private renderGameToMain({ gameId, participants }: { gameId: string; participants: any[] }) {
+    // 메인 컨테이너(예: .main-content)에 게임 전체화면 렌더링
+    const mainContent = document.querySelector('.main-content') as HTMLElement;
+    if (!mainContent) {
+      alert('게임 컨테이너를 찾을 수 없습니다.');
+      return;
     }
-    let gameContainer = this.container.querySelector('#game-container');
-    if (!gameContainer) {
-      gameContainer = document.createElement('div');
-      gameContainer.id = 'game-container';
-      gameContainer.className = 'flex-1 flex flex-col';
-      this.container.appendChild(gameContainer);
-    }
+    mainContent.innerHTML = '';
     this.gameClient = new GameClient(
       {
         gameId: gameId,
@@ -390,20 +402,17 @@ export class TournamentClient {
         },
       },
     );
-    console.log('[LOG] gameClient 생성 완료:', this.gameClient);
-    const renderResult = this.renderer.render();
-    console.log('[LOG] renderer.render() 반환값:', renderResult);
-    gameContainer.appendChild(renderResult);
+    mainContent.appendChild(this.renderer.render());
     this.gameClient.connectAndListen();
   }
 
-  private handleTournamentEnd(data: any): void {
-    console.log('Tournament ended:', data);
-    this.renderTournamentEndScreen(data.winner);
-  }
-
   private handleMatchFinish(winner: any): void {
-    console.log('Match finished, winner:', winner);
+    // 경기 종료 시 게임 화면은 그대로 두고 결과 모달만 띄움
+    if (this.matchModalId) {
+      this.modalManager.hide();
+      this.matchModalId = null;
+    }
+    // 서버에 결과 전송 등 기존 로직 유지
     // === winnerId가 undefined/null이면 participants에서 닉네임/점수로 찾아서 보정 ===
     let winnerId = winner?.id;
     if (winnerId === undefined || winnerId === null) {
@@ -458,7 +467,34 @@ export class TournamentClient {
     });
     this.currentMatch.resultSent = true;
     console.log('[LOG] handleMatchFinish 후 currentMatch:', this.currentMatch);
-    this.renderWaitingForNextMatch();
+    // 결과 모달 띄우기
+    const isFinal = this.currentMatch?.round_number === 2;
+    const gameResult = this.makeGameResult(winner);
+    const resultModal = new GameEndModal(
+      gameResult,
+      true, // isTournament
+      isFinal,
+      () => {
+        this.modalManager.hide();
+        this.resultModalId = null;
+        // 다음 매치 대기 시 브라켓 모달 다시 띄움
+        if (!isFinal) {
+          this.openBracketModal('waiting', '다음 매치 대기 중...');
+        }
+      },
+      isFinal ? undefined : () => {
+        this.modalManager.hide();
+        this.resultModalId = null;
+        // 다음 매치 대기 시 브라켓 모달 다시 띄움
+        this.openBracketModal('waiting', '다음 매치 대기 중...');
+      },
+      undefined,
+      'tournament'
+    );
+    resultModal.show();
+    this.resultModalId = null;
+    // 브라켓 갱신 등 추가 처리
+    this.updateBracketDisplay();
   }
 
   private renderWaitingForNextMatch(): void {
@@ -475,11 +511,11 @@ export class TournamentClient {
   }
 
   private updateBracketDisplay(): void {
-    const bracketContainer = this.container.querySelector('#bracket-container');
-    // 단순화: 브라켓 정보가 있으면 업데이트
-    if (bracketContainer && this.currentMatch) {
-      console.log('Updating bracket display for current match:', this.currentMatch);
-      // 실제 브라켓 정보가 필요하다면 별도 관리 필요
+    // 브라켓 모달이 열려있으면 내용만 갱신
+    const bracketDiv = document.querySelector('#bracket-container');
+    if (bracketDiv && this.bracketMatches) {
+      const bracket = { rounds: [this.bracketMatches.filter(m => m.round_number === 1), this.bracketMatches.filter(m => m.round_number === 2)] };
+      bracketDiv.innerHTML = this.generateBracketHTML(bracket);
     }
   }
 
@@ -539,5 +575,17 @@ export class TournamentClient {
       data: { tournamentId: this.tournamentId }
     });
     this.destroy();
+  }
+
+  private makeGameResult(winner: any): any {
+    // GameEndModal에 전달할 GameResult 객체 생성 (간략화)
+    // 실제 구현에서는 점수, 플레이어 정보 등 추가 필요
+    return {
+      winner: winner?.side || 'left',
+      leftPlayer: { nickname: winner?.leftPlayer?.nickname || 'Player 1', score: winner?.leftPlayer?.score || 0 },
+      rightPlayer: { nickname: winner?.rightPlayer?.nickname || 'Player 2', score: winner?.rightPlayer?.score || 0 },
+      totalRounds: (winner?.leftPlayer?.score || 0) + (winner?.rightPlayer?.score || 0),
+      gameMode: 'tournament'
+    };
   }
 } 
