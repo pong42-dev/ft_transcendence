@@ -99,7 +99,7 @@ export class GameSetupModal {
         </button>
         <button data-mode="local" class="rounded-lg border border-terminal-gray p-4 text-left transition-all hover:bg-terminal-gray hover:bg-opacity-10">
           <div class="text-lg font-bold mb-2">${i18n.t('gameSetupModal.local')}</div>
-          <div class="text-sm opacity-70">${i18n.t('gameSetupModal.play_with_a guest')}</div>
+          <div class="text-sm opacity-70">${i18n.t('gameSetupModal.play_with_a_guest')}</div>
         </button>
         <button data-mode="tournament" class="rounded-lg border border-terminal-gray p-4 text-left transition-all hover:bg-terminal-gray hover:bg-opacity-10">
           <div class="text-lg font-bold mb-2">${i18n.t('gameSetupModal.tournament')}</div>
