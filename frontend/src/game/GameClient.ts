@@ -8,7 +8,7 @@ import { ModalManager } from '../managers/ModalManager';
 export interface GameClientCallbacks {
   onPreGameCountdown: (remainingTime: number) => void;
   onGameStart: () => void;
-  onFinish: () => void;
+  onFinish: (winner?: any) => void;
 }
 
 export class GameClient {
@@ -52,15 +52,21 @@ export class GameClient {
     this.webSocketService.on('game_event', this.handlePreGameEvent);
     this.webSocketService.on('close', this.handleConnectionClose);
     this.webSocketService.on('error', this.handleError);
+    this.webSocketService.on('open', () => {
+      console.log('[LOG] GameClient WebSocket 연결 성공');
+    });
 
     // 2. WebSocket에 연결합니다.
     const userPlayer = this.gameInfo.players.find(p => p.type === 'user');
-    if (!userPlayer) {
+        if (!userPlayer) {
       console.error("User player not found");
       this.callbacks.onFinish();
       return;
     }
+    if (userPlayer)
     this.playerId = userPlayer.id;
+    
+    // ROUND2 에는 user 참가자가 없으므로 round 는 FINISH 상태가 됩니다.
 
     const backendHost = 'localhost:3000';
     const wsUrl = `ws://${backendHost}/ws/game/${this.gameId}?playerId=${this.playerId}`;
@@ -392,12 +398,12 @@ export class GameClient {
       isFinal: false,
       onProfileClick: () => {
         // onProfileClick - 프로필 보기하고 게임 종료
-        this.callbacks.onFinish();
+        this.callbacks.onFinish(gameResult);
       },
       onNextMatch: undefined, // 토너먼트가 아니므로 불필요
       onGameFinish: () => {
         // onGameFinish - Close 버튼을 눌렀을 때만 게임 종료
-        this.callbacks.onFinish();
+        this.callbacks.onFinish(gameResult);
       },
       gameMode: this.gameInfo.type, // 게임 모드 전달
       aiDifficulty: this.gameInfo.type === 'ai_1v1' ? (this.aiDifficulty || 'medium') : undefined // AI 모드일 때만 난이도 전달

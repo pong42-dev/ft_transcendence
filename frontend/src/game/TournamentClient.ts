@@ -42,12 +42,9 @@ export class TournamentClient {
   private renderer: GameRenderer;
   private inputHandler: InputHandler;
   private gameClient: GameClient | null = null;
-  private currentMatch: TournamentMatch | null = null;
-  private tournamentProgress: TournamentProgress | null = null;
-  private isActive: boolean = false;
   private tournamentWebSocketService: TournamentWebSocketService | null = null;
-  private processedMatchIds: Set<number> = new Set(); // 중복 처리 방지
-  private tournamentStarted: boolean = false; // 토너먼트 시작 상태 추적
+  private currentMatch: TournamentMatch | null = null; // 현재 매치 정보를 단일 인스턴스로 관리
+  private bracketMatches: TournamentMatch[] | null = null; // 브라켓 정보를 저장할 배열
 
   constructor(
     container: HTMLElement,
@@ -64,13 +61,11 @@ export class TournamentClient {
   }
 
   public start(): void {
-    this.isActive = true;
     this.renderTournamentWaitingScreen();
     this.connectToTournament();
   }
 
   public destroy(): void {
-    this.isActive = false;
     this.gameClient?.destroy();
     this.tournamentWebSocketService?.disconnect();
     this.container.innerHTML = '';
@@ -90,36 +85,22 @@ export class TournamentClient {
     this.tournamentWebSocketService = new TournamentWebSocketService();
     this.tournamentWebSocketService.connect(this.tournamentId.toString(), this.currentUserId);
 
-    // 웹소켓 이벤트 리스너 등록
     this.tournamentWebSocketService.on('open', () => {
-      console.log('Tournament WebSocket connection established');
-      // 연결 후 5초 카운트다운 시작
       this.startCountdown();
     });
-
     this.tournamentWebSocketService.on('tournament_bracket', (data: any) => {
       this.handleTournamentBracket(data);
     });
-
     this.tournamentWebSocketService.on('bracket_update', (data: any) => {
       this.handleBracketUpdate(data);
     });
-
     this.tournamentWebSocketService.on('match_starting', (data: any) => {
       this.handleMatchStarting(data);
     });
-
     this.tournamentWebSocketService.on('tournament_end', (data: any) => {
       this.handleTournamentEnd(data);
     });
-
-    this.tournamentWebSocketService.on('message', (message: any) => {
-      console.log('Tournament WebSocket message received:', message);
-    });
-
-    // 연결 오류 처리
     this.tournamentWebSocketService.on('error', (error: any) => {
-      console.error('Tournament WebSocket error:', error);
       alert('토너먼트 연결 중 오류가 발생했습니다.');
       this.destroy();
     });
@@ -329,44 +310,68 @@ export class TournamentClient {
 
   private handleBracketUpdate(data: any): void {
     console.log('Bracket update received:', data);
-    
-    // 중복 처리 방지 - 현재 매치가 진행 중이면 업데이트 건너뛰기
+    if (data && data.matches) {
+      this.bracketMatches = data.matches;
+    }
     if (this.currentMatch && this.currentMatch.status === 'starting') {
-      console.log('Match in progress, skipping bracket update');
+      console.log('Match in progress, skipping bracket update. currentMatch:', this.currentMatch);
       return;
     }
-    
-    // 브라켓 업데이트 처리
-    if (this.tournamentProgress) {
-      this.tournamentProgress = { ...this.tournamentProgress, ...data };
+    if (!this.currentMatch) {
+      console.log('No current match, skipping bracket update.');
+      return;
+    }
+    const matchId = this.currentMatch.id;
+    if (this.currentMatch.resultSent) {
+      console.log('Match result already sent, skipping update. currentMatch:', this.currentMatch);
+      return;
+    }
+    if (data.matchId && data.matchId === matchId) {
+      if (data.status) {
+        this.currentMatch.status = data.status;
+      }
+      if (data.winnerId) {
+        this.currentMatch.winner_id = data.winnerId;
+        this.currentMatch.resultSent = true;
+      }
       this.updateBracketDisplay();
     }
   }
 
   private handleMatchStarting(data: any): void {
-    // 서버에서 받은 데이터 파싱
-    const { matchId, gameId, participants } = data;
-
-    // 기존 게임 클라이언트 정리
+    console.log('[LOG] handleMatchStarting 진입', data);
+    const { matchId, gameId, participants, round_number } = data;
+    // round_number 우선순위: data.round_number → bracketMatches에서 찾기 → 1
+    let roundNum = round_number;
+    if (roundNum === undefined && this.bracketMatches) {
+      const match = this.bracketMatches.find((m: any) => m.id == matchId);
+      if (match && match.round_number !== undefined) {
+        roundNum = match.round_number;
+      }
+    }
+    if (roundNum === undefined) roundNum = 1;
+    // === currentMatch를 항상 새 매치 정보로 갱신 ===
+    this.currentMatch = {
+      id: matchId,
+      round_number: roundNum,
+      status: 'starting',
+      participants: participants || [],
+      winner_id: undefined,
+      started_at: undefined,
+      resultSent: false // 반드시 false로 초기화
+    };
+    console.log('[LOG] handleMatchStarting 후 currentMatch:', this.currentMatch);
     if (this.gameClient) {
       this.gameClient.destroy();
       this.gameClient = null;
     }
-
-    // 게임 컨테이너 찾기 (없으면 생성)
     let gameContainer = this.container.querySelector('#game-container');
     if (!gameContainer) {
-      // 컨테이너가 없으면 새로 생성해서 붙임
       gameContainer = document.createElement('div');
       gameContainer.id = 'game-container';
-      gameContainer.className = 'flex-1 flex items-center justify-center';
-      this.container.innerHTML = '';
+      gameContainer.className = 'flex-1 flex flex-col';
       this.container.appendChild(gameContainer);
-    } else {
-      gameContainer.innerHTML = '';
     }
-
-    // GameClient 인스턴스 생성 (일반 게임과 동일한 방식)
     this.gameClient = new GameClient(
       {
         gameId: gameId,
@@ -374,22 +379,22 @@ export class TournamentClient {
         status: 'waiting',
         players: participants
       },
-      new WebSocketService(), // 실제 게임용 WebSocketService
-      this.renderer,          // GameRenderer 인스턴스
-      this.inputHandler,      // InputHandler 인스턴스
+      new WebSocketService(),
+      this.renderer,
+      this.inputHandler,
       {
         onPreGameCountdown: () => {},
         onGameStart: () => {},
-        onFinish: () => {
-          this.handleMatchFinish(null);
+        onFinish: (winner: any) => {
+          this.handleMatchFinish(winner);
         },
-      }
+      },
+      null // playerId는 null
     );
-
-    // 게임 화면 렌더링
-    gameContainer.appendChild(this.renderer.render());
-
-    // 게임 클라이언트 연결 시작
+    console.log('[LOG] gameClient 생성 완료:', this.gameClient);
+    const renderResult = this.renderer.render();
+    console.log('[LOG] renderer.render() 반환값:', renderResult);
+    gameContainer.appendChild(renderResult);
     this.gameClient.connectAndListen();
   }
 
@@ -400,31 +405,60 @@ export class TournamentClient {
 
   private handleMatchFinish(winner: any): void {
     console.log('Match finished, winner:', winner);
-    
+    // === winnerId가 undefined/null이면 participants에서 닉네임/점수로 찾아서 보정 ===
+    let winnerId = winner?.id;
+    if (winnerId === undefined || winnerId === null) {
+      if (winner && winner.winner && this.currentMatch && this.currentMatch.participants) {
+        const winnerName = typeof winner.winner === 'string' ? winner.winner : winner.winner.nickname || winner.winner.name;
+        const found = this.currentMatch.participants.find(
+          (p: any) => p.name === winnerName || p.nickname === winnerName || p.display_name === winnerName
+        );
+        if (found) {
+          winnerId = found.id;
+          console.log('[보정] winnerId를 participants에서 찾아서 할당:', winnerId);
+        }
+      }
+      if ((winnerId === undefined || winnerId === null) && winner && winner.leftPlayer && winner.rightPlayer) {
+        const left = this.currentMatch?.participants[0];
+        const right = this.currentMatch?.participants[1];
+        if (left && right) {
+          if (winner.leftPlayer.score > winner.rightPlayer.score) winnerId = left.id;
+          else if (winner.leftPlayer.score < winner.rightPlayer.score) winnerId = right.id;
+        }
+        if (winnerId) console.log('[보정] 점수로 winnerId 추정:', winnerId);
+      }
+    }
+    if (winnerId === undefined || winnerId === null) {
+      console.warn('[WARN] handleMatchFinish: winnerId가 undefined/null입니다. winner:', winner, 'participants:', this.currentMatch?.participants);
+      return;
+    }
     // 게임 클라이언트 정리
     this.gameClient?.destroy();
     this.gameClient = null;
-
     // 중복 결과 전송 방지
-    if (this.currentMatch && this.tournamentWebSocketService && !this.currentMatch.resultSent) {
-      const winnerId = winner?.id || this.currentMatch.participants[0]?.id || 0;
-      console.log('Sending match result to server:', {
-        matchId: this.currentMatch.id,
-        winnerId: winnerId
-      });
-      this.tournamentWebSocketService.sendMessage({
-        type: 'match_result',
-        data: {
-          matchId: this.currentMatch.id,
-          winnerId: winnerId
-        }
-      });
-      
-      // 결과 전송 플래그 설정
-      this.currentMatch.resultSent = true;
+    if (!this.currentMatch) {
+      console.log('No current match, skipping result send.');
+      return;
     }
-
-    // 다음 매치 대기 화면으로 전환
+    const matchId = this.currentMatch.id;
+    if (this.currentMatch.resultSent) {
+      console.log('Match result already sent, skipping...');
+      return;
+    }
+    console.log('Sending match result to server:', {
+      matchId: matchId,
+      winnerId: winnerId,
+      resultSent: this.currentMatch.resultSent
+    });
+    this.tournamentWebSocketService?.sendMessage({
+      type: 'match_result',
+      data: {
+        matchId: matchId,
+        winnerId: winnerId
+      }
+    });
+    this.currentMatch.resultSent = true;
+    console.log('[LOG] handleMatchFinish 후 currentMatch:', this.currentMatch);
     this.renderWaitingForNextMatch();
   }
 
@@ -443,21 +477,15 @@ export class TournamentClient {
 
   private updateBracketDisplay(): void {
     const bracketContainer = this.container.querySelector('#bracket-container');
-    if (bracketContainer && this.tournamentProgress) {
-      // 브라켓 디스플레이 업데이트 로직
-      console.log('Updating bracket display with:', this.tournamentProgress);
+    // 단순화: 브라켓 정보가 있으면 업데이트
+    if (bracketContainer && this.currentMatch) {
+      console.log('Updating bracket display for current match:', this.currentMatch);
+      // 실제 브라켓 정보가 필요하다면 별도 관리 필요
     }
   }
 
   private startTournament(): void {
     console.log('Starting tournament...');
-    
-    // 중복 시작 방지
-    if (this.tournamentStarted) {
-      console.log('Tournament already started, skipping...');
-      return;
-    }
-    this.tournamentStarted = true;
     
     this.tournamentWebSocketService?.sendMessage({
       type: 'tournament_start',
@@ -488,16 +516,10 @@ export class TournamentClient {
         clearInterval(countdownInterval);
         console.log('Countdown finished, starting tournament...');
         
-        // 중복 시작 방지
-        if (!this.tournamentStarted) {
-          this.tournamentStarted = true;
-          
-          // 토너먼트 시작 메시지 전송
-          this.tournamentWebSocketService?.sendMessage({
-            type: 'tournament_start',
+        this.tournamentWebSocketService?.sendMessage({
+          type: 'tournament_start',
             data: { playerId: this.currentUserId }
-          });
-        }
+        });
         
         // 상태 업데이트
         if (statusElement) {
