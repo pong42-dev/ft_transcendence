@@ -389,7 +389,6 @@ export class TournamentClient {
           this.handleMatchFinish(winner);
         },
       },
-      null // playerId는 null
     );
     console.log('[LOG] gameClient 생성 완료:', this.gameClient);
     const renderResult = this.renderer.render();
