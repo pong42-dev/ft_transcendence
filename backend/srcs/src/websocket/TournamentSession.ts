@@ -75,6 +75,10 @@ export class TournamentSession {
     
     switch (parsed.type) {
       case 'tournament_start':
+        if (this.status === 'in_progress' || (this as any)._isStartingTournament) {
+          this.fastify.log.info(`[Session ${this.tournamentId}] Tournament start request ignored (already started or in progress).`);
+          return;
+        }
         this.fastify.log.info(`[Session ${this.tournamentId}] Starting tournament...`);
         await this.startTournament();
         break;
