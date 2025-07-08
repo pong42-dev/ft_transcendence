@@ -8,7 +8,7 @@ import { ModalManager } from '../managers/ModalManager';
 export interface GameClientCallbacks {
   onPreGameCountdown: (remainingTime: number) => void;
   onGameStart: () => void;
-  onFinish: (winner?: any) => void;
+  onFinish: () => void;
 }
 
 export class GameClient {
@@ -398,12 +398,12 @@ export class GameClient {
       isFinal: false,
       onProfileClick: () => {
         // onProfileClick - 프로필 보기하고 게임 종료
-        this.callbacks.onFinish(gameResult);
+        this.callbacks.onFinish();
       },
       onNextMatch: undefined, // 토너먼트가 아니므로 불필요
       onGameFinish: () => {
         // onGameFinish - Close 버튼을 눌렀을 때만 게임 종료
-        this.callbacks.onFinish(gameResult);
+        this.callbacks.onFinish();
       },
       gameMode: this.gameInfo.type, // 게임 모드 전달
       aiDifficulty: this.gameInfo.type === 'ai_1v1' ? (this.aiDifficulty || 'medium') : undefined // AI 모드일 때만 난이도 전달

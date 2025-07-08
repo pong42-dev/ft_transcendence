@@ -353,7 +353,7 @@ export class TournamentClient {
   }
 
   private handleMatchStarting(data: any): void {
-    // 매치 시작 시 브라켓 모달 닫고, 메인 컨테이너에 게임 전체화면 렌더
+    // 매치 시작 시 브라켓 모달을 닫고, 메인 컨테이너에 게임 전체화면을 렌더링합니다.
     if (this.bracketModalId) {
       this.modalManager.hide();
       this.bracketModalId = null;
@@ -368,133 +368,108 @@ export class TournamentClient {
       started_at: undefined,
       resultSent: false
     };
-    this.renderGameToMain({ gameId, participants });
+      this.renderGameToMain({ gameId, participants });
   }
 
   private handleTournamentEnd = (data: any): void => {
     // 최종 결과 모달만 띄우고, 브라켓은 그대로 유지
-    this.handleMatchFinish(data.winner);
+    this.handleMatchFinish();
   };
 
   private renderGameToMain({ gameId, participants }: { gameId: string; participants: any[] }) {
-    // 메인 컨테이너(예: .main-content)에 게임 전체화면 렌더링
+    // 메인 콘텐츠 영역을 찾아 게임 렌더러의 결과물로 교체합니다.
     const mainContent = document.querySelector('.main-content') as HTMLElement;
     if (!mainContent) {
-      alert('게임 컨테이너를 찾을 수 없습니다.');
+      console.error('메인 콘텐츠 영역을 찾을 수 없습니다.');
       return;
     }
+    // 기존 내용을 비우고 게임 화면을 채웁니다.
     mainContent.innerHTML = '';
+    // 새로운 GameClient를 생성합니다.
     this.gameClient = new GameClient(
-      {
-        gameId: gameId,
-        type: 'tournament',
-        status: 'waiting',
-        players: participants
-      },
+      { gameId, type: 'tournament', status: 'waiting', players: participants },
       new WebSocketService(),
-      this.renderer,
+      this.renderer, // TournamentClient가 이미 가지고 있는 renderer를 재사용
       this.inputHandler,
       {
         onPreGameCountdown: () => {},
         onGameStart: () => {},
-        onFinish: (winner: any) => {
-          this.handleMatchFinish(winner);
+        onFinish: () => {
+          // matchId만 넘김 (undefined 방지)
+          if (this.currentMatch?.id !== undefined) {
+            this.handleMatchFinish(this.currentMatch.id);
+          } else {
+            console.warn('[WARN] onFinish: currentMatch.id가 undefined입니다.');
+          }
         },
       },
     );
+    // 렌더러의 DOM 요소를 메인 콘텐츠에 추가
     mainContent.appendChild(this.renderer.render());
+    // 게임 클라이언트의 WebSocket 연결을 시작합니다.
     this.gameClient.connectAndListen();
   }
 
-  private handleMatchFinish(winner: any): void {
-    // 경기 종료 시 게임 화면은 그대로 두고 결과 모달만 띄움
-    if (this.matchModalId) {
-      this.modalManager.hide();
-      this.matchModalId = null;
-    }
-    // 서버에 결과 전송 등 기존 로직 유지
-    // === winnerId가 undefined/null이면 participants에서 닉네임/점수로 찾아서 보정 ===
-    let winnerId = winner?.id;
-    if (winnerId === undefined || winnerId === null) {
-      if (winner && winner.winner && this.currentMatch && this.currentMatch.participants) {
-        const winnerName = typeof winner.winner === 'string' ? winner.winner : winner.winner.nickname || winner.winner.name;
-        const found = this.currentMatch.participants.find(
-          (p: any) => p.name === winnerName || p.nickname === winnerName || p.display_name === winnerName
-        );
-        if (found) {
-          winnerId = found.id;
-          console.log('[보정] winnerId를 participants에서 찾아서 할당:', winnerId);
-        }
-      }
-      if ((winnerId === undefined || winnerId === null) && winner && winner.leftPlayer && winner.rightPlayer) {
-        const left = this.currentMatch?.participants[0];
-        const right = this.currentMatch?.participants[1];
-        if (left && right) {
-          if (winner.leftPlayer.score > winner.rightPlayer.score) winnerId = left.id;
-          else if (winner.leftPlayer.score < winner.rightPlayer.score) winnerId = right.id;
-        }
-        if (winnerId) console.log('[보정] 점수로 winnerId 추정:', winnerId);
-      }
-    }
-    if (winnerId === undefined || winnerId === null) {
-      console.warn('[WARN] handleMatchFinish: winnerId가 undefined/null입니다. winner:', winner, 'participants:', this.currentMatch?.participants);
+  // handleMatchFinish를 matchId만 받아서, match 정보를 API로 조회 후 렌더링
+  private async handleMatchFinish(matchId?: number) {
+    if (matchId === undefined) {
+      console.warn('[WARN] handleMatchFinish: matchId가 undefined입니다.');
       return;
     }
-    // 게임 클라이언트 정리
+    // 게임 클라이언트 리소스 정리
     this.gameClient?.destroy();
     this.gameClient = null;
-    // 중복 결과 전송 방지
-    if (!this.currentMatch) {
-      console.log('No current match, skipping result send.');
-      return;
-    }
-    const matchId = this.currentMatch.id;
-    if (this.currentMatch.resultSent) {
-      console.log('Match result already sent, skipping...');
-      return;
-    }
-    console.log('Sending match result to server:', {
-      matchId: matchId,
-      winnerId: winnerId,
-      resultSent: this.currentMatch.resultSent
-    });
-    this.tournamentWebSocketService?.sendMessage({
-      type: 'match_result',
-      data: {
-        matchId: matchId,
-        winnerId: winnerId
+    try {
+      const res = await fetch(`/api/tournaments/${this.tournamentId}/matches/${matchId}`);
+      const match = await res.json();
+      if (match.status !== 'finished') {
+        console.warn('[WARN] handleMatchFinish: match가 아직 finished 상태가 아님', match);
+        return;
       }
-    });
-    this.currentMatch.resultSent = true;
-    console.log('[LOG] handleMatchFinish 후 currentMatch:', this.currentMatch);
-    // 결과 모달 띄우기
-    const isFinal = this.currentMatch?.round_number === 2;
-    const gameResult = this.makeGameResult(winner);
-    const resultModal = new GameEndModal(
-      gameResult,
-      true, // isTournament
-      isFinal,
-      () => {
-        this.modalManager.hide();
-        this.resultModalId = null;
-        // 다음 매치 대기 시 브라켓 모달 다시 띄움
-        if (!isFinal) {
+      const winner = match.winner_id;
+      const scores = match.participants.map((p: any) => ({ id: p.id, score: p.score, display_name: p.display_name }));
+      // 이하 기존 winner, scores로 결과 렌더링 로직
+      let winnerId = winner;
+      if (winnerId === undefined || winnerId === null) {
+        console.warn('[WARN] handleMatchFinish: winnerId가 undefined/null입니다. match:', match);
+        return;
+      }
+      if (this.currentMatch && this.currentMatch.resultSent) {
+        console.log('Match result already sent, skipping...');
+        return;
+      }
+      if (this.currentMatch) this.currentMatch.resultSent = true;
+      this.renderMainView({ status: 'in_progress', message: '다음 경기를 기다리는 중...' });
+      if (this.bracketMatches) {
+        this.updateBracketDisplay();
+      }
+      // 결과 모달 띄우기 등 기존 로직 유지
+      const isFinal = this.currentMatch?.round_number === 2;
+      const gameResult = this.makeGameResult({ id: winnerId }, scores);
+      const resultModal = new GameEndModal(
+        gameResult,
+        true, // isTournament
+        isFinal,
+        () => {
+          this.modalManager.hide();
+          this.resultModalId = null;
+          if (!isFinal) {
+            this.openBracketModal('waiting', '다음 매치 대기 중...');
+          }
+        },
+        isFinal ? undefined : () => {
+          this.modalManager.hide();
+          this.resultModalId = null;
           this.openBracketModal('waiting', '다음 매치 대기 중...');
-        }
-      },
-      isFinal ? undefined : () => {
-        this.modalManager.hide();
-        this.resultModalId = null;
-        // 다음 매치 대기 시 브라켓 모달 다시 띄움
-        this.openBracketModal('waiting', '다음 매치 대기 중...');
-      },
-      undefined,
-      'tournament'
-    );
-    resultModal.show();
-    this.resultModalId = null;
-    // 브라켓 갱신 등 추가 처리
-    this.updateBracketDisplay();
+        },
+        undefined,
+        'tournament'
+      );
+      resultModal.show();
+      this.resultModalId = null;
+    } catch (e) {
+      console.error('handleMatchFinish: match 정보 조회 실패', e);
+    }
   }
 
   private renderWaitingForNextMatch(): void {
@@ -577,14 +552,14 @@ export class TournamentClient {
     this.destroy();
   }
 
-  private makeGameResult(winner: any): any {
+  private makeGameResult(winner: any, scores: any[]): any {
     // GameEndModal에 전달할 GameResult 객체 생성 (간략화)
     // 실제 구현에서는 점수, 플레이어 정보 등 추가 필요
     return {
-      winner: winner?.side || 'left',
-      leftPlayer: { nickname: winner?.leftPlayer?.nickname || 'Player 1', score: winner?.leftPlayer?.score || 0 },
-      rightPlayer: { nickname: winner?.rightPlayer?.nickname || 'Player 2', score: winner?.rightPlayer?.score || 0 },
-      totalRounds: (winner?.leftPlayer?.score || 0) + (winner?.rightPlayer?.score || 0),
+      winner: winner?.id,
+      leftPlayer: scores.find(p => p.id === this.currentMatch?.participants[0]?.id) || { nickname: 'Player 1', score: 0 },
+      rightPlayer: scores.find(p => p.id === this.currentMatch?.participants[1]?.id) || { nickname: 'Player 2', score: 0 },
+      totalRounds: (scores.find(p => p.id === this.currentMatch?.participants[0]?.id)?.score || 0) + (scores.find(p => p.id === this.currentMatch?.participants[1]?.id)?.score || 0),
       gameMode: 'tournament'
     };
   }
