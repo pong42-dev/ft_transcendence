@@ -150,25 +150,34 @@ export class TournamentSession {
     await matchesRepository.updateMatchStatus(matchId, 'finished', winnerId);
 
     // c) 토너먼트 상태 내부 갱신
-    this.handleMatchEnded(matchId, winnerId);
+    this.handleMatchEnded(matchId);
 
     // d) 다음 매치 시작
     // await this.startNextMatch(); // 이 부분은 onRawMatchResult에서 처리
   }
 
   // [기존 handleMatchEnd → handleMatchEnded로 이름만 변경, 내부 로직 그대로]
-  private async handleMatchEnded(matchId: number, winnerId: PlayerId) {
+  private async handleMatchEnded(matchId: number) {
     (this.fastify as any).log?.info?.('----------------handleMatchEnded hello---------');
+    const matchesRepository = (this.fastify as any).matchesRepository;
+    const matchInfo = await matchesRepository.getMatchById(matchId);
+    const winnerId = matchInfo?.winner_id;
     (this.fastify as any).log?.info?.(`[Session ${this.tournamentId}] Match ${matchId} ended. Winner: ${winnerId}`);
     this.currentGameSessionId = null;
     const finishedMatch = this.matches.find(m => m.id === matchId);
     if (!finishedMatch) {
       (this.fastify as any).log?.info?.(`------------ no match found ---------`); return;}
     const tournamentsRepository = (this.fastify as any).tournamentsRepository;
-    const matchesRepository = (this.fastify as any).matchesRepository;
     await matchesRepository.updateMatchStatus(matchId, 'finished', winnerId);
     finishedMatch.status = 'finished';
     finishedMatch.winner_id = winnerId;
+    // === 여기서 세션 정보 대신 repository에서 점수 정보 가져오기 ===
+    if (matchInfo) {
+      const scores = matchInfo.participants.map(p => ({ id: p.id, score: p.score, display_name: p.display_name }));
+      (this.fastify as any).log?.info?.(`[RepositoryInfo] scores: ${JSON.stringify(scores)}`);
+      // 필요하다면 winnerId, 점수 등 추가 활용 가능
+    }
+    // === 기존 로직 계속 ===
     const nextMatchId = (finishedMatch as any).nextMatchId;
     (this.fastify as any).log?.info?.(`next match id: ${nextMatchId}`);
 
@@ -321,7 +330,7 @@ export class TournamentSession {
             this.sendToClient(message);
             if (gameEvent.event === 'game_end') {
               (this.fastify as any).log?.error?.(`handlematchended`);
-              this.handleMatchEnded(nextMatch.id, gameEvent.data?.winnerId);
+              this.handleMatchEnded(nextMatch.id);
             }
           } catch (err) {
             (this.fastify as any).log?.error?.(`[Session ${this.tournamentId}] Error in onEvent callback:`, err);
