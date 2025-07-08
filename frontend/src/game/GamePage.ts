@@ -21,6 +21,7 @@ export class GamePage {
     // 브라우저 이벤트 리스너들을 추적하기 위한 변수들
     private isGameActive: boolean = false;
     private isInitializing: boolean = false; // 초기화 중복 방지
+    private isTournamentCreating: boolean = false; // 토너먼트 생성 중복 방지
     private beforeUnloadHandler?: (e: BeforeUnloadEvent) => void;
     private visibilityChangeHandler?: () => void;
     private popStateHandler?: (event: PopStateEvent) => void;
@@ -40,12 +41,16 @@ export class GamePage {
     }
 
     private async init(gameSetupResult?: GameSetupResult | null) {
+        console.log('=== INIT CALLED ===');
+        console.log('Current isInitializing:', this.isInitializing);
+        
         // 중복 초기화 방지
         if (this.isInitializing) {
             console.log('GamePage is already initializing, skipping...');
             return;
         }
         this.isInitializing = true;
+        console.log('Set isInitializing to true');
 
         console.log('=== GAME PAGE INIT START ===');
         console.log('Game setup result:', gameSetupResult);
@@ -84,6 +89,13 @@ export class GamePage {
                 // 2. 토너먼트 모드일 경우: TournamentApiService를 호출합니다.
                 console.log('=== TOURNAMENT MODE DETECTED ===');
                 console.log('Game settings:', gameSettings);
+                
+                // 토너먼트 생성 중복 방지
+                if (this.isTournamentCreating) {
+                    console.log('Tournament creation already in progress, skipping...');
+                    return;
+                }
+                
                 console.log('Requesting to create a tournament...');
                 
                 // 사용자 ID를 JWT에서 직접 추출
@@ -99,6 +111,9 @@ export class GamePage {
                 // GamePage의 CreateGameRequestDto를 그대로 백엔드에 전송
                 console.log('Tournament request data:', gameSettings);
 
+                // 토너먼트 생성 플래그 설정
+                this.isTournamentCreating = true;
+
                 // 토너먼트 생성 API 호출
                 try {
                     const tournamentInfo = await this.apiClient.tournament.createTournament(gameSettings);
@@ -107,16 +122,17 @@ export class GamePage {
                     // TournamentClient 시작
                     this.startTournament(tournamentInfo);
                 } catch (error: any) {
+                    console.error('Tournament creation failed:', error);
                     if (error.status === 429) {
-                        console.log('Tournament creation in progress, retrying...');
-                        // 잠시 후 재시도
-                        setTimeout(() => {
-                            console.log('여기 왔기 때문에 재호출');
-                            this.init(gameSetupResult);
-                        }, 2000);
-                        return;
+                        alert('토너먼트 생성이 이미 진행 중입니다. 잠시 후 다시 시도해주세요.');
+                    } else {
+                        alert('토너먼트 생성에 실패했습니다: ' + (error.message || '알 수 없는 오류'));
                     }
-                    throw error; // 다른 에러는 다시 던짐
+                    this.onGameEndCallback();
+                    return;
+                } finally {
+                    // 토너먼트 생성 완료 (성공 또는 실패)
+                    this.isTournamentCreating = false;
                 }
 
             }
@@ -206,6 +222,8 @@ export class GamePage {
 
     public destroy(): void {
         this.isGameActive = false;
+        this.isInitializing = false;
+        this.isTournamentCreating = false;
         this.removeBrowserEventListeners();
         this.gameClient?.destroy();
         this.tournamentClient?.destroy();
