@@ -52,9 +52,9 @@ export class CommandHandler {
       case 'play':
         await this.handlePlayCommand();
         break;
-      case 'tournament':
-        this.handleTournamentCommand();
-        break;
+      // case 'tournament':
+      //   this.handleTournamentCommand();
+      //   break;
       case '2fa':
         await this.handle2FACommand(args);
         break;
@@ -267,14 +267,15 @@ export class CommandHandler {
     }
   }
 
-  private handleTournamentCommand(): void {
-    try {
-      this.deps.onShowModal('tournament');
-    } catch (error) {
-      this.deps.terminal.appendOutput(i18next.t('tournamentCommand.failed_open_modal'));
-      console.error('Tournament command error:', error);
-    }
-  }
+  // test tournament modal 삭제 이슈로 일단 주석처리 해두었습니다!
+  // private handleTournamentCommand(): void {
+  //   try {
+  //     this.deps.onShowModal('tournament');
+  //   } catch (error) {
+  //     this.deps.terminal.appendOutput(i18next.t('tournamentCommand.failed_open_modal'));
+  //     console.error('Tournament command error:', error);
+  //   }
+  // }
 
   private async handle2FACommand(args: string[]): Promise<void> {
     if (!authStore.getIsLoggedIn()) {
