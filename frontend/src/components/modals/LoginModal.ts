@@ -172,9 +172,9 @@ export class LoginModal {
     emailInput?.addEventListener('blur', () => this.validateEmail());
     passwordInput?.addEventListener('blur', () => this.validatePassword());
 
-    // 에러 제거 (입력 시)
-    emailInput?.addEventListener('input', () => this.clearFieldError('email'));
-    passwordInput?.addEventListener('input', () => this.clearFieldError('password'));
+    // 에러 제거 (포커스 잃을 때만)
+    emailInput?.addEventListener('focus', () => this.clearGeneralError());
+    passwordInput?.addEventListener('focus', () => this.clearGeneralError());
   }
 
   /**
@@ -205,7 +205,6 @@ export class LoginModal {
 
     this.isSubmitting = true;
     DOMUpdater.toggleLoading('#login-btn', true, 'Signing in...');
-    this.hideGeneralError();
 
     try {
       const emailInput = document.querySelector('#email-input') as HTMLInputElement;
@@ -216,22 +215,11 @@ export class LoginModal {
         passwordInput.value
       );
 
-      console.log('[LoginModal] Login response check:', {
-        hasRequires2FA: 'requires2FA' in response,
-        requires2FA: (response as any).requires2FA,
-        hasTmpToken: 'tmpToken' in response,
-        tmpToken: (response as any).tmpToken
-      });
-
       if ('requires2FA' in response && (response as any).requires2FA) {
-        console.log('[LoginModal] Calling on2FARequired with tmpToken:', (response as any).tmpToken);
         this.callbacks.on2FARequired((response as any).tmpToken);
-        console.log('[LoginModal] NOT hiding modal - 2FA required');
         // 2FA가 필요한 경우 모달을 닫지 않음 - 2FA 완료 후에 닫아야 함
       } else {
-        console.log('[LoginModal] Calling onLoginSuccess');
         this.callbacks.onLoginSuccess(response as User);
-        console.log('[LoginModal] Hiding modal - login success');
         this.hide();
       }
     } catch (error: any) {
@@ -262,8 +250,12 @@ export class LoginModal {
    * 회원가입 모달로 전환
    */
   private handleSwitchToRegister(): void {
+    // 모달이 완전히 사라진 후 회원가입 모달 표시
+    setTimeout(() => {
+      this.callbacks.onSwitchToRegister();
+    }, 250); // 애니메이션 시간(200ms)보다 조금 더 길게
+    
     this.hide();
-    this.callbacks.onSwitchToRegister();
   }
 
   /**
@@ -298,28 +290,20 @@ export class LoginModal {
     return emailValid && passwordValid;
   }
 
-  /**
-   * 필드 에러 제거
-   */
-  private clearFieldError(fieldType: 'email' | 'password'): void {
-    const errorElement = document.querySelector(`#${fieldType}-input-error`) as HTMLElement;
-    const inputElement = document.querySelector(`#${fieldType}-input`) as HTMLElement;
-    
-    if (errorElement) {
-      DOMUpdater.hideError(errorElement);
-    }
-    
-    if (inputElement) {
-      DOMUpdater.updateClass(inputElement, 'border-terminal-red', false);
-      DOMUpdater.updateClass(inputElement, 'border-terminal-gray', true);
-    }
-  }
 
   /**
    * 일반 에러 표시
    */
   private showGeneralError(message: string): void {
     DOMUpdater.showError('#general-error', message, { animate: true });
+    
+    // 에러 메시지를 10초 후에 자동으로 숨기기
+    setTimeout(() => {
+      const errorElement = document.querySelector('#general-error');
+      if (errorElement && !errorElement.classList.contains('hidden')) {
+        DOMUpdater.hideError('#general-error', { animate: true, duration: 500 });
+      }
+    }, 10000);
   }
 
   /**
@@ -330,6 +314,16 @@ export class LoginModal {
   }
 
   /**
+   * 일반 에러 클리어 (사용자가 입력 시작할 때)
+   */
+  private clearGeneralError(): void {
+    const errorElement = document.querySelector('#general-error');
+    if (errorElement && !errorElement.classList.contains('hidden')) {
+      DOMUpdater.hideError('#general-error', { animate: true, duration: 300 });
+    }
+  }
+
+  /**
    * 폼 초기화
    */
   private resetForm(): void {
@@ -337,8 +331,23 @@ export class LoginModal {
     form?.reset();
     
     this.hideGeneralError();
-    this.clearFieldError('email');
-    this.clearFieldError('password');
+    
+    // 필드 에러 및 스타일 초기화
+    const emailError = document.querySelector('#email-error');
+    const passwordError = document.querySelector('#password-error');
+    const emailInput = document.querySelector('#email-input');
+    const passwordInput = document.querySelector('#password-input');
+    
+    [emailError, passwordError].forEach(element => {
+      if (element) element.classList.add('hidden');
+    });
+    
+    [emailInput, passwordInput].forEach(element => {
+      if (element) {
+        element.classList.remove('border-terminal-red');
+        element.classList.add('border-terminal-gray');
+      }
+    });
     
     this.isSubmitting = false;
   }

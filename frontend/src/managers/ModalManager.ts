@@ -4,7 +4,6 @@ import { Terminal } from '../components/Terminal.js';
 import { User } from '../types/types.js';
 import { TwoFAModal } from '../components/modals/TwoFAModal.js';
 import { FileModal } from '../components/modals/FileModal.js';
-import { NewTournamentTestModal } from '../components/modals/NewTournamentTestModal.js';
 
 /**
  * ModalManager - 모달의 중앙 집중식 관리

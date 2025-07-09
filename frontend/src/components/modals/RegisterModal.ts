@@ -257,9 +257,10 @@ export class RegisterModal {
     passwordInput?.addEventListener('blur', () => this.validatePassword());
     confirmPasswordInput?.addEventListener('blur', () => this.validateConfirmPassword());
 
-    // 실시간 중복 체크 (디바운싱) - 이름과 이메일
+    // 실시간 중복 체크 (디바운싱) - 이름만
     nameInput?.addEventListener('input', () => this.debouncedValidateNameWithDuplicateCheck());
-    emailInput?.addEventListener('input', () => this.debouncedValidateEmailWithDuplicateCheck());
+    // 이메일은 입력 중에는 형식 검증만 수행
+    emailInput?.addEventListener('input', () => this.debouncedValidateEmailFormat());
 
     // 디바운싱된 비밀번호 검증
     passwordInput?.addEventListener('input', () => {
@@ -403,35 +404,15 @@ export class RegisterModal {
     this.showValidationLoading('name-input', i18n.t('validation.checking_availability'));
     
     try {
-      console.log('[Debug] Calling checkNicknameExists API for:', name);
       const isDuplicate = await this.apiClient.auth.checkNicknameExists(name);
-      console.log('[Debug] API response - isDuplicate:', isDuplicate);
       
       if (isDuplicate) {
-        console.log('[Debug] Username is duplicate, showing error');
         const result = { isValid: false, message: i18n.t('validation.username_already_taken') };
         DOMUpdater.updateValidationResult('name-input', result);
-        
-        // DOMUpdater가 제대로 작동하지 않을 수 있으니 직접 업데이트도 시도
-        const errorElement = document.querySelector('#name-error') as HTMLElement;
-        const inputElement = document.querySelector('#name-input') as HTMLInputElement;
-        
-        if (errorElement) {
-          errorElement.textContent = 'Username already exists';
-          errorElement.classList.remove('hidden');
-          errorElement.classList.add('text-terminal-red');
-          errorElement.classList.remove('text-terminal-gray', 'text-terminal-green');
-        }
-        
-        if (inputElement) {
-          inputElement.classList.add('border-terminal-red');
-          inputElement.classList.remove('border-terminal-gray', 'border-terminal-green');
-        }
         
         this.validationStates.set('name', { isValid: false, isChecking: false });
         return false;
       } else {
-        console.log('[Debug] Username is available, showing success');
         this.showValidationSuccess('name-input', i18n.t('validation.username_available'));
         this.validationStates.set('name', { isValid: true, isChecking: false });
         return true;
@@ -472,38 +453,15 @@ export class RegisterModal {
     this.showValidationLoading('email-input', i18n.t('validation.checking_availability'));
     
     try {
-      console.log('[Debug] Calling checkEmailExists API for:', email);
       const isDuplicate = await this.apiClient.auth.checkEmailExists(email);
-      console.log('[Debug] API response - isDuplicate:', isDuplicate);
       
       if (isDuplicate) {
-        console.log('[Debug] Email is duplicate, showing error');
         const result = { isValid: false, message: i18n.t('validation.email_already_registered') };
-        console.log('[Debug] Calling DOMUpdater.updateValidationResult with:', result);
         DOMUpdater.updateValidationResult('email-input', result);
-        
-        // DOMUpdater가 제대로 작동하지 않을 수 있으니 직접 업데이트도 시도
-        const errorElement = document.querySelector('#email-error') as HTMLElement;
-        const inputElement = document.querySelector('#email-input') as HTMLInputElement;
-        console.log('[Debug] Direct DOM update - errorElement:', !!errorElement, 'inputElement:', !!inputElement);
-        
-        if (errorElement) {
-          errorElement.textContent = 'Email already exists';
-          errorElement.classList.remove('hidden');
-          errorElement.classList.add('text-terminal-red');
-          errorElement.classList.remove('text-terminal-gray', 'text-terminal-green');
-          console.log('[Debug] Direct error element update:', errorElement.textContent, errorElement.className);
-        }
-        
-        if (inputElement) {
-          inputElement.classList.add('border-terminal-red');
-          inputElement.classList.remove('border-terminal-gray', 'border-terminal-green');
-        }
         
         this.validationStates.set('email', { isValid: false, isChecking: false });
         return false;
       } else {
-        console.log('[Debug] Email is available, showing success');
         this.showValidationSuccess('email-input', i18n.t('validation.email_available'));
         this.validationStates.set('email', { isValid: true, isChecking: false });
         return true;
@@ -563,10 +521,10 @@ export class RegisterModal {
   }
 
   /**
-   * 디바운싱된 이메일 검증
+   * 디바운싱된 이메일 형식 검증만 수행 (중복 체크 없음)
    */
-  private debouncedValidateEmailWithDuplicateCheck(): void {
-    this.clearDebounceTimer('email');
+  private debouncedValidateEmailFormat(): void {
+    this.clearDebounceTimer('email-format');
     
     // 입력 중이면 기존 메시지 지우기
     const emailInput = document.querySelector('#email-input') as HTMLInputElement;
@@ -575,37 +533,33 @@ export class RegisterModal {
     }
     
     const timer = setTimeout(() => {
-      // 형식 검증을 먼저 통과한 경우에만 중복 체크 실행
       const email = emailInput?.value.trim();
       if (email) {
         const formatResult = validateEmail(email);
-        if (formatResult.isValid) {
-          // 형식이 올바른 경우에만 중복 체크 수행
-          this.validateEmailWithDuplicateCheck();
-        } else {
+        if (!formatResult.isValid && formatResult.error) {
           // 형식이 틀렸으면 형식 에러만 표시
-          if (formatResult.error) {
-            const errorElement = document.querySelector('#email-error') as HTMLElement;
-            const inputElement = document.querySelector('#email-input') as HTMLInputElement;
-            
-            if (errorElement) {
-              errorElement.textContent = formatResult.error;
-              errorElement.classList.remove('hidden');
-              errorElement.classList.add('text-terminal-red');
-              errorElement.classList.remove('text-terminal-gray', 'text-terminal-green');
-            }
-            
-            if (inputElement) {
-              inputElement.classList.add('border-terminal-red');
-              inputElement.classList.remove('border-terminal-gray', 'border-terminal-green');
-            }
+          const errorElement = document.querySelector('#email-error') as HTMLElement;
+          const inputElement = document.querySelector('#email-input') as HTMLInputElement;
+          
+          if (errorElement) {
+            errorElement.textContent = formatResult.error;
+            errorElement.classList.remove('hidden');
+            errorElement.classList.add('text-terminal-red');
+            errorElement.classList.remove('text-terminal-gray', 'text-terminal-green');
+          }
+          
+          if (inputElement) {
+            inputElement.classList.add('border-terminal-red');
+            inputElement.classList.remove('border-terminal-gray', 'border-terminal-green');
           }
         }
+        // 형식이 올바르면 아무것도 표시하지 않음 (중복 체크는 blur에서만)
       }
-    }, 500);
+    }, 1000); // 1초로 늘려서 사용자가 입력을 완료할 시간을 줌
     
-    this.debounceTimers.set('email', timer);
+    this.debounceTimers.set('email-format', timer);
   }
+
 
   /**
    * 디바운스 타이머 정리
@@ -627,35 +581,16 @@ export class RegisterModal {
     const errorElement = document.querySelector(`#${errorId}`) as HTMLElement;
     const inputElement = document.querySelector(`#${inputId}`) as HTMLInputElement;
     
-    console.log('[Debug] showValidationLoading:', { 
-      inputId, 
-      errorId, 
-      hasErrorElement: !!errorElement, 
-      hasInputElement: !!inputElement,
-      message,
-      errorElementClasses: errorElement?.className,
-      errorElementText: errorElement?.textContent
-    });
-    
     if (errorElement) {
       errorElement.textContent = message;
       errorElement.classList.remove('hidden');
       errorElement.classList.add('text-terminal-gray');
       errorElement.classList.remove('text-terminal-red', 'text-terminal-green');
-      console.log('[Debug] Updated error element:', { 
-        text: errorElement.textContent, 
-        classes: errorElement.className,
-        hidden: errorElement.classList.contains('hidden')
-      });
-    } else {
-      console.error('[Debug] Error element not found:', errorId);
     }
     
     if (inputElement) {
       inputElement.classList.add('border-terminal-gray');
       inputElement.classList.remove('border-terminal-red', 'border-terminal-green');
-    } else {
-      console.error('[Debug] Input element not found:', inputId);
     }
   }
 
@@ -667,8 +602,6 @@ export class RegisterModal {
     const errorId = inputId.replace('-input', '-error');
     const errorElement = document.querySelector(`#${errorId}`) as HTMLElement;
     const inputElement = document.querySelector(`#${inputId}`) as HTMLInputElement;
-    
-    console.log('[Debug] showValidationSuccess:', { inputId, errorId, hasErrorElement: !!errorElement, hasInputElement: !!inputElement, message });
     
     if (errorElement) {
       errorElement.textContent = message;
@@ -720,9 +653,6 @@ export class RegisterModal {
     
     // 클라이언트 측에서만 상세 검증 (사용자 경험 향상)
     const result = validatePassword(password);
-    
-    // 디버그 로그 제거 (성능 최적화)
-    // console.log('[Debug] validatePassword:', { isValid: result.isValid, error: result.error });
     
     // 간소화된 DOM 업데이트
     this.updatePasswordValidationUI(result);
@@ -777,47 +707,12 @@ export class RegisterModal {
       message: isValid ? undefined : i18n.t('validation.passwords_do_not_match')
     };
     
-    console.log('[Debug] validateConfirmPassword:', { 
-      isValid, 
-      message: result.message,
-      passwordValue: passwordInput.value.length,
-      confirmValue: confirmPasswordInput.value.length
-    });
-    
-    DOMUpdater.updateValidationResult('confirm-password-input', result);
-    
-    // DOMUpdater가 제대로 작동하지 않을 수 있으니 직접 업데이트도 시도
-    const errorElement = document.querySelector('#confirm-password-error') as HTMLElement;
-    const inputElement = document.querySelector('#confirm-password-input') as HTMLInputElement;
-    console.log('[Debug] Confirm password DOM elements:', { hasErrorElement: !!errorElement, hasInputElement: !!inputElement });
-    
     if (!isValid) {
-      if (errorElement) {
-        errorElement.textContent = i18n.t('validation.passwords_do_not_match');
-        errorElement.classList.remove('hidden');
-        errorElement.classList.add('text-terminal-red');
-        errorElement.classList.remove('text-terminal-gray', 'text-terminal-green');
-        console.log('[Debug] Showing password mismatch error');
-      }
-      
-      if (inputElement) {
-        inputElement.classList.add('border-terminal-red');
-        inputElement.classList.remove('border-terminal-gray', 'border-terminal-green');
-      }
+      const result = { isValid: false, message: i18n.t('validation.passwords_do_not_match') };
+      DOMUpdater.updateValidationResult('confirm-password-input', result);
     } else {
       // 비밀번호가 일치하는 경우 성공 상태 표시
-      if (errorElement) {
-        errorElement.textContent = i18n.t('validation.passwords_match');
-        errorElement.classList.remove('hidden');
-        errorElement.classList.add('text-terminal-green');
-        errorElement.classList.remove('text-terminal-red', 'text-terminal-gray');
-        console.log('[Debug] Showing password match success');
-      }
-      
-      if (inputElement) {
-        inputElement.classList.add('border-terminal-green');
-        inputElement.classList.remove('border-terminal-red', 'border-terminal-gray');
-      }
+      this.showValidationSuccess('confirm-password-input', i18n.t('validation.passwords_match'));
     }
     
     return result.isValid;
