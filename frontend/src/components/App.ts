@@ -1,11 +1,8 @@
 import { Terminal } from './Terminal.js';
-// import { PongGameModular as PongGame } from '../game/PongGameModular.js';
 import { ApiClient } from '../services/ApiClient.js';
 import { Router } from '../utils/Router.js';
 import {
   User,
-  // Friend,
-  // Player
 } from '../types/types.js';
 import * as Types from '../types/types.js';
 import { ErrorHandler } from '../utils/ErrorHandler.js';
@@ -51,9 +48,6 @@ export class App {
     this.router = new Router();
     this.errorHandler = new ErrorHandler();
     
-    // this.pongGame = new PongGame((winner) => {
-    //   this.handleGameEnd(winner);
-    // });
     
     // Initialize CommandHandler with dependencies
     this.commandHandler = new CommandHandler({
@@ -112,16 +106,14 @@ export class App {
   private setupCustomEventListeners(): void {
     // Listen for custom user data update events (fallback for 2FA updates)
     window.addEventListener('userDataUpdated', (_event: any) => {
-      console.log('[App] Received userDataUpdated event');
-      // Force UserProfile recreation by clearing the cache
+        // Force UserProfile recreation by clearing the cache
       // Note: UIRenderer handles lastUserProfileData internally
       this.uiRenderer.render();
       
       // 터미널 포커스 복원
       setTimeout(() => {
         this.mainTerminal.focus();
-        console.log('[App] Terminal focus restored after user data update');
-      }, 300);
+        }, 300);
     });
   }
 
@@ -165,10 +157,13 @@ export class App {
     // If user is logged in, redirect to their profile instead of showing it at root
     const isLoggedIn = authStore.getIsLoggedIn();
     const currentUser = authStore.getCurrentUser();
+    
+    
     if (isLoggedIn && currentUser) {
       this.router.navigate('/profile');
       return;
     }
+    
     this.uiRenderer.render();
   }
 
@@ -181,23 +176,43 @@ export class App {
     this.uiRenderer.render();
   }
 
+  private showOtherUserProfile(userProfile: any): void {
+    if (!authStore.getIsLoggedIn()) {
+      this.router.navigate('/');
+      return;
+    }
+    this.uiRenderer.setGameState(false); // Explicitly set game state to false
+    this.uiRenderer.renderOtherUserProfile(userProfile);
+  }
+
   private async showUserProfile(username: string): Promise<void> {
     if (!authStore.getIsLoggedIn()) {
       this.router.navigate('/');
       return;
     }
     
-    // 다른 사용자 프로필 조회 기능이 백엔드에 구현되지 않았으므로
-    // 현재 사용자 프로필로 리다이렉트
     const currentUser = authStore.getCurrentUser();
-    if (username !== currentUser?.username) {
-      this.mainTerminal.appendOutput(`User profile search not available. Showing your profile instead.`);
+    
+    // 현재 사용자 프로필인 경우 /profile로 리다이렉트
+    if (username === currentUser?.username) {
       this.router.navigate('/profile');
       return;
     }
     
-    // 현재 사용자 프로필 표시
-    this.showCurrentUserProfile();
+    // 다른 사용자 프로필 조회
+    try {
+      this.mainTerminal.appendOutput(`Loading profile for ${username}...`);
+      const userProfile = await this.apiClient.user.getUserProfile(username);
+      
+      // 다른 사용자 프로필 표시
+      this.showOtherUserProfile(userProfile);
+    } catch (error) {
+      console.error('Failed to load user profile:', error);
+      // 에러 메시지를 터미널에 표시
+      const errorMessage = error instanceof Error ? error.message : `User "${username}" not found or not accessible.`;
+      this.mainTerminal.appendOutput(errorMessage);
+      this.router.navigate('/profile');
+    }
   }
 
   private showGameView(): void {
@@ -253,7 +268,6 @@ export class App {
     if (!gameConfig) {
       try {
         // Stop any existing game first
-        // this.pongGame.stop();
         
         const result = await this.modalManager.showGameSetupModal();
 

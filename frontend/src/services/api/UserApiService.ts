@@ -86,5 +86,63 @@ export class UserApiService extends BaseApiService {
     return await this.getProfile();
   }
 
+  // 사용자명으로 프로필 조회 - /api/users/me/friends (친구 목록에서만 조회)
+  async getUserProfile(username: string): Promise<Types.User> {
+    // 친구 목록에서 해당 사용자 찾기
+    const friendsResponse = await this.get<{
+      success: boolean;
+      msg: string;
+      data: {
+        friends: Array<{
+          user_id: number;
+          name: string;
+          avatar: string;
+          status: boolean;
+        }>;
+      };
+    }>('/api/users/me/friends');
+    
+    const friend = friendsResponse.data.friends.find(f => f.name === username);
+    if (!friend) {
+      throw new Error(`User "${username}" is not in your friends list. Use 'friend follow ${username}' to add them first.`);
+    }
+    
+    // 친구 상세 프로필 조회
+    const profileResponse = await this.get<{
+      success: boolean;
+      msg: string;
+      data: {
+        friendInfo: {
+          name: string;
+          avatar: string;
+        };
+        gameStats: {
+          totalGames: number;
+          totalWins: number;
+          winRate: number;
+        };
+        oneOnOneHistory: any[];
+        tournHistory: any[];
+      };
+    }>(`/api/users/me/friends/${friend.user_id}`);
+    
+    const profileData = profileResponse.data;
+    
+    // User 객체로 변환
+    const user: Types.User = {
+      id: friend.user_id.toString(),
+      username: profileData.friendInfo.name,
+      nickname: profileData.friendInfo.name,
+      avatarUrl: profileData.friendInfo.avatar || undefined,
+      twoFactorEnabled: false, // 다른 사용자의 2FA 정보는 노출하지 않음
+      gamesPlayed: profileData.gameStats.totalGames,
+      gamesWon: profileData.gameStats.totalWins,
+      friends: [],
+      matchHistory: []
+    };
+    
+    return user;
+  }
+
 
 }

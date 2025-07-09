@@ -19,8 +19,12 @@ export class Router {
       this.handleRouteChange();
     });
     
-    // Handle initial load
-    this.handleRouteChange();
+    // Handle initial load - if no hash, set default hash
+    if (!window.location.hash) {
+      window.location.hash = '#/';
+    } else {
+      this.handleRouteChange();
+    }
   }
 
   register(pattern: string, handler: (params?: RouteParams) => void): void {

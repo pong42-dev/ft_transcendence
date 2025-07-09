@@ -20,7 +20,6 @@ export class TwoFAModal {
   private twoFAData: TwoFAInitResponse | null = null;
   private callbacks: TwoFAModalCallbacks;
   private modalManager: ModalManager;
-  private isCompleted: boolean = false;
 
   constructor(
     apiClient: ApiClient, 
@@ -67,16 +66,10 @@ export class TwoFAModal {
   private async initializeTwoFA(): Promise<void> {
     try {
       this.twoFAData = await this.apiClient.auth.initTwoFA();
-      console.log('[TwoFAModal] 2FA initialized:', {
-        hasQrCode: !!this.twoFAData?.qrCodeUrl,
-        hasSecret: !!this.twoFAData?.secret,
-        hasToken: !!this.twoFAData?.token,
-        secretLength: this.twoFAData?.secret?.length,
-        tokenLength: this.twoFAData?.token?.length,
-        secretPreview: this.twoFAData?.secret?.substring(0, 8) + '...'
-      });
     } catch (error) {
-      console.error('TwoFA initialization error:', error);
+      console.error('[TwoFAModal] Failed to initialize 2FA:', error);
+      // 초기화 에러 시 모달을 닫지 않고 에러 상태 표시
+      this.twoFAData = null;
     }
   }
 
@@ -322,10 +315,7 @@ export class TwoFAModal {
   }
 
   private onClose(): void {
-    // Reset state when modal is closed
-    this.isCompleted = false; // Reset completion state
-    // this.twoFAData = null; // Don't clear data if we might need to re-show for retry
-    // No need to call callbacks here, they are called when action is completed
+    // Modal cleanup logic can be added here if needed
   }
 
   private handleCodeInput(event: Event): void {
@@ -334,6 +324,24 @@ export class TwoFAModal {
   }
 
   private handleKeyDown(event: KeyboardEvent): void {
+    // Enter 키 처리 - 현재 단계에 따라 적절한 동작 실행
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      
+      switch (this.currentStep) {
+        case 'setup':
+          this.handleEnable();
+          break;
+        case 'verify':
+          this.handleVerify();
+          break;
+        case 'disable':
+          this.handleDisable();
+          break;
+      }
+      return;
+    }
+
     // Allow only numbers and specific control keys (backspace, arrow keys, etc.)
     if (!/^[0-9]$/.test(event.key) &&
         event.key !== 'Backspace' &&
@@ -362,23 +370,19 @@ export class TwoFAModal {
     DOMUpdater.toggleLoading('#enable-btn', true, i18n.t('twoFAModal.enabling_2fa'));
 
     try {
-      await this.apiClient.auth.enableTwoFA(this.twoFAData.token, code);
-      this.callbacks.onComplete();
+      await this.apiClient.auth.enableTwoFA({
+        tmpToken: this.twoFAData.token,
+        token: code
+      });
+      this.callbacks.onComplete(code);
       this.hide();
       this.refreshUserData(true); // 2FA 활성화 후 사용자 데이터 새로고침
-    } catch (error: any) {
-      console.error('2FA enable error:', error);
-      if (error.response && error.response.data && error.response.data.message) {
-        if (error.response.data.message === 'Please enter a 6-digit code') {
-          this.showVerificationError(i18n.t('twoFAModal.enter_6_digit_code_error'));
-        } else if (error.response.data.message === 'Setup data not found. Please refresh and try again.') {
-          this.showVerificationError(i18n.t('twoFAModal.setup_data_not_found_error'));
-        } else {
-          this.showVerificationError(error.response.data.message);
-        }
-      } else {
-        this.showVerificationError(i18n.t('common.error_occurred_try_again'));
-      }
+    } catch (error) {
+      console.error('[TwoFAModal] Failed to enable 2FA:', error);
+      
+      // 에러 메시지 추출 (타입 안전)
+      const errorMessage = error instanceof Error ? error.message : i18n.t('common.error_occurred_try_again');
+      this.showVerificationError(errorMessage);
     } finally {
       DOMUpdater.toggleLoading('#enable-btn', false);
     }
@@ -396,32 +400,14 @@ export class TwoFAModal {
     DOMUpdater.toggleLoading('#verify-btn', true, i18n.t('common.verifying'));
 
     try {
-      // tmpToken이 있다면 로그인 시 2FA 인증, 없다면 일반 인증
-      const tmpToken = authStore.getState().user?.tmpToken;
-      if (tmpToken) {
-        await this.apiClient.auth.verifyTwoFALogin(tmpToken, code);
-        this.callbacks.onComplete(code); // 로그인 시에는 코드도 함께 전달
-      } else {
-        await this.apiClient.auth.verifyTwoFA(code);
-        this.callbacks.onComplete();
-      }
+      this.callbacks.onComplete(code);
       this.hide();
-      this.refreshUserData(true); // 2FA 인증 후 사용자 데이터 새로고침
-    } catch (error: any) {
-      console.error('2FA verification error:', error);
-      if (error.response && error.response.data && error.response.data.message) {
-        if (error.response.data.message === 'Session refreshed. Please scan the new QR code and try again.') {
-          this.showVerificationError(i18n.t('twoFAModal.session_refreshed_error'));
-        } else if (error.response.data.message === 'Setup session expired. Please close and reopen 2FA setup.') {
-          this.showVerificationError(i18n.t('twoFAModal.setup_session_expired_error'));
-        } else if (error.response.data.message === 'Please enter a 6-digit code') {
-          this.showVerificationError(i18n.t('twoFAModal.enter_6_digit_code_error'));
-        } else {
-          this.showVerificationError(error.response.data.message);
-        }
-      } else {
-        this.showVerificationError(i18n.t('common.error_occurred_try_again'));
-      }
+    } catch (error) {
+      console.error('[TwoFAModal] Failed to verify 2FA code:', error);
+      
+      // 에러 메시지 추출 (타입 안전)
+      const errorMessage = error instanceof Error ? error.message : i18n.t('common.error_occurred_try_again');
+      this.showVerificationError(errorMessage);
     } finally {
       DOMUpdater.toggleLoading('#verify-btn', false);
     }
@@ -439,21 +425,16 @@ export class TwoFAModal {
     DOMUpdater.toggleLoading('#disable-btn', true, i18n.t('twoFAModal.disabling_2fa'));
 
     try {
-      await this.apiClient.auth.disableTwoFA(code);
-      this.callbacks.onComplete();
+      await this.apiClient.auth.disableTwoFA({ token: code });
+      this.callbacks.onComplete(code);
       this.hide();
       this.refreshUserData(false); // 2FA 비활성화 후 사용자 데이터 새로고침
-    } catch (error: any) {
-      console.error('2FA disable error:', error);
-      if (error.response && error.response.data && error.response.data.message) {
-        if (error.response.data.message === 'Please enter a 6-digit code') {
-          this.showVerificationError(i18n.t('twoFAModal.enter_6_digit_code_error'));
-        } else {
-          this.showVerificationError(error.response.data.message);
-        }
-      } else {
-        this.showVerificationError(i18n.t('common.error_occurred_try_again'));
-      }
+    } catch (error) {
+      console.error('[TwoFAModal] Failed to disable 2FA:', error);
+      
+      // 에러 메시지 추출 (타입 안전)
+      const errorMessage = error instanceof Error ? error.message : i18n.t('common.error_occurred_try_again');
+      this.showVerificationError(errorMessage);
     } finally {
       DOMUpdater.toggleLoading('#disable-btn', false);
     }
@@ -470,16 +451,9 @@ export class TwoFAModal {
    */
   private async refreshUserData(isEnabled: boolean): Promise<void> {
     try {
-      const response = await this.apiClient.users.getMe();
-      if (response.status === 200) {
-        const updatedUser = { ...response.data.user, twoFactorEnabled: isEnabled };
-        authStore.getState().login(updatedUser, authStore.getState().accessToken);
-        console.log('[TwoFAModal] User data refreshed after 2FA status change.');
-        // UserProfileManager를 사용하여 UserProfile 컴포넌트 업데이트를 트리거합니다.
-        // UserProfileManager.getInstance().updateUserProfile(updatedUser);
-      } else {
-        console.warn('[TwoFAModal] Failed to refresh user data after 2FA change.', response.status);
-      }
+      const updatedUser = await this.apiClient.user.getProfile();
+      const userWithTwoFA = { ...updatedUser, twoFactorEnabled: isEnabled };
+      authStore.updateUser(userWithTwoFA);
     } catch (error) {
       console.error('[TwoFAModal] Error refreshing user data after 2FA change:', error);
     }

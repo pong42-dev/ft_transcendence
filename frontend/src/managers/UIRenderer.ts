@@ -28,7 +28,6 @@ export class UIRenderer {
   render(): void {
     // 렌더링 중복 방지
     if (this.isRendering) {
-      console.log('⏸️ Render already in progress, skipping...');
       return;
     }
     
@@ -141,21 +140,16 @@ export class UIRenderer {
         DOMUpdater.updateHTML(mainContent, `<div class="flex items-center justify-center h-full text-terminal-green">Game View (Coming Soon)</div>`);
       } else {
         // UserProfile이 없거나 사용자 데이터가 변경된 경우 새로 생성
+        // 현재 사용자 프로필로 돌아올 때는 항상 재생성하여 다른 사용자 프로필 상태 정리
         const shouldRecreate = !this.userProfile || this.shouldRecreateUserProfile(currentUser);
-        console.log('[UIRenderer] UserProfile recreation check:', {
-          hasUserProfile: !!this.userProfile,
-          shouldRecreate,
-          currentUser2FA: currentUser.twoFactorEnabled
-        });
         
-        if (shouldRecreate) {
-          if (this.userProfile) {
-            console.log('[UIRenderer] Destroying existing UserProfile');
-            this.userProfile.destroy();
-          }
-          console.log('[UIRenderer] Creating new UserProfile with 2FA status:', currentUser.twoFactorEnabled);
-          this.userProfile = new UserProfile(currentUser, true);
+        // 기존 UserProfile 정리 (다른 사용자 프로필일 수 있으므로 강제 정리)
+        if (this.userProfile) {
+          this.userProfile.destroy();
         }
+        
+        // 현재 사용자 프로필로 새로 생성
+        this.userProfile = new UserProfile(currentUser, true);
         
         // Clear main content and append user profile using DOMUpdater
         DOMUpdater.updateHTML(mainContent, '');
@@ -219,15 +213,9 @@ export class UIRenderer {
    * UserProfile 재생성이 필요한지 확인
    */
   private shouldRecreateUserProfile(currentUser: User): boolean {
-    console.log('[UIRenderer] Checking if UserProfile should be recreated:', {
-      hasLastData: !!this.lastUserProfileData,
-      currentUser2FA: currentUser.twoFactorEnabled,
-      lastData2FA: this.lastUserProfileData?.twoFactorEnabled
-    });
 
     if (!this.lastUserProfileData) {
       // 처음 생성하는 경우
-      console.log('[UIRenderer] First time creating UserProfile');
       this.lastUserProfileData = {
         id: currentUser.id,
         twoFactorEnabled: currentUser.twoFactorEnabled,
@@ -242,23 +230,8 @@ export class UIRenderer {
       this.lastUserProfileData.twoFactorEnabled !== currentUser.twoFactorEnabled ||
       this.lastUserProfileData.username !== currentUser.username;
 
-    console.log('[UIRenderer] UserProfile data comparison:', {
-      hasChanged,
-      changes: {
-        id: this.lastUserProfileData.id !== currentUser.id,
-        twoFactorEnabled: this.lastUserProfileData.twoFactorEnabled !== currentUser.twoFactorEnabled,
-        username: this.lastUserProfileData.username !== currentUser.username
-      },
-      old: this.lastUserProfileData,
-      new: {
-        id: currentUser.id,
-        twoFactorEnabled: currentUser.twoFactorEnabled,
-        username: currentUser.username
-      }
-    });
 
     if (hasChanged) {
-      console.log('[UIRenderer] User data changed, recreating UserProfile');
       
       // 새로운 상태 저장
       this.lastUserProfileData = {
@@ -275,14 +248,11 @@ export class UIRenderer {
    * UserProfile을 새로운 사용자 데이터로 새로고침
    */
   refreshUserProfile(updatedUser: User): void {
-    console.log('refreshUserProfile called with user:', updatedUser.nickname, 'avatarUrl:', updatedUser.avatarUrl);
     
     // Check if we're currently on the profile page
     const currentRoute = window.location.hash.replace('#', '') || '/';
-    console.log('Current route:', currentRoute);
     
     if (currentRoute === '/profile' || currentRoute.startsWith('/profile/')) {
-      console.log('On profile page, refreshing UserProfile...');
       
       // Update the user profile instance with new data
       this.userProfile = new UserProfile(updatedUser, true);
@@ -290,9 +260,40 @@ export class UIRenderer {
       // Force re-render the current view
       this.updateMainContent();
       
-      console.log('UserProfile refreshed');
     } else {
-      console.log('Not on profile page, skipping refresh');
+    }
+  }
+
+  /**
+   * 다른 사용자의 프로필을 렌더링
+   */
+  renderOtherUserProfile(otherUser: User): void {
+    const mainContent = this.appElement.querySelector('.main-content') as HTMLElement;
+    if (!mainContent) return;
+
+    // 터미널 메시지 업데이트
+    this.mainTerminal.updateWelcomeMessage(true, otherUser.username);
+
+    // 기존 UserProfile 정리
+    if (this.userProfile) {
+      this.userProfile.destroy();
+    }
+
+    // 다른 사용자 프로필 생성 (isCurrentUser = false)
+    this.userProfile = new UserProfile(otherUser, false);
+
+    // 메인 컨텐츠 업데이트
+    DOMUpdater.updateHTML(mainContent, '');
+    mainContent.appendChild(this.userProfile.render());
+
+    // 상태바 업데이트
+    this.updateStatusBar();
+
+    // 터미널에 포커스
+    if (!this.isInGame) {
+      setTimeout(() => {
+        this.mainTerminal.focus();
+      }, 200);
     }
   }
 

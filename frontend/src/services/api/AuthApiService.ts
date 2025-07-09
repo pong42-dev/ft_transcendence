@@ -27,17 +27,9 @@ export class AuthApiService extends BaseApiService {
       credentials: 'include'
     });
     
-    // 디버깅을 위한 응답 구조 로그
-    console.log('[Auth] Login response analysis:', {
-      requires2FA: response.requires2FA,
-      hasData: !!response.data,
-      dataKeys: response.data ? Object.keys(response.data) : [],
-      dataContent: response.data
-    });
     
     // 2FA가 필요한 경우
     if (response.requires2FA && response.data?.token) {
-      console.log('[Auth] 2FA required, tmpToken:', response.data.token);
       return {
         requires2FA: true,
         tmpToken: response.data.token
@@ -68,29 +60,13 @@ export class AuthApiService extends BaseApiService {
 
   // 2FA 로그인 완료 - tmpToken과 2FA 코드로 로그인 마무리
   async completeTwoFALogin(tmpToken: string, twoFACode: string): Promise<Types.User> {
-    console.log('[Auth] Completing 2FA login:', { 
-      hasTmpToken: !!tmpToken, 
-      tmpTokenLength: tmpToken?.length,
-      hasCode: !!twoFACode, 
-      codeLength: twoFACode?.length 
-    });
-    
     const response = await this.verifyTwoFA({
       tmpToken,
       token: twoFACode
     });
     
-    console.log('[Auth] 2FA login verification successful, setting tokens...');
-    
     // Access Token을 TokenManager에 저장
     TokenManager.setTokens(response.token, 'cookie-managed');
-    
-    // 토큰 설정 확인
-    console.info('[Auth] 2FA Login successful - tokens managed securely', {
-      tokenLength: response.token.length,
-      tokenManagerHasToken: !!TokenManager.getAccessToken(),
-      apiClientHasToken: !!TokenManager.getAccessToken()
-    });
     
     // 사용자 정보 가져오기 (2FA 완료 상태)
     return await this._fetchUserProfile(true);
@@ -272,12 +248,7 @@ export class AuthApiService extends BaseApiService {
 
   // 토큰 검증 및 사용자 정보 조회 - /api/users/me
   async verifyToken(): Promise<Types.User> {
-    // 현재 토큰 상태 디버깅
     const currentToken = TokenManager.getAccessToken();
-    console.log('[Auth] Token verification state:', {
-      hasToken: !!currentToken,
-      tokenLength: currentToken?.length
-    });
     
     // 토큰이 없으면 에러
     if (!currentToken) {
@@ -363,23 +334,11 @@ export class AuthApiService extends BaseApiService {
   async initTwoFA(): Promise<Types.TwoFAInitResponse> {
     // 토큰이 있는지 확인
     const token = TokenManager.getAccessToken();
-    const tokenManagerToken = TokenManager.getAccessToken();
-    
-    console.log('[Auth] 2FA initialization - detailed token check:', {
-      hasToken: !!token,
-      hasTokenManagerToken: !!tokenManagerToken,
-      tokenLength: token?.length,
-      tokenManagerTokenLength: tokenManagerToken?.length,
-      tokensMatch: token === tokenManagerToken,
-      hasRefreshToken: TokenManager.hasRefreshToken()
-    });
     
     if (!token) {
       console.error('[Auth] No access token available for 2FA initialization');
       throw new ApiError(401, 'Authentication required', { message: 'No access token available for 2FA initialization' });
     }
-    
-    console.log('[Auth] Initializing 2FA with token present:', !!token);
     
     const response = await this.post<{
       success: boolean;
@@ -404,15 +363,6 @@ export class AuthApiService extends BaseApiService {
       throw new ApiError(401, 'Authentication required', { message: 'No access token available for 2FA activation' });
     }
     
-    console.log('[Auth] Enabling 2FA:', {
-      hasAccessToken: !!token,
-      accessTokenLength: token?.length,
-      hasTmpToken: !!request.tmpToken,
-      tmpTokenLength: request.tmpToken?.length,
-      hasCode: !!request.token,
-      codeLength: request.token?.length
-    });
-    
     await this.post<{
       success: boolean;
       msg: string;
@@ -420,24 +370,14 @@ export class AuthApiService extends BaseApiService {
       credentials: 'include'
     });
     
-    console.log('[Auth] 2FA enabled successfully');
   }
 
   // 2FA 로그인 검증 - /api/users/auth/2fa
   async verifyTwoFA(request: Types.TwoFAVerifyRequest): Promise<{ token: string }> {
-    console.log('[Auth] Verifying 2FA:', { 
-      hasToken: !!request.token, 
-      tokenLength: request.token?.length,
-      hasTmpToken: !!request.tmpToken,
-      tmpTokenLength: request.tmpToken?.length 
-    });
-    
     // 2FA 검증 시 tmpToken은 body에만 포함 (Authorization 헤더 사용 안함)
     const headers: Record<string, string> = {
       'Content-Type': 'application/json'
     };
-    
-    console.log('[Auth] Sending tmpToken in request body for 2FA verification');
     
     const response = await this.post<{
       success: boolean;
@@ -448,11 +388,6 @@ export class AuthApiService extends BaseApiService {
     }>('/api/users/auth/2fa', request, {
       credentials: 'include',
       headers
-    });
-    
-    console.log('[Auth] 2FA verification response:', { 
-      success: response.success, 
-      hasToken: !!response.data?.token 
     });
     
     // 2FA 검증 실패 시 에러 던지기
@@ -471,8 +406,6 @@ export class AuthApiService extends BaseApiService {
       throw new ApiError(401, 'Authentication required', { message: 'No access token available for 2FA deactivation' });
     }
     
-    console.log('[Auth] Disabling 2FA with token present:', !!token);
-    
     await this.post<{
       success: boolean;
       msg: string;
@@ -480,7 +413,6 @@ export class AuthApiService extends BaseApiService {
       credentials: 'include'
     });
     
-    console.log('[Auth] 2FA disabled successfully');
   }
 
 
@@ -524,7 +456,6 @@ export class AuthApiService extends BaseApiService {
     if (userData.twoFA !== undefined) {
       // 서버에서 명시적으로 2FA 상태를 제공한 경우
       twoFactorEnabled = userData.twoFA;
-      console.log('[Auth] Using server-provided 2FA status:', twoFactorEnabled);
     } else {
       // 서버에서 2FA 상태를 제공하지 않는 경우 fallback 사용
       console.warn('[Auth] No 2FA info in profile, using fallback:', fallbackTwoFactorEnabled);
@@ -545,12 +476,6 @@ export class AuthApiService extends BaseApiService {
       friends: [],
       matchHistory: []
     };
-    
-    console.log('[Auth] User profile loaded:', { 
-      username: user.username, 
-      twoFactorEnabled: user.twoFactorEnabled 
-    });
-    
     
     return user;
   }
@@ -589,7 +514,6 @@ export class AuthApiService extends BaseApiService {
     
     // 서버에서 제공된 2FA 상태 사용, 없으면 기본값(false) 사용
     const twoFactorEnabled = userData.twoFA ?? false;
-    console.log('[Auth] Using 2FA status (without check):', twoFactorEnabled);
     
     // User 객체로 변환
     const user: Types.User = {
@@ -605,11 +529,6 @@ export class AuthApiService extends BaseApiService {
       friends: [],
       matchHistory: []
     };
-    
-    console.log('[Auth] User profile loaded (without 2FA check):', { 
-      username: user.username, 
-      twoFactorEnabled: user.twoFactorEnabled 
-    });
     
     return user;
   }

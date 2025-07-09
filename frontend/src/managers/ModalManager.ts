@@ -215,7 +215,6 @@ export class ModalManager {
       const terminalInput = document.querySelector('input[type="text"]:not([id])') as HTMLInputElement;
       if (terminalInput) {
         terminalInput.focus();
-        console.log('[ModalManager] Terminal focus restored after modal removal');
       }
     }, 50);
   }
@@ -349,16 +348,10 @@ export class ModalManager {
         return this.show2FAModal(options);
       case 'file':
         return this.showFileModal(options);
-      case 'tournament':
-        const tournamentModal = new NewTournamentTestModal();
-        tournamentModal.show();
-        return;
       case 'game-setup':
         return this.showGameSetupModal(options);
       case 'game-end':
         return this.showGameEndModal(options);
-      case 'friend':
-        break;
       default:
         console.warn(`Unknown modal type: ${modalType}`);
     }

@@ -40,7 +40,6 @@ export const createInterceptors = (options?: {
   // 🔐 인증 인터셉터
   const authInterceptor: RequestInterceptor = {
     onRequest: async (config, endpoint) => {
-      console.log('[Interceptor] Processing request to:', endpoint);
       
       const publicEndpoints = [
         '/auth/login', 
@@ -56,20 +55,9 @@ export const createInterceptors = (options?: {
       // 2FA 검증 엔드포인트만 tmpToken 사용 (정확한 매칭)
       const is2FAVerifyEndpoint = endpoint.endsWith('/users/auth/2fa');
       
-      console.log('[Interceptor] Auth check for endpoint:', {
-        endpoint,
-        isPublicEndpoint,
-        is2FAVerifyEndpoint,
-        needsAuth: !isPublicEndpoint && !is2FAVerifyEndpoint
-      });
       
       if (!isPublicEndpoint && !is2FAVerifyEndpoint) {
         const token = TokenManager.getAccessToken();
-        console.log('[Interceptor] Token state:', {
-          hasToken: !!token,
-          tokenLength: token?.length,
-          tokenPreview: token ? `${token.substring(0, 20)}...` : 'none'
-        });
         
         if (!token) {
           console.error('[Interceptor] ❌ No access token available for endpoint:', endpoint);
@@ -81,10 +69,8 @@ export const createInterceptors = (options?: {
         if (typeof headers === 'object' && !Array.isArray(headers)) {
           (headers as Record<string, string>).Authorization = `Bearer ${token}`;
           config.headers = headers;
-          console.log('[Interceptor] ✅ Authorization header added for endpoint:', endpoint);
         }
       } else {
-        console.log('[Interceptor] ⏭️ Skipping auth for public/2FA endpoint:', endpoint);
       }
       
       // 2FA 검증 엔드포인트는 tmpToken을 사용하고, enable/disable은 일반 토큰을 사용
@@ -151,7 +137,6 @@ export const createInterceptors = (options?: {
     onResponse: async (response, data) => {
       // 401 Unauthorized 응답이고 refresh token 엔드포인트가 아닌 경우
       if (response.status === 401 && !response.url.includes('/refresh-token')) {
-        console.log('🔄 401 detected, token refresh needed - will be handled by BaseApiService');
         
         // 401 에러를 특별한 에러로 마킹하여 BaseApiService에서 처리하도록 함
         const error = new Error('TOKEN_REFRESH_REQUIRED');
@@ -199,8 +184,6 @@ export const createInterceptors = (options?: {
     request: {
       onRequest: async (config: RequestInit, endpoint: string) => {
         console.group(`🚀 API Request: ${config.method || 'GET'} ${endpoint}`);
-        console.log('Headers:', config.headers);
-        console.log('Body:', config.body);
         console.groupEnd();
         return config;
       }
@@ -208,7 +191,6 @@ export const createInterceptors = (options?: {
     response: {
       onResponse: async (response: Response, data: any) => {
         console.group(`✅ API Response: ${response.status} ${response.url}`);
-        console.log('Data:', data);
         console.groupEnd();
         return data;
       },
@@ -265,7 +247,6 @@ export class SimpleInterceptorManager {
     this.responseInterceptors = interceptors.response;
     this.initialized = true;
 
-    console.log('✅ Simple interceptors initialized');
   }
 
   static getInterceptors(): {
