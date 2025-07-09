@@ -93,19 +93,19 @@ export class GameEndModal {
       // AI 모드일 때
       if (userWon) {
         // 유저가 이겼을 때
-        titleText = 'Victory!';
-        subtitleText = 'Congratulations!';
+        titleText = i18n.t('gameEndModal.victory');
+        subtitleText = i18n.t('gameEndModal.congratulations');
         iconEmoji = '🏆';
       } else {
         // AI가 이겼을 때
-        titleText = 'Good Game!';
-        subtitleText = 'AI won the game';
+        titleText = i18n.t('gameEndModal.good_game');
+        subtitleText = i18n.t('gameEndModal.ai_won');
         iconEmoji = '🤖';
       }
     } else {
       // 로컬/게스트 모드일 때
-      titleText = `${winnerName} Wins!`;
-      subtitleText = 'Congratulations!';
+      titleText = i18n.t('gameEndModal.winner_announcement', { winnerName });
+      subtitleText = i18n.t('gameEndModal.congratulations');
       iconEmoji = '🏆';
     }
     
@@ -114,8 +114,8 @@ export class GameEndModal {
         <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-terminal-gray bg-opacity-10 mb-3">
           <div class="text-3xl">${iconEmoji}</div>
         </div>
-        <h3 class="text-terminal-green text-2xl font-bold mb-1">${i18n.t(`gameEndModal.${titleText}`)}</h3>
-        <div class="text-sm opacity-70">${i18n.t(`gameEndModal.${subtitleText}`)}</div>
+        <h3 class="text-terminal-green text-2xl font-bold mb-1">${titleText}</h3>
+        <div class="text-sm opacity-70">${subtitleText}</div>
       </div>
       
       <div class="bg-terminal-gray bg-opacity-5 rounded-lg p-4 mb-6">

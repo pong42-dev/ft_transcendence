@@ -88,7 +88,8 @@
     "game_mode": "게임 모드",
     "next_match": "다음 경기",
     "view_tournament_results": "토너먼트 결과 보기",
-    "view_profile": "프로필 보기"
+    "view_profile": "프로필 보기",
+    "ai_won": "AI가 게임에서 승리했습니다"
   },
   "gameSetupModal": {
     "select_game_mode": "게임 모드 선택",

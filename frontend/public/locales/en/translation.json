@@ -88,7 +88,8 @@
     "game_mode": "Game Mode",
     "next_match": "Next Match",
     "view_tournament_results": "View Tournament Results",
-    "view_profile": "View Profile"
+    "view_profile": "View Profile",
+    "ai_won": "AI won the game"
   },
   "gameSetupModal": {
     "select_game_mode": "Select Game Mode",

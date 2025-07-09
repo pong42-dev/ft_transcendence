@@ -88,7 +88,8 @@
     "game_mode": "ゲームモード",
     "next_match": "次の試合",
     "view_tournament_results": "トーナメント結果を見る",
-    "view_profile": "プロフィールを見る"
+    "view_profile": "プロフィールを見る",
+    "ai_won": "AIがゲームに勝利しました"
   },
   "gameSetupModal": {
     "select_game_mode": "ゲームモードを選択",
