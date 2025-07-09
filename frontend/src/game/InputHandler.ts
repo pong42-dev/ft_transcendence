@@ -1,5 +1,7 @@
 // ./frontend/src/game/InputHandler.ts
 
+import i18next from 'i18next';
+
 type InputAction = 'UP' | 'DOWN' | 'NONE';
 type PlayerSide = 'left' | 'right';
 type InputEventCallback = (action: InputAction, playerSide?: PlayerSide) => void;
@@ -97,7 +99,7 @@ export class InputHandler {
     this.isActive = true;
     this.isLocalMultiplayer = isLocalMultiplayer;
     this.keyState = {};
-    console.log(`[InputHandler] Activated - Local Multiplayer: ${isLocalMultiplayer}`);
+    console.log(i18next.t('game.inputHandler.log.activated', { isLocalMultiplayer }));
   }
 
   // 게임 종료 시 호출하여 입력을 중단

@@ -6,6 +6,7 @@ import { WebSocketService } from '../services/websocket/WebSocketService';
 import { authStore } from '../store/authStore';
 import { ModalManager } from '../managers/ModalManager';
 import { GameEndModal } from '../components/modals/GameEndModal';
+import i18next from 'i18next';
 
 export interface TournamentMatch {
   id: number;
@@ -101,7 +102,7 @@ export class TournamentClient {
       this.bracketModalId = null;
     }
     const modalContent = {
-      title: '토너먼트 브라켓',
+      title: i18next.t('tournament.client.bracketModal.title'),
       content: () => {
         const wrapper = document.createElement('div');
         wrapper.className = 'w-[700px] min-h-[400px] flex flex-col items-center justify-center';
@@ -135,13 +136,13 @@ export class TournamentClient {
 
   private connectToTournament(): void {
     if (!this.currentUserId) {
-      console.error('Current user ID is required to connect to tournament');
-      alert('토너먼트 연결에 실패했습니다. 사용자 ID가 필요합니다.');
+      console.error(i18next.t('tournament.client.error.userIdRequired'));
+      alert(i18next.t('tournament.client.alert.connectionFailedUserId'));
       this.destroy();
       return;
     }
 
-    console.log(`Connecting to tournament ${this.tournamentId} with user ID ${this.currentUserId}`);
+    console.log(i18next.t('tournament.client.log.connecting', { tournamentId: this.tournamentId, currentUserId: this.currentUserId }));
 
     // 토너먼트 웹소켓 서비스 생성 및 연결
     this.tournamentWebSocketService = new TournamentWebSocketService();
@@ -160,7 +161,7 @@ export class TournamentClient {
       this.handleTournamentEnd(data);
     });
     this.tournamentWebSocketService.on('error', (error: any) => {
-      alert('토너먼트 연결 중 오류가 발생했습니다.');
+      alert(i18next.t('tournament.client.alert.connectionError'));
       this.destroy();
     });
   }
@@ -168,34 +169,34 @@ export class TournamentClient {
   private renderTournamentWaitingScreen(): void {
     this.container.innerHTML = `
       <div id="tournament-waiting-screen" class="w-full h-full flex flex-col items-center justify-center bg-terminal-black text-terminal-green">
-        <h2 class="text-3xl font-bold mb-4">🏆 Tournament Starting 🏆</h2>
-        <p class="text-xl mb-8">Preparing tournament bracket...</p>
-        <div id="tournament-status" class="text-lg mb-4 text-terminal-yellow">Initializing...</div>
+        <h2 class="text-3xl font-bold mb-4">${i18next.t('tournament.client.waitingScreen.title')}</h2>
+        <p class="text-xl mb-8">${i18next.t('tournament.client.waitingScreen.preparingBracket')}</p>
+        <div id="tournament-status" class="text-lg mb-4 text-terminal-yellow">${i18next.t('tournament.client.waitingScreen.initializing')}</div>
         <div id="participants-list" class="text-sm mb-8 p-4 border border-terminal-green rounded-lg">
-          <div class="mb-2 font-bold text-terminal-cyan">Tournament Participants:</div>
+          <div class="mb-2 font-bold text-terminal-cyan">${i18next.t('tournament.client.waitingScreen.participantsTitle')}</div>
           <div class="text-xs space-y-1">
             <div class="flex items-center">
               <span class="mr-2">👤</span>
-              <span>Current User (ID: ${this.currentUserId})</span>
+              <span>${i18next.t('tournament.client.waitingScreen.currentUser', { userId: this.currentUserId })}</span>
             </div>
             <div class="flex items-center">
               <span class="mr-2">🤖</span>
-              <span>Guest Player 1</span>
+              <span>${i18next.t('tournament.client.waitingScreen.guestPlayer', { playerNum: 1 })}</span>
             </div>
             <div class="flex items-center">
               <span class="mr-2">🤖</span>
-              <span>Guest Player 2</span>
+              <span>${i18next.t('tournament.client.waitingScreen.guestPlayer', { playerNum: 2 })}</span>
             </div>
             <div class="flex items-center">
               <span class="mr-2">🤖</span>
-              <span>Guest Player 3</span>
+              <span>${i18next.t('tournament.client.waitingScreen.guestPlayer', { playerNum: 3 })}</span>
             </div>
           </div>
         </div>
-        <div class="text-xs text-terminal-gray mb-4">Tournament ID: ${this.tournamentId}</div>
-        <div class="text-sm text-terminal-cyan mb-4">⏳ Tournament will start automatically in 5 seconds...</div>
+        <div class="text-xs text-terminal-gray mb-4">${i18next.t('tournament.client.waitingScreen.tournamentId', { tournamentId: this.tournamentId })}</div>
+        <div class="text-sm text-terminal-cyan mb-4">${i18next.t('tournament.client.waitingScreen.autoStartTime')}</div>
         <button id="cancel-tournament-btn" class="px-6 py-3 border border-terminal-red text-terminal-red rounded-lg hover:bg-terminal-red hover:bg-opacity-10 transition-all">
-          Cancel Tournament
+          ${i18next.t('tournament.client.button.cancelTournament')}
         </button>
       </div>
     `;
@@ -214,17 +215,17 @@ export class TournamentClient {
   private renderTournamentBracket(bracket: any): void {
     this.container.innerHTML = `
       <div id="tournament-bracket-screen" class="w-full h-full flex flex-col items-center justify-center bg-terminal-black text-terminal-green p-8">
-        <h2 class="text-3xl font-bold mb-2">🏆 Tournament Bracket 🏆</h2>
-        <div class="text-sm text-terminal-gray mb-6">Tournament ID: ${this.tournamentId}</div>
+        <h2 class="text-3xl font-bold mb-2">${i18next.t('tournament.client.bracketScreen.title')}</h2>
+        <div class="text-sm text-terminal-gray mb-6">${i18next.t('tournament.client.bracketScreen.tournamentId', { tournamentId: this.tournamentId })}</div>
         <div id="bracket-container" class="w-full max-w-4xl mb-8">
           ${this.generateBracketHTML(bracket)}
         </div>
         <div id="tournament-controls" class="flex gap-4">
           <button id="start-tournament-btn" class="px-6 py-3 border border-terminal-green text-terminal-green rounded-lg hover:bg-terminal-green hover:bg-opacity-10 transition-all">
-            🚀 Start Tournament
+            ${i18next.t('tournament.client.button.startTournament')}
           </button>
           <button id="cancel-tournament-btn" class="px-6 py-3 border border-terminal-red text-terminal-red rounded-lg hover:bg-terminal-red hover:bg-opacity-10 transition-all">
-            ❌ Cancel
+            ${i18next.t('tournament.client.button.cancel')}
           </button>
         </div>
       </div>
@@ -243,7 +244,7 @@ export class TournamentClient {
   private generateBracketHTML(bracket: any): string {
     // 2열 준결승 + 중앙 결승 구조로 브라켓을 렌더링
     if (!bracket || !bracket.rounds || !Array.isArray(bracket.rounds) || bracket.rounds.length < 2) {
-      return '<div class="text-center text-red-500">Invalid bracket data</div>';
+      return `<div class="text-center text-red-500">${i18next.t('tournament.client.bracket.invalidData')}</div>`;
     }
     const semiFinals = bracket.rounds[0];
     const final = bracket.rounds[1][0];
@@ -251,54 +252,54 @@ export class TournamentClient {
     return `
       <div class="grid grid-cols-3 gap-8 items-center justify-center w-full">
         <div class="flex flex-col gap-8 items-center">
-          ${this.renderBracketMatch(semiFinals[0], '준결승 1')}
+          ${this.renderBracketMatch(semiFinals[0], i18next.t('tournament.client.bracket.semiFinal1'))}
         </div>
         <div class="flex flex-col gap-8 items-center">
-          ${this.renderBracketMatch(final, '결승')}
+          ${this.renderBracketMatch(final, i18next.t('tournament.client.bracket.final'))}
         </div>
         <div class="flex flex-col gap-8 items-center">
-          ${this.renderBracketMatch(semiFinals[1], '준결승 2')}
+          ${this.renderBracketMatch(semiFinals[1], i18next.t('tournament.client.bracket.semiFinal2'))}
         </div>
       </div>
     `;
   }
 
   private renderBracketMatch(match: any, label: string): string {
-    const player1Name = match?.player1?.nickname || match?.player1?.name || 'Unknown';
-    const player2Name = match?.player2?.nickname || match?.player2?.name || 'Unknown';
+    const player1Name = match?.player1?.nickname || match?.player1?.name || i18next.t('common.player.unknown');
+    const player2Name = match?.player2?.nickname || match?.player2?.name || i18next.t('common.player.unknown');
     const matchId = match?.matchId || match?.id || '';
     const winner = match?.winnerId || match?.winner_id;
     return `
-      <div class="p-4 border-2 rounded-lg bg-terminal-black bg-opacity-50 w-56 text-center ${label === '결승' ? 'border-terminal-yellow' : 'border-terminal-green'}">
+      <div class="p-4 border-2 rounded-lg bg-terminal-black bg-opacity-50 w-56 text-center ${label === i18next.t('tournament.client.bracket.final') ? 'border-terminal-yellow' : 'border-terminal-green'}">
         <div class="text-lg font-bold mb-2">${label}</div>
         <div class="flex flex-col gap-2">
           <div class="${winner === match?.player1?.id ? 'text-terminal-yellow font-bold' : ''}">${player1Name}</div>
-          <div class="text-terminal-green">vs</div>
+          <div class="text-terminal-green">${i18next.t('common.vs')}</div>
           <div class="${winner === match?.player2?.id ? 'text-terminal-yellow font-bold' : ''}">${player2Name}</div>
         </div>
-        <div class="text-xs text-terminal-gray mt-2">ID: ${matchId}</div>
+        <div class="text-xs text-terminal-gray mt-2">${i18next.t('common.id')}: ${matchId}</div>
       </div>
     `;
   }
 
   private renderMatchScreen(match: TournamentMatch): void {
-    const player1Name = match.participants[0]?.name || 'Player 1';
-    const player2Name = match.participants[1]?.name || 'Player 2';
+    const player1Name = match.participants[0]?.name || i18next.t('game.renderer.playerInfo.defaultPlayer1');
+    const player2Name = match.participants[1]?.name || i18next.t('game.renderer.playerInfo.defaultPlayer2');
     
     this.container.innerHTML = `
       <div id="match-screen" class="w-full h-full flex flex-col bg-terminal-black text-terminal-green">
         <div id="match-info" class="text-center p-4 border-b border-terminal-green">
-          <h2 class="text-2xl font-bold mb-2">🏆 Tournament Match 🏆</h2>
+          <h2 class="text-2xl font-bold mb-2">${i18next.t('tournament.client.matchScreen.title')}</h2>
           <div class="text-lg mb-2">
             <span class="text-terminal-cyan font-bold">${player1Name}</span> 
-            <span class="text-terminal-green mx-4">vs</span> 
+            <span class="text-terminal-green mx-4">${i18next.t('common.vs')}</span> 
             <span class="text-terminal-cyan font-bold">${player2Name}</span>
           </div>
-          <div id="match-status" class="text-sm text-terminal-yellow">Starting...</div>
-          <div class="text-xs text-terminal-gray mt-1">Match ID: ${match.id}</div>
+          <div id="match-status" class="text-sm text-terminal-yellow">${i18next.t('tournament.client.matchScreen.starting')}</div>
+          <div class="text-xs text-terminal-gray mt-1">${i18next.t('common.id')}: ${match.id}</div>
         </div>
         <div id="game-container" class="flex-1 flex items-center justify-center">
-          <div class="text-lg">Loading game...</div>
+          <div class="text-lg">${i18next.t('tournament.client.matchScreen.loadingGame')}</div>
         </div>
       </div>
     `;
@@ -307,29 +308,29 @@ export class TournamentClient {
   private renderTournamentEndScreen(winner: any): void {
     this.container.innerHTML = `
       <div id="tournament-end-screen" class="w-full h-full flex flex-col items-center justify-center bg-terminal-black text-terminal-green">
-        <h2 class="text-4xl font-bold mb-6">🏆 Tournament Complete! 🏆</h2>
+        <h2 class="text-4xl font-bold mb-6">${i18next.t('tournament.client.endScreen.title')}</h2>
         <div class="text-2xl mb-8">
-          Winner: <span class="text-terminal-yellow font-bold">${winner?.name || 'Unknown'}</span>
+          ${i18next.t('tournament.client.endScreen.winner')}: <span class="text-terminal-yellow font-bold">${winner?.name || i18next.t('common.player.unknown')}</span>
         </div>
         <div id="final-results" class="text-lg mb-8 p-6 border border-terminal-green rounded-lg">
-          <div class="mb-4 text-xl font-bold">Final Results:</div>
+          <div class="mb-4 text-xl font-bold">${i18next.t('tournament.client.endScreen.finalResults')}</div>
           <div class="text-sm space-y-2">
             <div class="flex items-center">
               <span class="mr-2">🥇</span>
-              <span>1st Place: ${winner?.name || 'Unknown'}</span>
+              <span>${i18next.t('tournament.client.endScreen.firstPlace')}: ${winner?.name || i18next.t('common.player.unknown')}</span>
             </div>
             <div class="flex items-center">
               <span class="mr-2">🥈</span>
-              <span>2nd Place: Runner-up</span>
+              <span>${i18next.t('tournament.client.endScreen.secondPlace')}</span>
             </div>
             <div class="flex items-center">
               <span class="mr-2">🥉</span>
-              <span>3rd Place: Third Place</span>
+              <span>${i18next.t('tournament.client.endScreen.thirdPlace')}</span>
             </div>
           </div>
         </div>
         <button id="return-to-main-btn" class="px-6 py-3 border border-terminal-green text-terminal-green rounded-lg hover:bg-terminal-green hover:bg-opacity-10 transition-all">
-          Return to Main Menu
+          ${i18next.t('tournament.client.button.returnToMain')}
         </button>
       </div>
     `;
@@ -342,7 +343,7 @@ export class TournamentClient {
   private handleTournamentBracket(data: any): void {
     this.bracketMatches = data.matches;
     this.updateBracketDisplay();
-    this.openBracketModal('waiting', '토너먼트 대기 중...');
+    this.openBracketModal('waiting', i18next.t('tournament.client.modal.waitingForTournament'));
   }
 
   private handleBracketUpdate(data: any): void {
@@ -439,7 +440,7 @@ export class TournamentClient {
         return;
       }
       if (this.currentMatch) this.currentMatch.resultSent = true;
-      this.renderMainView({ status: 'in_progress', message: '다음 경기를 기다리는 중...' });
+      this.renderMainView({ status: 'in_progress', message: i18next.t('tournament.client.status.waitingForNextMatch') });
       if (this.bracketMatches) {
         this.updateBracketDisplay();
       }
@@ -454,13 +455,13 @@ export class TournamentClient {
           this.modalManager.hide();
           this.resultModalId = null;
           if (!isFinal) {
-            this.openBracketModal('waiting', '다음 매치 대기 중...');
+            this.openBracketModal('waiting', i18next.t('tournament.client.modal.waitingForNextMatch'));
           }
         },
         isFinal ? undefined : () => {
           this.modalManager.hide();
           this.resultModalId = null;
-          this.openBracketModal('waiting', '다음 매치 대기 중...');
+          this.openBracketModal('waiting', i18next.t('tournament.client.modal.waitingForNextMatch'));
         },
         undefined,
         'tournament'
@@ -468,18 +469,18 @@ export class TournamentClient {
       resultModal.show();
       this.resultModalId = null;
     } catch (e) {
-      console.error('handleMatchFinish: match 정보 조회 실패', e);
+      console.error(i18next.t('tournament.client.error.matchInfoFetchFailed'), e);
     }
   }
 
   private renderWaitingForNextMatch(): void {
     this.container.innerHTML = `
       <div id="waiting-next-match" class="w-full h-full flex flex-col items-center justify-center bg-terminal-black text-terminal-green">
-        <h2 class="text-3xl font-bold mb-4">🎉 Match Complete! 🎉</h2>
-        <p class="text-xl mb-8">Waiting for next match...</p>
+        <h2 class="text-3xl font-bold mb-4">${i18next.t('tournament.client.nextMatchScreen.title')}</h2>
+        <p class="text-xl mb-8">${i18next.t('tournament.client.nextMatchScreen.waitingForNextMatch')}</p>
         <div id="next-match-info" class="text-lg p-4 border border-terminal-green rounded-lg">
-          <div class="mb-2 font-bold">Preparing next round...</div>
-          <div class="text-sm text-terminal-yellow">Please wait while the tournament progresses.</div>
+          <div class="mb-2 font-bold">${i18next.t('tournament.client.nextMatchScreen.preparingNextRound')}</div>
+          <div class="text-sm text-terminal-yellow">${i18next.t('tournament.client.nextMatchScreen.pleaseWait')}</div>
         </div>
       </div>
     `;
@@ -495,7 +496,7 @@ export class TournamentClient {
   }
 
   private startTournament(): void {
-    console.log('Starting tournament...');
+    console.log(i18next.t('tournament.client.log.startingTournament'));
     
     this.tournamentWebSocketService?.sendMessage({
       type: 'tournament_start',
@@ -505,7 +506,7 @@ export class TournamentClient {
     // 토너먼트 시작 상태로 UI 업데이트
     const startButton = this.container.querySelector('#start-tournament-btn');
     if (startButton) {
-      startButton.textContent = '🚀 Starting...';
+      startButton.textContent = i18next.t('tournament.client.button.starting');
       startButton.setAttribute('disabled', 'true');
       startButton.classList.add('opacity-50');
     }
@@ -517,14 +518,14 @@ export class TournamentClient {
     
     const countdownInterval = setInterval(() => {
       if (statusElement) {
-        statusElement.textContent = `Starting in ${countdown}...`;
+        statusElement.textContent = i18next.t('tournament.client.countdown.startingIn', { countdown });
       }
       
       countdown--;
       
       if (countdown < 0) {
         clearInterval(countdownInterval);
-        console.log('Countdown finished, starting tournament...');
+        console.log(i18next.t('tournament.client.countdown.finished'));
         
         this.tournamentWebSocketService?.sendMessage({
           type: 'tournament_start',
@@ -533,7 +534,7 @@ export class TournamentClient {
         
         // 상태 업데이트
         if (statusElement) {
-          statusElement.textContent = 'Starting tournament...';
+          statusElement.textContent = i18next.t('tournament.client.status.startingTournament');
           statusElement.className = 'text-lg mb-4 text-terminal-green';
         }
       }
@@ -544,7 +545,7 @@ export class TournamentClient {
   }
 
   private cancelTournament(): void {
-    console.log('Canceling tournament...');
+    console.log(i18next.t('tournament.client.log.cancelingTournament'));
     this.tournamentWebSocketService?.sendMessage({
       type: 'cancel_tournament',
       data: { tournamentId: this.tournamentId }
@@ -557,8 +558,8 @@ export class TournamentClient {
     // 실제 구현에서는 점수, 플레이어 정보 등 추가 필요
     return {
       winner: winner?.id,
-      leftPlayer: scores.find(p => p.id === this.currentMatch?.participants[0]?.id) || { nickname: 'Player 1', score: 0 },
-      rightPlayer: scores.find(p => p.id === this.currentMatch?.participants[1]?.id) || { nickname: 'Player 2', score: 0 },
+      leftPlayer: scores.find(p => p.id === this.currentMatch?.participants[0]?.id) || { nickname: i18next.t('game.renderer.playerInfo.defaultPlayer1'), score: 0 },
+      rightPlayer: scores.find(p => p.id === this.currentMatch?.participants[1]?.id) || { nickname: i18next.t('game.renderer.playerInfo.defaultPlayer2'), score: 0 },
       totalRounds: (scores.find(p => p.id === this.currentMatch?.participants[0]?.id)?.score || 0) + (scores.find(p => p.id === this.currentMatch?.participants[1]?.id)?.score || 0),
       gameMode: 'tournament'
     };

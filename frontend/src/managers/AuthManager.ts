@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import { ApiClient, ApiError } from '../services/ApiClient.js';
 import { Router } from '../utils/Router.js';
 import { Terminal } from '../components/Terminal.js';
@@ -76,8 +77,8 @@ export class AuthManager {
     this.apiClient.clearToken();
     
     // 터미널 메시지 표시
-    this.terminal.appendOutput('You have been logged out from another tab.');
-    this.terminal.appendOutput('Please use the "login" command to sign in again.');
+    this.terminal.appendOutput(i18next.t('auth.loggedOutFromOtherTab'));
+    this.terminal.appendOutput(i18next.t('auth.loginAgainPrompt'));
     
     // 홈으로 이동
     this.router.navigate('/');
@@ -172,8 +173,8 @@ export class AuthManager {
           authStore.login(user);
           UserStateCache.cache(user);
           this.terminal.reset();
-          this.terminal.appendOutput(`Welcome back, ${user.username}!`);
-          this.terminal.appendOutput('Type "help" to see available commands.');
+          this.terminal.appendOutput(i18next.t('auth.welcomeBack', { username: user.username }));
+          this.terminal.appendOutput(i18next.t('auth.typeHelp'));
           
           // OAuth 로그인 시도 추적 정리
           sessionStorage.removeItem('oauth_login_attempt');
@@ -469,11 +470,11 @@ export class AuthManager {
       );
       
       // Show user-friendly error message
-      this.terminal.appendOutput('Google 로그인 중 오류가 발생했습니다.');
+      this.terminal.appendOutput(i18next.t('auth.googleLoginError'));
       if (error instanceof Error && error.message.includes('409')) {
-        this.terminal.appendOutput('이미 등록된 계정일 수 있습니다. 일반 로그인을 시도해보세요.');
+        this.terminal.appendOutput(i18next.t('auth.googleLoginConflict'));
       } else {
-        this.terminal.appendOutput('잠시 후 다시 시도해주세요.');
+        this.terminal.appendOutput(i18next.t('auth.tryAgainLater'));
       }
     }
     return null;
@@ -496,20 +497,20 @@ export class AuthManager {
    * 2FA 로그인 처리 (App.ts에서 이동)
    */
   async handle2FALogin(tmpToken: string): Promise<void> {
-    this.terminal.appendOutput('Two-factor authentication required. Please enter your verification code.');
+    this.terminal.appendOutput(i18next.t('auth.twoFARequired'));
     
     const { TwoFAModal } = await import('../components/modals/TwoFAModal.js');
     
     const twoFAModal = new TwoFAModal(this.apiClient, 'login', {
       onComplete: async (code?: string) => {
         if (!code) {
-          this.terminal.appendOutput('2FA verification cancelled.');
+          this.terminal.appendOutput(i18next.t('auth.twoFACancelled'));
           return;
         }
         await this.handle2FAVerification(tmpToken, code, twoFAModal);
       },
       onCancel: () => {
-        this.terminal.appendOutput('2FA verification cancelled.');
+        this.terminal.appendOutput(i18next.t('auth.twoFACancelled'));
       }
     });
 
@@ -521,7 +522,7 @@ export class AuthManager {
    */
   async handle2FAVerification(tmpToken: string, code: string, twoFAModal: any): Promise<void> {
     try {
-      this.terminal.appendOutput('Verifying 2FA code...');
+      this.terminal.appendOutput(i18next.t('auth.twoFAVerifying'));
       const user = await this.apiClient.auth.completeTwoFALogin(tmpToken, code);
       
       // 로그인 성공 처리
@@ -529,7 +530,7 @@ export class AuthManager {
       UserStateCache.cache(user);
       this.terminal.updateWelcomeMessage(true, user.username);
       this.terminal.reset();
-      this.terminal.appendOutput('Type "help" to see available commands.');
+      this.terminal.appendOutput(i18next.t('auth.typeHelp'));
       
       setTimeout(() => {
         this.router.navigate('/profile');
@@ -540,9 +541,12 @@ export class AuthManager {
       twoFAModal.hide();
     } catch (error) {
       this.errorHandler.handleError(error as Error, 'AuthManager.handle2FAVerification', ErrorLevel.ERROR);
-      const message = error instanceof ApiError
-        ? `2FA verification failed: ${error.data?.message || 'Invalid code'}`
-        : '2FA verification failed. Please try again.';
+      const message =
+        error instanceof ApiError
+          ? i18next.t('auth.twoFAFailedWithMessage', {
+              message: error.data?.message || i18next.t('auth.invalidCode')
+            })
+          : i18next.t('auth.twoFAFailed');
       this.terminal.appendOutput(message);
     }
   }

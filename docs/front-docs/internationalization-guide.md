@@ -18,8 +18,10 @@
    - `frontend/public/locales/ko/translation.json`
    - `frontend/public/locales/ja/translation.json`
 2. Use in code: `i18next.t('new.key')`.
+3. Review the file again to ensure the changes are correct.
 
 ## Reviewing for Hardcoded Text
-When files are given in the prompt, you must review them file by file to find any text strings that are not internationalized. All user-facing text should use `i18next.t('key.name')` instead of being hardcoded.
+When files are given in the prompt, you must review them file by file to find any text strings that are not internationalized. All user-facing text should use `i18next.t('key.name')` instead of being hardcoded. Do not make uninstructed changes.
+
 
 

@@ -6,6 +6,7 @@ import { ApiClient } from '../services/ApiClient'; // ApiClient를 직접 import
 import { WebSocketService } from '../services/websocket/WebSocketService';
 import { tournamentWebSocketService } from '../services/websocket/TournamentWebSocketService';
 import { GameMode, GameSetupResult, CreateGameRequestDto, GameResponseDto } from '../types/types';
+import i18next from 'i18next';
 
 export class GamePage {
     private container: HTMLElement;
@@ -100,10 +101,10 @@ export class GamePage {
                 
                 // 사용자 ID를 JWT에서 직접 추출
                 const userId = this.decodeUserIdFromAccessToken();
-                console.log('Decoded user ID from JWT:', userId);
+                console.log(i18next.t('game.page.log.decodedUserId'), userId);
                 if (!userId) {
-                    console.error('User must be logged in to participate in tournament');
-                    alert('토너먼트에 참가하려면 로그인이 필요합니다.');
+                    console.error(i18next.t('game.page.error.loginRequiredForTournament'));
+                    alert(i18next.t('game.page.alert.loginRequiredForTournament'));
                     this.onGameEndCallback();
                     return;
                 }
@@ -117,16 +118,16 @@ export class GamePage {
                 // 토너먼트 생성 API 호출
                 try {
                     const tournamentInfo = await this.apiClient.tournament.createTournament(gameSettings);
-                    console.log('Tournament created:', tournamentInfo);
+                    console.log(i18next.t('game.page.log.tournamentCreated'), tournamentInfo);
                     
                     // TournamentClient 시작
                     this.startTournament(tournamentInfo);
                 } catch (error: any) {
-                    console.error('Tournament creation failed:', error);
+                    console.error(i18next.t('game.page.error.tournamentCreationFailed'), error);
                     if (error.status === 429) {
-                        alert('토너먼트 생성이 이미 진행 중입니다. 잠시 후 다시 시도해주세요.');
+                        alert(i18next.t('game.page.alert.tournamentCreationRateLimit'));
                     } else {
-                        alert('토너먼트 생성에 실패했습니다: ' + (error.message || '알 수 없는 오류'));
+                        alert(i18next.t('game.page.alert.tournamentCreationFailed') + (error.message || i18next.t('common.error.unknownError')));
                     }
                     this.onGameEndCallback();
                     return;
@@ -137,8 +138,8 @@ export class GamePage {
 
             }
         } catch (error) {
-            console.error('Failed to create game or tournament:', error);
-            alert('게임을 시작하는 중 오류가 발생했습니다.');
+            console.error(i18next.t('game.page.error.failedToCreateGameOrTournament'), error);
+            alert(i18next.t('game.page.alert.failedToStartGame'));
             this.onGameEndCallback();
         } finally {
             this.isInitializing = false;
@@ -188,11 +189,11 @@ export class GamePage {
     private renderWaitingScreen() {
         this.container.innerHTML = `
             <div id="waiting-screen" class="w-full h-full flex flex-col items-center justify-center bg-terminal-black text-terminal-green">
-                <h2 class="text-3xl font-bold mb-4">Game Starting</h2>
-                <p class="text-xl mb-8">Waiting for server...</p>
+                <h2 class="text-3xl font-bold mb-4">${i18next.t('game.page.waitingScreen.gameStarting')}</h2>
+                <p class="text-xl mb-8">${i18next.t('game.page.waitingScreen.waitingForServer')}</p>
                 <div id="countdown-display" class="text-7xl font-mono font-bold mb-8"></div>
                 <button id="cancel-game-btn" class="px-6 py-3 border border-terminal-red text-terminal-red rounded-lg hover:bg-terminal-red hover:bg-opacity-10 transition-all">
-                    Cancel
+                    ${i18next.t('game.page.button.cancel')}
                 </button>
             </div>
         `;
@@ -243,17 +244,17 @@ export class GamePage {
             case 'vs ai':
                 // AI 모드에서는 'type'만 필요하고 opponents 배열은 비워둡니다.
                 gameMode = 'ai_1v1';
-                console.log('AI mode selected');
+                console.log(i18next.t('game.page.log.aiModeSelected'));
                 break;
 
             case 'local':
                 // 로컬 1:1 모드에서는 opponents 배열에 게스트 닉네임 1명을 담습니다.
                 gameMode = 'local_1v1';
                 const guestNickname = setupResult.opponents[0];
-                console.log('Local mode selected, guest nickname:', guestNickname);
+                console.log(i18next.t('game.page.log.localModeSelected'), guestNickname);
 
                 if (!guestNickname) {
-                    console.error('Guest nickname is required for local mode.');
+                    console.error(i18next.t('game.page.error.guestNicknameRequired'));
                     return null;
                 }
                 opponents = [guestNickname];
@@ -262,18 +263,18 @@ export class GamePage {
             case 'tournament':
                 // 토너먼트 모드에서는 opponents 배열에 게스트 닉네임 3명을 담습니다.
                 gameMode = 'tournament';
-                console.log('Tournament mode selected');
+                console.log(i18next.t('game.page.log.tournamentModeSelected'));
 
                 if (setupResult.opponents.length < 3) { // 3명으로 가정
-                    console.error('Three guest nicknames are required for tournament mode.');
+                    console.error(i18next.t('game.page.error.threeGuestNicknamesRequired'));
                     return null;
                 }
                 opponents = setupResult.opponents;
-                console.log('Tournament opponents:', opponents);
+                console.log(i18next.t('game.page.log.tournamentOpponents'), opponents);
                 break;
 
             default:
-                console.error('Unsupported game mode from setup modal:', setupResult.mode);
+                console.error(i18next.t('game.page.error.unsupportedGameMode'), setupResult.mode);
                 return null;
         }
 
@@ -296,7 +297,7 @@ export class GamePage {
      * [신규] 게임을 명시적으로 취소하는 메서드
      */
     private cancelGame() {
-        console.log('Game canceled by user');
+        console.log(i18next.t('game.page.log.gameCanceledByUser'));
         
         // 게임 비활성화
         this.isGameActive = false;
@@ -331,7 +332,7 @@ export class GamePage {
             if (this.isGameActive && (this.gameClient || this.tournamentClient)) {
                 // 게임이 진행 중이면 경고 메시지 표시
                 e.preventDefault();
-                e.returnValue = '게임이 진행 중입니다. 정말 나가시겠습니까?';
+                e.returnValue = i18next.t('game.page.alert.gameInProgressWarning');
                 
                 // 백그라운드에서 게임 취소 처리
                 this.handleUnexpectedExit();
@@ -384,7 +385,7 @@ export class GamePage {
      */
     private handleUnexpectedExit() {
         if ((this.gameClient || this.tournamentClient) && this.isGameActive) {
-            console.log('Handling unexpected exit - destroying game/tournament client');
+            console.log(i18next.t('game.page.log.handlingUnexpectedExit'));
             this.gameClient?.destroy();
             this.tournamentClient?.destroy();
             this.isGameActive = false;
@@ -399,7 +400,7 @@ export class GamePage {
 
         // 기존 토너먼트 클라이언트가 있다면 정리
         if (this.tournamentClient) {
-            console.log('Destroying existing tournament client');
+            console.log(i18next.t('game.page.log.destroyingExistingTournamentClient'));
             this.tournamentClient.destroy();
             this.tournamentClient = null;
         }
@@ -420,7 +421,7 @@ export class GamePage {
         // tournamentId와 userId를 TournamentClient에 전달
         const tournamentId = tournamentInfo.id; 
         const userId = this.decodeUserIdFromAccessToken();
-        console.log('Tournament client - Decoded user ID from JWT:', userId);
+        console.log(i18next.t('game.page.log.tournamentClientDecodedUserId'), userId);
         
         this.tournamentClient = new TournamentClient(
             this.container,
@@ -470,7 +471,7 @@ export class GamePage {
     private decodeUserIdFromAccessToken(): string | undefined {
         try {
             const accessToken = sessionStorage.getItem('access_token_session');
-            console.log('Access token from session storage:', accessToken ? 'exists' : 'not found');
+            console.log(i18next.t('game.page.log.accessTokenStatus'), accessToken ? i18next.t('common.status.exists') : i18next.t('common.status.notFound'));
             if (!accessToken) return undefined;
             
             const payloadBase64 = accessToken.split('.')[1];
@@ -486,11 +487,11 @@ export class GamePage {
                     .join('')
             );
             const payload = JSON.parse(jsonPayload);
-            console.log('JWT payload:', payload);
-            console.log('JWT user_id:', payload.user_id);
+            console.log(i18next.t('game.page.log.jwtPayload'), payload);
+            console.log(i18next.t('game.page.log.jwtUserId'), payload.user_id);
             return payload.user_id ? String(payload.user_id) : undefined;
         } catch (e) {
-            console.error('Error decoding JWT:', e);
+            console.error(i18next.t('game.page.error.jwtDecodingError'), e);
             return undefined;
         }
     }

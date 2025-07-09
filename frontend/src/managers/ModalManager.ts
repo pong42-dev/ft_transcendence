@@ -4,6 +4,7 @@ import { Terminal } from '../components/Terminal.js';
 import { User } from '../types/types.js';
 import { TwoFAModal } from '../components/modals/TwoFAModal.js';
 import { FileModal } from '../components/modals/FileModal.js';
+import i18next from 'i18next';
 
 /**
  * ModalManager - 모달의 중앙 집중식 관리
@@ -426,7 +427,7 @@ export class ModalManager {
    */
   public async showFileModal(options?: any): Promise<File | null> {
     const {
-      title = 'Select Avatar',
+      title = i18next.t('fileModal.selectAvatarTitle'),
       accept = 'image/*',
       maxSize = 5 * 1024 * 1024,
       onFileSelected

@@ -4,6 +4,7 @@ import { ErrorHandler, ErrorLevel } from '../utils/ErrorHandler.js';
 import { User } from '../types/types.js';
 import { authStore } from '../store/index.js';
 import { UserStateCache } from '../services/UserStateCache.js';
+import i18next from 'i18next';
 
 export class UserProfileManager {
   private pendingAvatarFile: File | null = null;
@@ -27,9 +28,9 @@ export class UserProfileManager {
   async handlePendingAvatarUpload(): Promise<void> {
     if (this.pendingAvatarFile) {
       try {
-        this.terminal.appendOutput('Uploading your profile picture...');
+        this.terminal.appendOutput(i18next.t('uploadingProfilePicture'));
         await this.apiClient.user.uploadAvatar(this.pendingAvatarFile);
-        this.terminal.appendOutput('Profile picture uploaded successfully!');
+        this.terminal.appendOutput(i18next.t('profilePictureUploadedSuccessfully'));
         this.pendingAvatarFile = null;
         
         // 아바타 업로드 후 사용자 정보 재로드
@@ -37,13 +38,13 @@ export class UserProfileManager {
           const updatedUser = await this.apiClient.auth.verifyToken();
           authStore.login(updatedUser);
           UserStateCache.cache(updatedUser);
-          console.log('🖼️ User profile updated with new avatar');
+          console.log(i18next.t('userProfileUpdatedWithNewAvatar'));
         } catch (error) {
-          console.error('Failed to refresh user profile after avatar upload:', error);
+          console.error(i18next.t('failedToRefreshUserProfileAfterAvatarUpload'), error);
         }
       } catch (error) {
-        console.error('Avatar upload failed:', error);
-        this.terminal.appendOutput('Failed to upload profile picture. You can try again later with "set avatar" command.');
+        console.error(i18next.t('avatarUploadFailed'), error);
+        this.terminal.appendOutput(i18next.t('failedToUploadProfilePictureTryAgain'));
         this.pendingAvatarFile = null;
       }
     }
@@ -54,7 +55,7 @@ export class UserProfileManager {
    */
   async handleAvatarUpload(file: File, resolve: () => void, reject: (error: any) => void, uiRenderer?: any): Promise<void> {
     try {
-      this.terminal.appendOutput('Uploading avatar...');
+      this.terminal.appendOutput(i18next.t('uploadingAvatar'));
       
       const updatedUser = await this.apiClient.user.uploadAvatar(file);
       authStore.updateUser(updatedUser);
@@ -65,11 +66,11 @@ export class UserProfileManager {
         uiRenderer.refreshUserProfile(updatedUser);
       }
       
-      this.terminal.appendOutput('✅ Avatar updated successfully!');
+      this.terminal.appendOutput(i18next.t('avatarUpdatedSuccessfully'));
       resolve();
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : 'Failed to upload avatar';
-      this.terminal.appendOutput(`❌ Avatar upload failed: ${errorMsg}`);
+      const errorMsg = error instanceof Error ? error.message : i18next.t('failedToUploadAvatar');
+      this.terminal.appendOutput(i18next.t('avatarUploadFailedWithMessage', { message: errorMsg }));
       this.errorHandler.handleError(error as Error, 'UserProfileManager.handleAvatarUpload', ErrorLevel.ERROR);
       reject(error);
     }

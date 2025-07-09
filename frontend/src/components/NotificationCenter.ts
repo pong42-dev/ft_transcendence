@@ -1,6 +1,7 @@
 import { Notification } from '../types/types.js';
 import { ApiClient } from '../services/ApiClient';
 import { getConfig } from '../config/environment';
+import i18next from 'i18next';
 
 export class NotificationCenter {
   private notifications: Notification[] = [];
@@ -127,7 +128,7 @@ export class NotificationCenter {
     if (this.notifications.length === 0) {
       const emptyState = document.createElement('div');
       emptyState.className = 'p-3 text-center text-terminal-green text-sm';
-      emptyState.textContent = 'No new notifications';
+      emptyState.textContent = i18next.t('notification.no_new_notifications');
       this.container.appendChild(emptyState);
       return;
     }
@@ -152,7 +153,7 @@ export class NotificationCenter {
       
       const time = document.createElement('div');
       time.className = 'text-sm text-terminal-gray opacity-60';
-      time.textContent = 'now';
+      time.textContent = i18next.t('notification.time_now');
       
       header.appendChild(icon);
       header.appendChild(title);
@@ -167,7 +168,7 @@ export class NotificationCenter {
 
       const acceptButton = document.createElement('button');
       acceptButton.className = 'px-2 py-1 text-sm bg-terminal-green text-terminal-black rounded hover:bg-terminal-darkGreen transition-colors';
-      acceptButton.textContent = 'Accept';
+      acceptButton.textContent = i18next.t('notification.accept');
       acceptButton.onclick = async () => {
         await this.handleNotificationResponse(notification, 'accept');
         this.onNotificationAction(notification);
@@ -179,7 +180,7 @@ export class NotificationCenter {
       
       const declineButton = document.createElement('button');
       declineButton.className = 'px-2 py-1 text-sm bg-terminal-red text-white rounded hover:bg-opacity-80 transition-colors';
-      declineButton.textContent = 'Decline';
+      declineButton.textContent = i18next.t('notification.decline');
       declineButton.onclick = async () => {
         await this.handleNotificationResponse(notification, 'decline');
         this.notifications = this.notifications.filter(n => n.id !== notification.id);
@@ -218,8 +219,8 @@ export class NotificationCenter {
       {
         id: `mock_${Date.now()}`,
         type: 'friend_request' as const,
-        title: 'Friend Request',
-        message: 'MockUser wants to be your friend',
+        title: i18next.t('notification.friend_request_title'),
+        message: i18next.t('notification.friend_request_message', { username: 'MockUser' }),
         timestamp: Date.now(),
         read: false,
         data: { username: 'MockUser' }
@@ -227,8 +228,8 @@ export class NotificationCenter {
       {
         id: `mock_${Date.now()}`,
         type: 'game_invite' as const,
-        title: 'Game Invitation',
-        message: 'TestPlayer invited you to a game',
+        title: i18next.t('notification.game_invitation_title'),
+        message: i18next.t('notification.game_invitation_message', { username: 'TestPlayer', gameMode: '1v1' }),
         timestamp: Date.now(),
         read: false,
         data: { username: 'TestPlayer', gameMode: '1v1' }
@@ -248,9 +249,9 @@ export class NotificationCenter {
       // const notifications = await this.apiClient.getNotifications();
       // notifications.forEach(notification => this.addNotification(notification));
       
-      console.log('Real API notification fetch would happen here');
+      console.log(i18next.t('notification.real_api_fetch_placeholder'));
     } catch (error) {
-      console.error('Failed to fetch notifications:', error);
+      console.error(i18next.t('notification.fetch_error'), error);
     }
   }
 
@@ -258,7 +259,7 @@ export class NotificationCenter {
   public async handleNotificationResponse(notification: Notification, action: 'accept' | 'decline'): Promise<void> {
     if (this.config.useMockData) {
       // Mock 응답 처리
-      console.log(`Mock ${action} for notification:`, notification.id);
+      console.log(i18next.t('notification.mock_response_placeholder', { action, id: notification.id }));
       return;
     }
 
@@ -266,9 +267,9 @@ export class NotificationCenter {
       // 실제 API 호출 (향후 구현)
       // await this.apiClient.respondToNotification(notification.id, action);
       
-      console.log(`Real API ${action} response would be sent for notification:`, notification.id);
+      console.log(i18next.t('notification.real_api_response_placeholder', { action, id: notification.id }));
     } catch (error) {
-      console.error(`Failed to ${action} notification:`, error);
+      console.error(i18next.t('notification.response_error', { action }), error);
     }
   }
 

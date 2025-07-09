@@ -207,15 +207,15 @@ export class App {
     
     // 다른 사용자 프로필 조회
     try {
-      this.mainTerminal.appendOutput(`Loading profile for ${username}...`);
+      this.mainTerminal.appendOutput(i18next.t('app.loading_profile', { username }));
       const userProfile = await this.apiClient.user.getUserProfile(username);
       
       // 다른 사용자 프로필 표시
       this.showOtherUserProfile(userProfile);
     } catch (error) {
-      console.error('Failed to load user profile:', error);
+      console.error(i18next.t('app.failed_to_load_profile'), error);
       // 에러 메시지를 터미널에 표시
-      const errorMessage = error instanceof Error ? error.message : `User "${username}" not found or not accessible.`;
+      const errorMessage = error instanceof Error ? error.message : i18next.t('app.user_not_found', { username });
       this.mainTerminal.appendOutput(errorMessage);
       this.router.navigate('/profile');
     }
@@ -235,7 +235,7 @@ export class App {
     // main-content 컨테이너 가져오기
     const mainContent = document.querySelector('.main-content') as HTMLElement;
     if (!mainContent) {
-      this.mainTerminal.appendOutput('Error: Game container not found.');
+      this.mainTerminal.appendOutput(i18next.t('app.game_container_not_found_error'));
       return;
     }
 
@@ -250,7 +250,7 @@ export class App {
         this.gameSetupResult = null; // 게임 설정 데이터 정리
         this.uiRenderer.setGameState(false);
         this.router.navigate('/profile');
-        this.mainTerminal.appendOutput('Game ended. Returning to profile.');
+        this.mainTerminal.appendOutput(i18next.t('app.game_ended_return_profile'));
       }
     );
   }
@@ -279,7 +279,7 @@ export class App {
 
         if (result) {
           const { mode } = result;
-          this.mainTerminal.appendOutput(`Starting ${mode} game...`);
+          this.mainTerminal.appendOutput(i18next.t('app.starting_game', { mode }));
 
           const currentUser = authStore.getCurrentUser();
           if (currentUser) {
@@ -294,11 +294,11 @@ export class App {
             this.router.navigate('/game');
           }
         } else {
-          this.mainTerminal.appendOutput('Game cancelled.');
+          this.mainTerminal.appendOutput(i18next.t('app.game_cancelled'));
         }
       } catch (error) {
         this.mainTerminal.appendOutput(
-          'Error: Could not start the game. Please try again.',
+          i18next.t('app.game_start_error'),
         );
         this.errorHandler.handleError(
           error as Error,
@@ -327,7 +327,7 @@ export class App {
         return this.modalManager.showRegisterModal(callbacks);
       case 'file':
         return this.modalManager.showFileModal({
-          title: 'Select Avatar',
+          title: i18next.t('app.select_avatar'),
           accept: 'image/*',
           maxSize: 5 * 1024 * 1024,
           onFileSelected: (file: File, resolve: () => void, reject: (error: any) => void) => {
@@ -346,11 +346,11 @@ export class App {
         authStore.login(user);
         UserStateCache.cache(user);
         this.mainTerminal.reset();
-        this.mainTerminal.appendOutput(`Welcome back, ${user.username}!`);
+        this.mainTerminal.appendOutput(i18next.t('app.welcome_back', { username: user.username }));
         
         await this.userProfileManager.handlePendingAvatarUpload();
         
-        this.mainTerminal.appendOutput('Type "help" to see available commands.');
+        this.mainTerminal.appendOutput(i18next.t('app.type_help_command'));
         this.uiRenderer.render();
         setTimeout(() => {
           this.router.navigate('/profile');
@@ -361,12 +361,12 @@ export class App {
       onRegisterSuccess: (user: Types.User, avatarFile?: File) => {
         if (avatarFile) {
           this.userProfileManager.setPendingAvatarFile(avatarFile);
-          this.mainTerminal.appendOutput(`Account created successfully for ${user.username}!`);
-          this.mainTerminal.appendOutput('Profile picture will be uploaded after you log in.');
+          this.mainTerminal.appendOutput(i18next.t('app.account_created_success', { username: user.username }));
+          this.mainTerminal.appendOutput(i18next.t('app.avatar_upload_pending'));
         } else {
-          this.mainTerminal.appendOutput(`Account created successfully for ${user.username}!`);
+          this.mainTerminal.appendOutput(i18next.t('app.account_created_success', { username: user.username }));
         }
-        this.mainTerminal.appendOutput('Please use the "login" command to sign in to your new account.');
+        this.mainTerminal.appendOutput(i18next.t('app.login_to_new_account'));
       },
       
       onSwitchToRegister: () => this.modalManager.showRegisterModal(this.getCommonModalCallbacks()),

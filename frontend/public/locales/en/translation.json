@@ -18,7 +18,24 @@
     "no_1v1_matches": "No 1vs1 matches yet",
     "no_tournament_matches": "No tournament matches yet",
     "victory": "Victory",
-    "defeat": "Defeat"
+    "defeat": "Defeat",
+    "tournament_type": "Tournament",
+    "you": "You",
+    "versus": "vs",
+    "rank_prefix": "R",
+    "champion": "🏆 Champion",
+    "runner_up": "🥈 Runner-up",
+    "semi_finalist": "🥉 Semi-finalist",
+    "uploadingProfilePicture": "Uploading your profile picture...",
+    "profilePictureUploadedSuccessfully": "Profile picture uploaded successfully!",
+    "userProfileUpdatedWithNewAvatar": "🖼️ User profile updated with new avatar",
+    "failedToRefreshUserProfileAfterAvatarUpload": "Failed to refresh user profile after avatar upload:",
+    "avatarUploadFailed": "Avatar upload failed:",
+    "failedToUploadProfilePictureTryAgain": "Failed to upload profile picture. You can try again later with \"set avatar\" command.",
+    "uploadingAvatar": "Uploading avatar...",
+    "avatarUpdatedSuccessfully": "✅ Avatar updated successfully!",
+    "failedToUploadAvatar": "Failed to upload avatar",
+    "avatarUploadFailedWithMessage": "❌ Avatar upload failed: {{message}}"
   },
   "loginModal": {
     "welcome_back": "Welcome Back",
@@ -135,7 +152,8 @@
     "max_size_formats": "Max size: {{size}} • {{formats}}",
     "remove_file": "Remove file",
     "file_size_too_large": "File size must be less than {{maxSize}}",
-    "file_type_not_supported": "File type not supported. Please select: {{accept}}"
+    "file_type_not_supported": "File type not supported. Please select: {{accept}}",
+    "selectAvatarTitle": "Select Avatar"
   },
   "newTournamentTestModal": {
     "title": "Tournament Vertical Flow Test",
@@ -197,6 +215,19 @@
     "megabytes": "MB",
     "gigabytes": "GB",
     "remove": "Remove"
+  },
+  "header": {
+    "title": "PONG-CLI v1.0.0"
+  },
+  "mainContent": {
+    "gameViewComingSoon": "Game View (Coming Soon)",
+    "welcomeMessage": "Welcome to PONG-CLI",
+    "loginPrompt": "Please login to continue"
+  },
+  "statusBar": {
+    "notLoggedIn": "Not logged in",
+    "route": "Route: ",
+    "authenticating": "Authenticating..."
   },
   "validation": {
     "passwords_match": "Passwords match",
@@ -321,9 +352,209 @@
     "change_success": "Language changed to {{language}}.",
     "change_failed": "Failed to change language to {{lang}}."
   },
+  "auth": {
+    "loggedOutFromOtherTab": "You have been logged out from another tab.",
+    "loginAgainPrompt": "Please use the 'login' command to sign in again.",
+    "welcomeBack": "Welcome back, {{username}}!",
+    "typeHelp": "Type 'help' to see available commands.",
+    "googleLoginError": "An error occurred during Google login.",
+    "googleLoginConflict": "This account may already be registered. Try a regular login.",
+    "tryAgainLater": "Please try again later.",
+    "twoFARequired": "Two-factor authentication required. Please enter your verification code.",
+    "twoFACancelled": "2FA verification cancelled.",
+    "twoFAVerifying": "Verifying 2FA code...",
+    "twoFAFailed": "2FA verification failed. Please try again.",
+    "twoFAFailedWithMessage": "2FA verification failed: {{message}}",
+    "invalidCode": "Invalid code"
+  },
   "languages": {
     "en": "English",
     "ko": "Korean",
     "ja": "Japanese"
+  },
+  "game": {
+    "client": {
+      "error": {
+        "insufficientPlayerData": "GameClient Error: Insufficient player data provided.",
+        "notEnoughPlayers": "GameClient Error: Not enough players in game info."
+      },
+      "log": {
+        "webSocketConnected": "[LOG] GameClient WebSocket connection successful",
+        "gameCanceledByServer": "Game canceled by server.",
+        "gameCanceledDuringPlay": "Game canceled by server during play."
+      },
+      "player": {
+        "defaultPlayer1": "Player 1",
+        "defaultPlayer2": "Player 2",
+        "defaultUserPlayer": "Player",
+        "defaultUserPlayer1": "Player 1",
+        "defaultGuestPlayer2": "Player 2"
+      }
+    },
+    "page": {
+      "log": {
+        "decodedUserId": "Decoded user ID from JWT:",
+        "tournamentCreated": "Tournament created:",
+        "localModeSelected": "Local mode selected, guest nickname:",
+        "tournamentOpponents": "Tournament opponents:",
+        "gameCanceledByUser": "Game canceled by user",
+        "handlingUnexpectedExit": "Handling unexpected exit - destroying game/tournament client",
+        "destroyingExistingTournamentClient": "Destroying existing tournament client",
+        "tournamentClientDecodedUserId": "Tournament client - Decoded user ID from JWT:",
+        "accessTokenStatus": "Access token from session storage:"
+      },
+      "error": {
+        "loginRequiredForTournament": "User must be logged in to participate in tournament",
+        "tournamentCreationFailed": "Tournament creation failed:",
+        "failedToCreateGameOrTournament": "Failed to create game or tournament:",
+        "guestNicknameRequired": "Guest nickname is required for local mode.",
+        "threeGuestNicknamesRequired": "Three guest nicknames are required for tournament mode.",
+        "unsupportedGameMode": "Unsupported game mode from setup modal:"
+      },
+      "alert": {
+        "loginRequiredForTournament": "You need to be logged in to participate in a tournament.",
+        "tournamentCreationRateLimit": "Tournament creation is already in progress. Please try again later.",
+        "tournamentCreationFailed": "Failed to create tournament: ",
+        "failedToStartGame": "An error occurred while starting the game."
+      },
+      "waitingScreen": {
+        "gameStarting": "Game Starting",
+        "waitingForServer": "Waiting for server..."
+      },
+      "button": {
+        "cancel": "Cancel"
+      }
+    },
+    "renderer": {
+      "playerInfo": {
+        "defaultPlayerInitial": "P",
+        "defaultPlayer1": "Player 1",
+        "defaultPlayer2": "Player 2"
+      },
+      "round": "Round {{round}}"
+    },
+    "inputHandler": {
+      "log": {
+        "activated": "[InputHandler] Activated - Local Multiplayer: {{isLocalMultiplayer}}"
+      }
+    }
+  },
+  "tournament": {
+    "client": {
+      "bracketModal": {
+        "title": "Tournament Bracket"
+      },
+      "error": {
+        "userIdRequired": "Current user ID is required to connect to tournament",
+        "matchInfoFetchFailed": "handleMatchFinish: Failed to fetch match information"
+      },
+      "alert": {
+        "connectionFailedUserId": "Failed to connect to tournament. User ID is required.",
+        "connectionError": "An error occurred during tournament connection."
+      },
+      "log": {
+        "connecting": "Connecting to tournament {{tournamentId}} with user ID {{currentUserId}}",
+        "startingTournament": "Starting tournament...",
+        "cancelingTournament": "Canceling tournament..."
+      },
+      "waitingScreen": {
+        "title": "🏆 Tournament Starting 🏆",
+        "preparingBracket": "Preparing tournament bracket...",
+        "initializing": "Initializing...",
+        "participantsTitle": "Tournament Participants:",
+        "currentUser": "Current User (ID: {{userId}})",
+        "guestPlayer": "Guest Player {{playerNum}}",
+        "tournamentId": "Tournament ID: {{tournamentId}}",
+        "autoStartTime": "⏳ Tournament will start automatically in 5 seconds..."
+      },
+      "button": {
+        "cancelTournament": "Cancel Tournament",
+        "startTournament": "🚀 Start Tournament",
+        "cancel": "❌ Cancel",
+        "starting": "🚀 Starting...",
+        "returnToMain": "Return to Main Menu"
+      },
+      "bracket": {
+        "invalidData": "Invalid bracket data",
+        "semiFinal1": "Semi-Final 1",
+        "final": "Final",
+        "semiFinal2": "Semi-Final 2"
+      },
+      "matchScreen": {
+        "title": "🏆 Tournament Match 🏆",
+        "starting": "Starting...",
+        "loadingGame": "Loading game..."
+      },
+      "endScreen": {
+        "title": "🏆 Tournament Complete! 🏆",
+        "winner": "Winner",
+        "finalResults": "Final Results:",
+        "firstPlace": "1st Place",
+        "secondPlace": "2nd Place: Runner-up",
+        "thirdPlace": "3rd Place: Third Place"
+      },
+      "modal": {
+        "waitingForTournament": "Waiting for tournament...",
+        "waitingForNextMatch": "Waiting for next match..."
+      },
+      "status": {
+        "waitingForNextMatch": "Waiting for next match...",
+        "startingTournament": "Starting tournament..."
+      },
+      "nextMatchScreen": {
+        "title": "🎉 Match Complete! 🎉",
+        "waitingForNextMatch": "Waiting for next match...",
+        "preparingNextRound": "Preparing next round...",
+        "pleaseWait": "Please wait while the tournament progresses."
+      },
+      "countdown": {
+        "startingIn": "Starting in {{countdown}}...",
+        "finished": "Countdown finished, starting tournament..."
+      }
+    }
+  },
+  "common": {
+    "error": {
+      "unknownError": "Unknown error"
+    },
+    "status": {
+      "exists": "exists",
+      "notFound": "not found"
+    },
+    "player": {
+      "unknown": "Unknown"
+    },
+    "id": "ID"
+  },
+  "app": {
+    "loading_profile": "Loading profile for {{username}}...",
+    "failed_to_load_profile": "Failed to load user profile:",
+    "user_not_found": "User \"{{username}}\" not found or not accessible.",
+    "game_container_not_found_error": "Error: Game container not found.",
+    "game_ended_return_profile": "Game ended. Returning to profile.",
+    "starting_game": "Starting {{mode}} game...",
+    "game_cancelled": "Game cancelled.",
+    "game_start_error": "Error: Could not start the game. Please try again.",
+    "select_avatar": "Select Avatar",
+    "welcome_back": "Welcome back, {{username}}!",
+    "type_help_command": "Type \"help\" to see available commands.",
+    "account_created_success": "Account created successfully for {{username}}!",
+    "avatar_upload_pending": "Profile picture will be uploaded after you log in.",
+    "login_to_new_account": "Please use the \"login\" command to sign in to your new account."
+  },
+  "notification": {
+    "no_new_notifications": "No new notifications",
+    "time_now": "now",
+    "accept": "Accept",
+    "decline": "Decline",
+    "friend_request_title": "Friend Request",
+    "friend_request_message": "{{username}} wants to be your friend",
+    "game_invitation_title": "Game Invitation",
+    "game_invitation_message": "{{username}} invited you to a game",
+    "real_api_fetch_placeholder": "Real API notification fetch would happen here",
+    "fetch_error": "Failed to fetch notifications:",
+    "mock_response_placeholder": "Mock {{action}} for notification: {{id}}",
+    "real_api_response_placeholder": "Real API {{action}} response would be sent for notification: {{id}}",
+    "response_error": "Failed to {{action}} notification:"
   }
 } 

@@ -18,7 +18,24 @@
     "no_1v1_matches": "まだ1対1の対戦はありません",
     "no_tournament_matches": "まだトーナメントの対戦はありません",
     "victory": "勝利",
-    "defeat": "敗北"
+    "defeat": "敗北",
+    "tournament_type": "トーナメント",
+    "you": "あなた",
+    "versus": "対",
+    "rank_prefix": "R",
+    "champion": "🏆 チャンピオン",
+    "runner_up": "🥈 準優勝",
+    "semi_finalist": "🥉 準決勝進出者",
+    "uploadingProfilePicture": "プロフィール画像をアップロードしています...",
+    "profilePictureUploadedSuccessfully": "プロフィール画像が正常にアップロードされました！",
+    "userProfileUpdatedWithNewAvatar": "🖼️ 新しいアバターでユーザープロフィールが更新されました",
+    "failedToRefreshUserProfileAfterAvatarUpload": "アバターアップロード後にユーザープロフィールを更新できませんでした:",
+    "avatarUploadFailed": "アバターのアップロードに失敗しました:",
+    "failedToUploadProfilePictureTryAgain": "プロフィール画像のアップロードに失敗しました。「set avatar」コマンドで後で再試行できます。",
+    "uploadingAvatar": "アバターをアップロードしています...",
+    "avatarUpdatedSuccessfully": "✅ アバターが正常に更新されました！",
+    "failedToUploadAvatar": "アバターのアップロードに失敗しました",
+    "avatarUploadFailedWithMessage": "❌ アバターのアップロードに失敗しました: {{message}}"
   },
   "loginModal": {
     "welcome_back": "おかえりなさい",
@@ -135,7 +152,8 @@
     "max_size_formats": "最大サイズ：{{size}} • {{formats}}",
     "remove_file": "ファイルを削除",
     "file_size_too_large": "ファイルサイズは{{maxSize}}未満である必要があります",
-    "file_type_not_supported": "サポートされていないファイルタイプです。{{accept}}を選択してください"
+    "file_type_not_supported": "サポートされていないファイルタイプです。{{accept}}を選択してください",
+    "selectAvatarTitle": "アバターを選択"
   },
   "newTournamentTestModal": {
     "title": "トーナメント垂直フローテスト",
@@ -198,9 +216,22 @@
     "gigabytes": "GB",
     "remove": "削除"
   },
+  "header": {
+    "title": "PONG-CLI v1.0.0"
+  },
+  "mainContent": {
+    "gameViewComingSoon": "ゲームビュー（近日公開）",
+    "welcomeMessage": "PONG-CLIへようこそ",
+    "loginPrompt": "続行するにはログインしてください"
+  },
+  "statusBar": {
+    "notLoggedIn": "ログインしていません",
+    "route": "ルート: ",
+    "authenticating": "認証中..."
+  },
   "validation": {
-    "passwords_match": "パスワードが一致します",
-    "email_already_registered": "メールアドレスは既に登録されています。",
+    "passwords_match": "パスワードが一致しました",
+    "email_already_registered": "このメールアドレスは既に登録されています。",
     "username_already_taken": "ユーザー名は既に使用されています。",
     "passwords_do_not_match": "パスワードが一致しません",
     "invalid_email_format": "無効なメールアドレス形式です",
@@ -321,9 +352,209 @@
     "change_success": "言語が{{language}}に変更されました。",
     "change_failed": "言語を{{lang}}に変更できませんでした。"
   },
+  "auth": {
+    "loggedOutFromOtherTab": "別のタブからログアウトしました。",
+    "loginAgainPrompt": "'login' コマンドを使用して再度サインインしてください。",
+    "welcomeBack": "おかえりなさい、{{username}}さん！",
+    "typeHelp": "利用可能なコマンドを表示するには 'help' と入力してください。",
+    "googleLoginError": "Googleログイン中にエラーが発生しました。",
+    "googleLoginConflict": "このアカウントはすでに登録されている可能性があります。通常のログインをお試しください。",
+    "tryAgainLater": "後でもう一度お試しください。",
+    "twoFARequired": "二要素認証が必要です。確認コードを入力してください。",
+    "twoFACancelled": "二要素認証がキャンセルされました。",
+    "twoFAVerifying": "2FAコードを確認しています...",
+    "twoFAFailed": "二要素認証に失敗しました。もう一度お試しください。",
+    "twoFAFailedWithMessage": "二要素認証に失敗しました: {{message}}",
+    "invalidCode": "無効なコード"
+  },
   "languages": {
     "en": "英語",
     "ko": "韓国語",
     "ja": "日本語"
+  },
+  "game": {
+    "client": {
+      "error": {
+        "insufficientPlayerData": "GameClient エラー: プレイヤーデータが不足しています。",
+        "notEnoughPlayers": "GameClient エラー: ゲーム情報にプレイヤーが不足しています。"
+      },
+      "log": {
+        "webSocketConnected": "[LOG] GameClient WebSocket 接続成功",
+        "gameCanceledByServer": "サーバーによってゲームがキャンセルされました。",
+        "gameCanceledDuringPlay": "プレイ中にサーバーによってゲームがキャンセルされました。"
+      },
+      "player": {
+        "defaultPlayer1": "プレイヤー1",
+        "defaultPlayer2": "プレイヤー2",
+        "defaultUserPlayer": "プレイヤー",
+        "defaultUserPlayer1": "プレイヤー1",
+        "defaultGuestPlayer2": "プレイヤー2"
+      }
+    },
+    "page": {
+      "log": {
+        "decodedUserId": "JWTからデコードされたユーザーID:",
+        "tournamentCreated": "トーナメント作成済み:",
+        "localModeSelected": "ローカルモードが選択されました、ゲストニックネーム:",
+        "tournamentOpponents": "トーナメント対戦相手:",
+        "gameCanceledByUser": "ユーザーによってゲームがキャンセルされました",
+        "handlingUnexpectedExit": "予期せぬ終了を処理中 - ゲーム/トーナメントクライアントを破棄",
+        "destroyingExistingTournamentClient": "既存のトーナメントクライアントを破棄中",
+        "tournamentClientDecodedUserId": "トーナメントクライアント - JWTからデコードされたユーザーID:",
+        "accessTokenStatus": "セッションストレージからのアクセストークン:"
+      },
+      "error": {
+        "loginRequiredForTournament": "トーナメントに参加するにはユーザーログインが必要です。",
+        "tournamentCreationFailed": "トーナメント作成失敗:",
+        "failedToCreateGameOrTournament": "ゲームまたはトーナメントの作成に失敗しました:",
+        "guestNicknameRequired": "ローカルモードにはゲストニックネームが必要です。",
+        "threeGuestNicknamesRequired": "トーナメントモードには3人のゲストニックネームが必要です。",
+        "unsupportedGameMode": "サポートされていないゲームモード:"
+      },
+      "alert": {
+        "loginRequiredForTournament": "トーナメントに参加するにはログインが必要です。",
+        "tournamentCreationRateLimit": "トーナメント作成がすでに進行中です。しばらくしてからもう一度お試しください。",
+        "tournamentCreationFailed": "トーナメント作成に失敗しました: ",
+        "failedToStartGame": "ゲームを開始中にエラーが発生しました。"
+      },
+      "waitingScreen": {
+        "gameStarting": "ゲーム開始",
+        "waitingForServer": "サーバーを待機中..."
+      },
+      "button": {
+        "cancel": "キャンセル"
+      }
+    },
+    "renderer": {
+      "playerInfo": {
+        "defaultPlayerInitial": "P",
+        "defaultPlayer1": "プレイヤー1",
+        "defaultPlayer2": "プレイヤー2"
+      },
+      "round": "ラウンド {{round}}"
+    },
+    "inputHandler": {
+      "log": {
+        "activated": "[InputHandler] アクティブ化 - ローカルマルチプレイヤー: {{isLocalMultiplayer}}"
+      }
+    }
+  },
+  "tournament": {
+    "client": {
+      "bracketModal": {
+        "title": "トーナメントブラケット"
+      },
+      "error": {
+        "userIdRequired": "トーナメントに接続するには現在のユーザーIDが必要です。",
+        "matchInfoFetchFailed": "handleMatchFinish: 試合情報の取得に失敗しました"
+      },
+      "alert": {
+        "connectionFailedUserId": "トーナメント接続失敗。ユーザーIDが必要です。",
+        "connectionError": "トーナメント接続中にエラーが発生しました。"
+      },
+      "log": {
+        "connecting": "トーナメント {{tournamentId}} にユーザーID {{currentUserId}} で接続中",
+        "startingTournament": "トーナメントを開始中...",
+        "cancelingTournament": "トーナメントをキャンセル中..."
+      },
+      "waitingScreen": {
+        "title": "🏆 トーナメント開始 🏆",
+        "preparingBracket": "トーナメントブラケットを準備中...",
+        "initializing": "初期化中...",
+        "participantsTitle": "トーナメント参加者:",
+        "currentUser": "現在のユーザー (ID: {{userId}})",
+        "guestPlayer": "ゲストプレイヤー {{playerNum}}",
+        "tournamentId": "トーナメントID: {{tournamentId}}",
+        "autoStartTime": "⏳ トーナメントは5秒後に自動的に開始されます..."
+      },
+      "button": {
+        "cancelTournament": "トーナメントをキャンセル",
+        "startTournament": "🚀 トーナメント開始",
+        "cancel": "❌ キャンセル",
+        "starting": "🚀 開始中...",
+        "returnToMain": "メインメニューに戻る"
+      },
+      "bracket": {
+        "invalidData": "無効なブラケットデータ",
+        "semiFinal1": "準決勝1",
+        "final": "決勝",
+        "semiFinal2": "準決勝2"
+      },
+      "matchScreen": {
+        "title": "🏆 トーナメントマッチ 🏆",
+        "starting": "開始中...",
+        "loadingGame": "ゲームを読み込み中..."
+      },
+      "endScreen": {
+        "title": "🏆 トーナメント完了！ 🏆",
+        "winner": "勝者",
+        "finalResults": "最終結果:",
+        "firstPlace": "1位",
+        "secondPlace": "2位: 準優勝",
+        "thirdPlace": "3位: 3位"
+      },
+      "modal": {
+        "waitingForTournament": "トーナメントを待機中...",
+        "waitingForNextMatch": "次の試合を待機中..."
+      },
+      "status": {
+        "waitingForNextMatch": "次の試合を待機中...",
+        "startingTournament": "トーナメントを開始中..."
+      },
+      "nextMatchScreen": {
+        "title": "🎉 試合完了！ 🎉",
+        "waitingForNextMatch": "次の試合を待機中...",
+        "preparingNextRound": "次のラウンドを準備中...",
+        "pleaseWait": "トーナメントの進行をしばらくお待ちください。"
+      },
+      "countdown": {
+        "startingIn": "{{countdown}}秒で開始...",
+        "finished": "カウントダウン終了、トーナメントを開始中..."
+      }
+    }
+  },
+  "common": {
+    "error": {
+      "unknownError": "不明なエラー"
+    },
+    "status": {
+      "exists": "存在する",
+      "notFound": "見つからない"
+    },
+    "player": {
+      "unknown": "不明"
+    },
+    "id": "ID"
+  },
+  "app": {
+    "loading_profile": "{{username}}のプロフィールを読み込み中...",
+    "failed_to_load_profile": "ユーザープロフィールの読み込みに失敗しました: ",
+    "user_not_found": "ユーザー \"{{username}}\" が見つからないか、アクセスできません。",
+    "game_container_not_found_error": "エラー: ゲームコンテナが見つかりません。",
+    "game_ended_return_profile": "ゲームが終了しました。プロフィールに戻ります。",
+    "starting_game": "{{mode}}ゲームを開始しています...",
+    "game_cancelled": "ゲームはキャンセルされました。",
+    "game_start_error": "エラー: ゲームを開始できませんでした。もう一度お試しください。",
+    "select_avatar": "アバターを選択",
+    "welcome_back": "おかえりなさい、{{username}}さん！",
+    "type_help_command": "利用可能なコマンドを表示するには\"help\"と入力してください。",
+    "account_created_success": "{{username}}のアカウントが正常に作成されました！",
+    "avatar_upload_pending": "プロフィール画像はログイン後にアップロードされます。",
+    "login_to_new_account": "新しいアカウントにサインインするには、\"login\"コマンドを使用してください。"
+  },
+  "notification": {
+    "no_new_notifications": "新しい通知はありません",
+    "time_now": "今",
+    "accept": "承認",
+    "decline": "拒否",
+    "friend_request_title": "フレンドリクエスト",
+    "friend_request_message": "{{username}}さんがフレンドになりたがっています",
+    "game_invitation_title": "ゲーム招待",
+    "game_invitation_message": "{{username}}さんがゲームに招待しました",
+    "real_api_fetch_placeholder": "ここに実際のAPI通知の取得が行われます",
+    "fetch_error": "通知の取得に失敗しました:",
+    "mock_response_placeholder": "通知: {{id}}に対するモック{{action}}",
+    "real_api_response_placeholder": "通知: {{id}}に対する実際のAPI{{action}}応答が送信されます",
+    "response_error": "通知{{action}}失敗:"
   }
 } 

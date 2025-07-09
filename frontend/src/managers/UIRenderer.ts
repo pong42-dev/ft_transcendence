@@ -4,6 +4,7 @@ import { ApiClient } from '../services/ApiClient.js';
 import { authStore } from '../store/authStore.js';
 import { User } from '../types/types.js';
 import { DOMUpdater } from '../utils/DOMUpdater.js';
+import i18next from 'i18next';
 
 export class UIRenderer {
   private appElement: HTMLElement;
@@ -62,7 +63,7 @@ export class UIRenderer {
             <div class="w-3 h-3 rounded-full bg-terminal-lightGreen"></div>
           </div>
           <div class="header-title flex-grow text-center text-gray-400 text-sm">
-            PONG-CLI v1.0.0 <span class="mode-indicator"></span>
+            ${i18next.t('header.title')} <span class="mode-indicator"></span>
           </div>
         </div>
         
@@ -88,9 +89,9 @@ export class UIRenderer {
         <div class="app-status-bar h-[30px] min-h-[30px] max-h-[30px] flex justify-between items-center px-4 bg-terminal-black border-t border-terminal-gray">
           <div class="flex items-center gap-2">
             <span class="status-indicator text-terminal-lightGreen text-sm">○</span>
-            <span class="status-text text-gray-400 text-sm">Not logged in</span>
+            <span class="status-text text-gray-400 text-sm">${i18next.t('statusBar.notLoggedIn')}</span>
           </div>
-          <div class="route-text text-gray-400 text-sm">Route: #/</div>
+          <div class="route-text text-gray-400 text-sm">${i18next.t('statusBar.route')}#/</div>
         </div>
       </div>
     `;
@@ -124,7 +125,7 @@ export class UIRenderer {
     
     // Don't update content until auth is resolved
     if (isLoggedIn === null) {
-      DOMUpdater.updateHTML(mainContent, `<div class="flex items-center justify-center h-full text-terminal-lightGreen">Authenticating...</div>`);
+      DOMUpdater.updateHTML(mainContent, `<div class="flex items-center justify-center h-full text-terminal-lightGreen">${i18next.t('statusBar.authenticating')}</div>`);
       return;
     }
     
@@ -137,7 +138,7 @@ export class UIRenderer {
     if (isLoggedIn && currentUser) {
       if (this.isInGame) {
         // Game content would go here
-        DOMUpdater.updateHTML(mainContent, `<div class="flex items-center justify-center h-full text-terminal-green">Game View (Coming Soon)</div>`);
+        DOMUpdater.updateHTML(mainContent, `<div class="flex items-center justify-center h-full text-terminal-green">${i18next.t('mainContent.gameViewComingSoon')}</div>`);
       } else {
         // UserProfile이 없거나 사용자 데이터가 변경된 경우 새로 생성
         // 현재 사용자 프로필로 돌아올 때는 항상 재생성하여 다른 사용자 프로필 상태 정리
@@ -165,7 +166,7 @@ export class UIRenderer {
       this.lastUserProfileData = null;
       
       // Demo content
-      DOMUpdater.updateHTML(mainContent, `<div class="flex items-center justify-center h-full text-terminal-gray">Welcome to PONG-CLI<br/>Please login to continue</div>`);
+      DOMUpdater.updateHTML(mainContent, `<div class="flex items-center justify-center h-full text-terminal-gray">${i18next.t('mainContent.welcomeMessage')}<br/>${i18next.t('mainContent.loginPrompt')}</div>`);
     }
     
     // Update status bar to reflect current state
@@ -194,7 +195,7 @@ export class UIRenderer {
     DOMUpdater.updateText('.status-text', this.getStatusText());
     
     // 라우트 정보 업데이트
-    DOMUpdater.updateText('.route-text', `Route: ${window.location.hash || '#/'}`);
+    DOMUpdater.updateText('.route-text', `${i18next.t('statusBar.route')}${window.location.hash || '#/'}`);
   }
 
   /**
@@ -204,9 +205,9 @@ export class UIRenderer {
     const isLoggedIn = authStore.getIsLoggedIn();
     const currentUser = authStore.getCurrentUser();
     
-    if (isLoggedIn === null) return 'Authenticating...';
+    if (isLoggedIn === null) return i18next.t('statusBar.authenticating');
     if (isLoggedIn) return currentUser?.username || '';
-    return 'Not logged in';
+    return i18next.t('statusBar.notLoggedIn');
   }
 
   /**

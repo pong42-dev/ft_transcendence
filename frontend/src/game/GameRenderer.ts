@@ -2,6 +2,7 @@
 
 import { GameStateDto } from '../types/game-websocket';
 import { PlayerResponseDto } from '../types/types';
+import i18next from 'i18next';
 
 /**
  * Game Renderer Module (WebSocket 기반, GameConfig 완전 제거)
@@ -163,25 +164,25 @@ export class GameRenderer {
     // 왼쪽 플레이어: 아바타 → 이름 순서
     const leftAvatarHtml = leftPlayer.avatarUrl
       ? `<img src="${leftPlayer.avatarUrl}" class="w-full h-full object-cover rounded-full" alt="${leftPlayer.name}">`
-      : `<span class="text-sm">${leftPlayer.name?.charAt(0).toUpperCase() || 'P'}</span>`;
+      : `<span class="text-sm">${leftPlayer.name?.charAt(0).toUpperCase() || i18next.t('game.renderer.playerInfo.defaultPlayerInitial')}</span>`;
 
     this.leftPlayerInfo.innerHTML = `
       <div class="flex items-center gap-3">
         <div class="w-10 h-10 rounded-full bg-terminal-gray bg-opacity-20 flex items-center justify-center overflow-hidden">
           ${leftAvatarHtml}
         </div>
-        <div class="text-sm font-bold">${leftPlayer.name || 'Player 1'}</div>
+        <div class="text-sm font-bold">${leftPlayer.name || i18next.t('game.renderer.playerInfo.defaultPlayer1')}</div>
       </div>
     `;
 
     // 오른쪽 플레이어: 이름 → 아바타 순서
     const rightAvatarHtml = rightPlayer.avatarUrl
       ? `<img src="${rightPlayer.avatarUrl}" class="w-full h-full object-cover rounded-full" alt="${rightPlayer.name}">`
-      : `<span class="text-sm">${rightPlayer.name?.charAt(0).toUpperCase() || 'P'}</span>`;
+      : `<span class="text-sm">${rightPlayer.name?.charAt(0).toUpperCase() || i18next.t('game.renderer.playerInfo.defaultPlayerInitial')}</span>`;
 
     this.rightPlayerInfo.innerHTML = `
       <div class="flex items-center gap-3">
-        <div class="text-sm font-bold">${rightPlayer.name || 'Player 2'}</div>
+        <div class="text-sm font-bold">${rightPlayer.name || i18next.t('game.renderer.playerInfo.defaultPlayer2')}</div>
         <div class="w-10 h-10 rounded-full bg-terminal-gray bg-opacity-20 flex items-center justify-center overflow-hidden">
           ${rightAvatarHtml}
         </div>
@@ -191,7 +192,7 @@ export class GameRenderer {
 
   public updateRound(round: number): void {
     this.roundElement.className = 'absolute top-16 left-1/2 transform -translate-x-1/2 text-sm opacity-70';
-    this.roundElement.textContent = `Round ${round}`;
+    this.roundElement.textContent = i18next.t('game.renderer.round', { round });
   }
 
   // 기존 updatePlayerInfo에 아바타 지원 추가
@@ -240,7 +241,7 @@ export class GameRenderer {
     this.countdownElement.innerHTML = `
       <div class="flex flex-col items-center">
         <div class="text-6xl font-bold mb-2 text-center">${count}</div>
-        <div class="text-2xl opacity-70 text-center">Round ${round}</div>
+        <div class="text-2xl opacity-70 text-center">${i18next.t('game.renderer.round', { round })}</div>
       </div>
     `;
   }

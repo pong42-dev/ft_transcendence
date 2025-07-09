@@ -173,8 +173,8 @@ export class UserProfile {
         opponent: 'GameMaster',
         rank: 1,
         type: '1v1',
-        my_score: 5,
-        opponent_score: 3
+        myScore: 5,
+        opponentScore: 3
       },
       {
         date: '2025-01-14',
@@ -187,8 +187,8 @@ export class UserProfile {
         opponent: 'PongKing',
         rank: 2,
         type: '1v1',
-        my_score: 3,
-        opponent_score: 5
+        myScore: 3,
+        opponentScore: 5
       },
       {
         date: '2025-01-12',
@@ -201,8 +201,8 @@ export class UserProfile {
         opponent: 'Champion',
         rank: 1,
         type: '1v1',
-        my_score: 5,
-        opponent_score: 2
+        myScore: 5,
+        opponentScore: 2
       }
     ];
 
@@ -275,7 +275,7 @@ export class UserProfile {
 
     const matchType = document.createElement('div');
     matchType.className = 'text-xs px-2 py-0.5 rounded-full bg-terminal-gray bg-opacity-20';
-    matchType.textContent = match.type === '1v1' ? '1v1' : 'Tournament';
+    matchType.textContent = match.type === '1v1' ? '1v1' : i18n.t('userProfile.tournament_type');
 
     header.appendChild(dateInfo);
     header.appendChild(matchType);
@@ -288,12 +288,12 @@ export class UserProfile {
       content.innerHTML = `
         <div class="flex items-center gap-4">
           <div class="flex flex-col items-center">
-            <div class="text-lg font-bold">${match.my_score}</div>
-            <div class="text-xs opacity-70">You</div>
+            <div class="text-lg font-bold">${match.myScore}</div>
+            <div class="text-xs opacity-70">${i18n.t('userProfile.you')}</div>
           </div>
-          <div class="text-sm opacity-50">vs</div>
+          <div class="text-sm opacity-50">${i18n.t('userProfile.versus')}</div>
           <div class="flex flex-col items-center">
-            <div class="text-lg font-bold">${match.opponent_score}</div>
+            <div class="text-lg font-bold">${match.opponentScore}</div>
             <div class="text-xs opacity-70">${match.opponent}</div>
           </div>
         </div>
@@ -312,7 +312,7 @@ export class UserProfile {
         const opponentItem = document.createElement('div');
         opponentItem.className = 'flex items-center gap-2 text-sm';
         opponentItem.innerHTML = `
-          <span class="text-xs opacity-70">R${index + 1}:</span>
+          <span class="text-xs opacity-70">${i18n.t('userProfile.rank_prefix')}${index + 1}:</span>
           <span>${opponent}</span>
         `;
         opponentsList.appendChild(opponentItem);
@@ -320,7 +320,7 @@ export class UserProfile {
 
       const rankBadge = document.createElement('div');
       rankBadge.className = 'text-xs px-2 py-0.5 rounded-full bg-terminal-gray bg-opacity-20';
-      rankBadge.textContent = match.rank === 1 ? '🏆 Champion' : match.rank === 2 ? '🥈 Runner-up' : '🥉 Semi-finalist';
+      rankBadge.textContent = match.rank === 1 ? i18n.t('userProfile.champion') : match.rank === 2 ? i18n.t('userProfile.runner_up') : i18n.t('userProfile.semi_finalist');
 
       content.appendChild(opponentsList);
       content.appendChild(rankBadge);

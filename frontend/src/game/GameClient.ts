@@ -4,6 +4,7 @@ import { InputHandler } from './InputHandler';
 import { GameResponseDto, GameResult } from '../types/types';
 import { GameStateDto, GameEventDto, WSPlayerInputMessage } from '../types/game-websocket';
 import { ModalManager } from '../managers/ModalManager';
+import i18next from 'i18next';
 
 export interface GameClientCallbacks {
   onPreGameCountdown: (remainingTime: number) => void;
@@ -47,7 +48,7 @@ export class GameClient {
         this.playerId = this.gameInfo.players[0].id;
         this.player2Id = this.gameInfo.players[1]?.id ?? null;
       } else {
-        console.error('GameClient Error: Insufficient player data provided.');
+        console.error(i18next.t('game.client.error.insufficientPlayerData'));
         this.callbacks.onFinish(); // 플레이어 정보가 없으면 게임을 진행할 수 없음
       }
     }
@@ -64,7 +65,7 @@ export class GameClient {
     this.webSocketService.on('close', this.handleConnectionClose);
     this.webSocketService.on('error', this.handleError);
     this.webSocketService.on('open', () => {
-      console.log('[LOG] GameClient WebSocket 연결 성공');
+      console.log(i18next.t('game.client.log.webSocketConnected'));
     });
 
     // [수정] 토너먼트 모드가 아닐 때만 직접 연결합니다.
@@ -114,7 +115,7 @@ export class GameClient {
       this.renderer.showBall();
     }
     else if (gameEvent.event === 'game_canceled') {
-      console.log('Game canceled by server.');
+      console.log(i18next.t('game.client.log.gameCanceledByServer'));
       this.gameEnded = true; // 게임이 종료되었음을 명시
       this.callbacks.onFinish();
     }
@@ -160,7 +161,7 @@ export class GameClient {
         this.handleGameEnd(gameEvent.data?.winnerId, gameEvent.data?.finalScores);
         break;
       case 'game_canceled':
-        console.log('Game canceled by server during play.');
+        console.log(i18next.t('game.client.log.gameCanceledDuringPlay'));
         this.gameEnded = true;
         this.callbacks.onFinish();
         break;
@@ -213,12 +214,12 @@ export class GameClient {
     let rightPlayerAvatar: string | undefined;
 
     if (players.length < 2) {
-      console.error('GameClient Error: Not enough players in game info.');
+      console.error(i18next.t('game.client.error.notEnoughPlayers'));
       return;
     }
 
-    leftPlayerName = players[0]?.name || 'Player 1';
-    rightPlayerName = players[1]?.name || 'Player 2';
+    leftPlayerName = players[0]?.name || i18next.t('game.client.player.defaultPlayer1');
+    rightPlayerName = players[1]?.name || i18next.t('game.client.player.defaultPlayer2');
     leftPlayerAvatar = players[0]?.avatarUrl;
     rightPlayerAvatar = players[1]?.avatarUrl;
 
@@ -281,7 +282,7 @@ export class GameClient {
         score: scores.left
       };
       rightPlayer = {
-        nickname: userPlayer?.name || 'Player',
+        nickname: userPlayer?.name || i18next.t('game.client.player.defaultUserPlayer'),
         score: scores.right
       };
       
@@ -291,11 +292,11 @@ export class GameClient {
     } else if (this.gameMode === 'local_1v1') {
       // 로컬 모드: 유저가 왼쪽, 게스트가 오른쪽
       leftPlayer = {
-        nickname: userPlayer?.name || 'Player 1',
+        nickname: userPlayer?.name || i18next.t('game.client.player.defaultUserPlayer1'),
         score: scores.left
       };
       rightPlayer = {
-        nickname: guestPlayer?.name || 'Player 2',
+        nickname: guestPlayer?.name || i18next.t('game.client.player.defaultGuestPlayer2'),
         score: scores.right
       };
       
@@ -305,11 +306,11 @@ export class GameClient {
     } else {
       // 기본값 (다른 모드)
       leftPlayer = {
-        nickname: players[0]?.name || 'Player 1',
+        nickname: players[0]?.name || i18next.t('game.client.player.defaultPlayer1'),
         score: scores.left
       };
       rightPlayer = {
-        nickname: players[1]?.name || 'Player 2', 
+        nickname: players[1]?.name || i18next.t('game.client.player.defaultPlayer2'), 
         score: scores.right
       };
       winner = winnerId === players[0]?.id ? 'left' : 'right';
