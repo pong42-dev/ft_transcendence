@@ -17,5 +17,10 @@ async function initI18n() {
   });
 }
 
+export const changeLanguage = async (lng: string) => {
+  await i18next.changeLanguage(lng);
+  localStorage.setItem('language', lng);
+};
+
 export { initI18n };
 export default i18next;

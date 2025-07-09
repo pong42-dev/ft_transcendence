@@ -1,5 +1,6 @@
 import { DOMUpdater } from '../utils/DOMUpdater.js';
 import i18n from '../services/i18n';
+import { authStore } from '../store/index.js';
 
 export class Terminal {
   private terminalElement: HTMLElement;
@@ -97,10 +98,11 @@ export class Terminal {
       ? i18n.t('terminal.welcome_message_logged_in', { username })
       : i18n.t('terminal.initial_message_logged_out');
     
+    const oldInitialMessage = this.initialMessage;
     this.initialMessage = welcomeMessage;
     
     // 현재 터미널이 초기 상태라면 메시지 업데이트
-    if (this.outputContent === this.initialMessage || this.outputContent.includes(i18n.t('terminal.please_login_continue')) || this.outputContent.includes(i18n.t('terminal.welcome_back'))) {
+    if (this.outputContent === oldInitialMessage) {
       DOMUpdater.updateHTML(this.outputElement, welcomeMessage, {
         animate: true,
         duration: 300,

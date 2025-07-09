@@ -6,7 +6,7 @@ import { ErrorHandler } from '../utils/ErrorHandler.js';
 import { authStore } from '../store/index.js';
 import { User } from '../types/types.js';
 import { UserStateCache } from '../services/UserStateCache.js';
-import i18next from '../services/i18n.js';
+import i18next, { changeLanguage } from '../services/i18n.js';
 
 export interface CommandHandlerDependencies {
   apiClient: ApiClient;
@@ -63,6 +63,9 @@ export class CommandHandler {
         break;
       case 'clear':
         this.handleClearCommand();
+        break;
+      case 'lang':
+        await this.handleLangCommand(args);
         break;
       default:
         this.deps.terminal.appendOutput(`Unknown command: ${commandName}. Type "help" for available commands.`);
@@ -464,5 +467,39 @@ export class CommandHandler {
 
   private handleClearCommand(): void {
     this.deps.terminal.clearOutput();
+  }
+
+  private async handleLangCommand(args: string[]): Promise<void> {
+    const supportedLangs = ['en', 'ko', 'ja'];
+    const lang = args[0]?.toLowerCase();
+
+    if (!lang || !supportedLangs.includes(lang)) {
+      this.deps.terminal.appendOutput(i18next.t('langCommand.usage'));
+      return;
+    }
+
+    try {
+      await changeLanguage(lang);
+
+      const languageName = i18next.t(`languages.${lang}`);
+
+      this.deps.terminal.appendOutput(
+        i18next.t('langCommand.change_success', { language: languageName }),
+      );
+
+      // Welcome message in the new language
+      const isLoggedIn = authStore.getIsLoggedIn();
+      const user = authStore.getCurrentUser();
+      const welcomeMessage = isLoggedIn && user?.username
+        ? i18next.t('terminal.welcome_message_logged_in', { username: user.username })
+        : i18next.t('terminal.initial_message_logged_out');
+      this.deps.terminal.appendOutput(welcomeMessage);
+
+    } catch (error) {
+      this.deps.terminal.appendOutput(
+        i18next.t('langCommand.change_failed', { lang: lang }),
+      );
+      this.deps.errorHandler.handleError(error as Error, 'handleLangCommand');
+    }
   }
 }

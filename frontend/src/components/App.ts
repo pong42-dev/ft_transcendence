@@ -13,7 +13,9 @@ import { UserStateCache } from '../services/UserStateCache.js';
 import { UIRenderer } from '../managers/UIRenderer.js';
 import { ModalManager } from '../managers/ModalManager.js';
 import { UserProfileManager } from '../managers/UserProfileManager.js';
+import { changeLanguage } from '../services/i18n.js';
 import { GamePage } from '../game/GamePage.js';
+import i18next from '../services/i18n.js';
 
 export class App {
   // UI Elements References
@@ -89,6 +91,10 @@ export class App {
     
     // Listen for custom user data update events
     this.setupCustomEventListeners();
+
+    i18next.on('languageChanged', () => {
+      this.uiRenderer.render();
+    });
   }
 
   private setupStoreSubscriptions(): void {

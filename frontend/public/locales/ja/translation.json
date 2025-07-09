@@ -1,10 +1,8 @@
 {
   "terminal": {
-    "initial_message_logged_out": "PONG-CLI v1.0.0 (c) 2025 PongDevs\n利用可能なコマンドを表示するには\"help\"と入力してください。\n続行するにはログインしてください。",
-    "prompt": "$ ",
-    "welcome_message_logged_in": "PONG-CLI v1.0.0 (c) 2025 PongDevs\n利用可能なコマンドを表示するには\"help\"と入力してください。\nようこそ、{{username}}さん！",
-    "please_login_continue": "続行するにはログインしてください。",
-    "welcome_back": "おかえりなさい"
+    "prompt": "$ >",
+    "initial_message_logged_out": "ft_transcendenceへようこそ！'login'または'register'と入力して開始してください。",
+    "welcome_message_logged_in": "おかえりなさい、{{username}}さん！コマンド一覧は'help'と入力してください。"
   },
   "userProfile": {
     "default_username": "プレイヤー607",
@@ -198,8 +196,8 @@
   "helpCommand": {
     "api_status": "APIステータス",
     "full_help_text": {
-      "true": "利用可能なコマンド:\n  help       - このヘルプメッセージを表示\n  profile    - ユーザープロフィールを表示 (profile <username>)\n  play       - ポンゲームを開始\n  tournament - トーナメントテストモーダルを開く\n  logout     - 現在のセッションからログアウト\n  friend     - 友達を管理 (friend follow|unfollow|list)\n  2fa        - 2要素認証を管理 (2fa enable|disable|status)\n  set        - プロフィール設定を更新 (set avatar|name)\n  clear      - ターミナル画面をクリア",
-      "false": "利用可能なコマンド:\n  help       - このヘルプメッセージを表示\n  login      - アカウントにログイン\n  register   - 新しいアカウントを作成\n  clear      - ターミナル画面をクリア"
+      "true": "利用可能なコマンド:\n  help       - このヘルプメッセージを表示\n  profile    - ユーザープロフィールを表示 (profile <username>)\n  play       - ポンゲームを開始\n  logout     - 現在のセッションからログアウト\n  friend     - 友達を管理 (friend follow|unfollow|list)\n  2fa        - 2要素認証を管理 (2fa enable|disable|status)\n  set        - プロフィール設定を更新 (set avatar|name)\n  lang       - Change language (lang en|ko|ja)\n  clear      - ターミナル画面をクリア",
+      "false": "利用可能なコマンド:\n  help       - このヘルプメッセージを表示\n  login      - アカウントにログイン\n  register   - 新しいアカウントを作成\n  lang       - Change language (lang en|ko|ja)\n  clear      - ターミナル画面をクリア"
     }
   },
   "loginCommand": {
@@ -244,46 +242,53 @@
     "game_cancelled": "ゲームはキャンセルされました。",
     "failed_start_game": "❌ ゲームの開始に失敗しました。もう一度お試しください。"
   },
-  "tournamentCommand": {
-    "failed_open_modal": "❌ トーナメントモーダルを開けませんでした。もう一度お試しください。"
-  },
   "twoFACommand": {
     "login_first": "2FA設定を管理するには、まずログインしてください。",
     "google_2fa_not_available_1": "❌ Google OAuthユーザーは2FAを利用できません。",
     "google_2fa_not_available_2": "Googleアカウントはすでに安全なOAuth認証を使用しています。",
     "google_2fa_not_available_3": "追加の2FA設定は不要です。",
     "usage": "使用法: 2fa <enable|disable|status>",
-    "enable_usage": "  2fa enable  - 2要素認証を有効にする",
-    "disable_usage": "  2fa disable - 2要素認証を無効にする",
-    "status_usage": "  2fa status  - 現在の2FAステータスを確認",
-    "twofa_already_enabled": "2FAはすでに有効です。無効にするには\"2fa disable\"を使用してください。",
-    "starting_setup": "2FAセットアッププロセスを開始中...",
-    "enable_success": "✅ 2FAが正常に有効になりました！",
-    "account_more_secure": "あなたのアカウントはより安全になりました。",
-    "setup_cancelled": "2FAセットアップがキャンセルされました。",
-    "failed_start_setup": "❌ 2FAセットアップの開始に失敗しました。もう一度お試しください。",
-    "twofa_already_disabled": "2FAはすでに無効です。",
-    "starting_disable": "2FA無効化プロセスを開始中...",
-    "disable_success": "✅ 2FAが正常に無効になりました！",
-    "account_security_updated": "あなたのアカウントのセキュリティが更新されました。",
-    "disable_cancelled": "2FA無効化がキャンセルされました。",
-    "failed_start_disable": "❌ 2FA無効化プロセスの開始に失敗しました。もう一度お試しください。",
-    "status_unavailable": "2FAステータスを確認できません - ユーザーデータが利用できません。",
-    "current_status": "{{statusIcon}} 2要素認証: {{status}}",
-    "account_protected": "あなたのアカウントは2FAで保護されています。",
-    "consider_enabling": "セキュリティを向上させるために2FAを有効にすることを検討してください。設定するには\"2fa enable\"を使用してください。"
+    "enable_usage": "  2fa enable  - 2段階認証を有効にする",
+    "disable_usage": "  2fa disable - 2段階認証を無効にする",
+    "status_usage": "  2fa status  - 2段階認証のステータスを確認する",
+    "twofa_already_enabled": "🔒 アカウントで2段階認証はすでに有効です。",
+    "starting_setup": "2段階認証の設定を開始しています...",
+    "enable_success": "✅ 2段階認証が正常に有効になりました！",
+    "account_more_secure": "アカウントのセキュリティが向上しました。",
+    "setup_cancelled": "2段階認証の設定がキャンセルされました。",
+    "failed_start_setup": "❌ 2段階認証の設定を開始できませんでした。もう一度お試しください。",
+    "twofa_already_disabled": "🔓 アカウントで2段階認証はすでに無効です。",
+    "starting_disable": "2段階認証の無効化プロセスを開始しています...",
+    "disable_success": "✅ 2段階認証が正常に無効になりました。",
+    "account_security_updated": "アカウントのセキュリティが更新されました。",
+    "disable_cancelled": "2段階認証の無効化プロセスがキャンセルされました。",
+    "failed_start_disable": "❌ 2段階認証の無効化を開始できませんでした。もう一度お試しください。",
+    "status_unavailable": "2段階認証のステータスを確認できません。再度ログインしてください。",
+    "current_status": "{{statusIcon}} 2段階認証ステータス: {{status}}",
+    "account_protected": "アカウントは追加のセキュリティ層で保護されています。",
+    "consider_enabling": "アカウントのセキュリティ向上のため、2段階認証の有効化を検討してください。"
   },
   "setCommand": {
-    "login_first": "プロフィール設定を更新するには、まずログインしてください。",
-    "usage": "使用法: set <avatar|name> [value]",
-    "avatar_usage": "  set avatar        - 新しいアバター画像をアップロード",
-    "name_usage": "  set name <name>   - 表示名を更新",
+    "login_first": "設定を更新するには、まずログインしてください。",
+    "usage": "使用法: set <avatar|name> [new_name]",
+    "avatar_usage": "  set avatar     - アバターアップロードダイアログを開く",
+    "name_usage": "  set name <name>  - 表示名を更新する",
     "failed_open_avatar_upload": "❌ アバターのアップロードを開けませんでした。もう一度お試しください。",
     "set_name_usage": "使用法: set name <new_name>",
-    "set_name_example": "例: set name \"John Doe\"",
+    "set_name_example": "例: set name 新しいニックネーム",
     "provide_valid_name": "有効な名前を入力してください。",
-    "updating_name": "名前を更新中: \"{{newName}}\"",
-    "name_update_success": "✅ 名前が正常に更新されました: \"{{nickname}}\"",
+    "updating_name": "名前を{{newName}}に更新中...",
+    "name_update_success": "✅ 名前の更新に成功しました。新しいニックネームは{{nickname}}です。",
     "failed_update_name": "❌ 名前の更新に失敗しました。もう一度お試しください。"
+  },
+  "langCommand": {
+    "usage": "使用法: lang [en|ko|ja]",
+    "change_success": "言語が{{language}}に変更されました。",
+    "change_failed": "言語を{{lang}}に変更できませんでした。"
+  },
+  "languages": {
+    "en": "英語",
+    "ko": "韓国語",
+    "ja": "日本語"
   }
 } 

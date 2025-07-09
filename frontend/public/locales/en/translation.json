@@ -1,10 +1,8 @@
 {
   "terminal": {
-    "initial_message_logged_out": "PONG-CLI v1.0.0 (c) 2025 PongDevs\nType \"help\" for available commands.\nPlease login to continue.",
-    "prompt": "$ ",
-    "welcome_message_logged_in": "PONG-CLI v1.0.0 (c) 2025 PongDevs\nType \"help\" for available commands.\nWelcome {{username}}!",
-    "please_login_continue": "Please login to continue.",
-    "welcome_back": "Welcome back"
+    "prompt": "$ >",
+    "initial_message_logged_out": "Welcome to ft_transcendence! Type 'login' or 'register' to begin.",
+    "welcome_message_logged_in": "Welcome back, {{username}}! Type 'help' for commands."
   },
   "userProfile": {
     "default_username": "Player607",
@@ -198,8 +196,8 @@
   "helpCommand": {
     "api_status": "API Status",
     "full_help_text": {
-      "true": "Available commands:\n  help       - Display this help message\n  profile    - View user profile (profile <username>)\n  play       - Start a game of Pong\n  tournament - Open tournament test modal\n  logout     - Log out of current session\n  friend     - Manage friends (friend follow|unfollow|list)\n  2fa        - Manage two-factor authentication (2fa enable|disable|status)\n  set        - Update profile settings (set avatar|name)\n  clear      - Clear the terminal screen",
-      "false": "Available commands:\n  help       - Display this help message\n  login      - Log into your account\n  register   - Create a new account\n  clear      - Clear the terminal screen"
+      "true": "Available commands:\n  help       - Display this help message\n  profile    - View user profile (profile <username>)\n  play       - Start a game of Pong\n  logout     - Log out of current session\n  friend     - Manage friends (friend follow|unfollow|list)\n  2fa        - Manage two-factor authentication (2fa enable|disable|status)\n  set        - Update profile settings (set avatar|name)\n  lang       - Change language (lang en|ko|ja)\n  clear      - Clear the terminal screen",
+      "false": "Available commands:\n  help       - Display this help message\n  login      - Log into your account\n  register   - Create a new account\n  lang       - Change language (lang en|ko|ja)\n  clear      - Clear the terminal screen"
     }
   },
   "loginCommand": {
@@ -244,9 +242,6 @@
     "game_cancelled": "Game cancelled.",
     "failed_start_game": "❌ Failed to start game. Please try again."
   },
-  "tournamentCommand": {
-    "failed_open_modal": "❌ Failed to open tournament modal. Please try again."
-  },
   "twoFACommand": {
     "login_first": "Please login first to manage 2FA settings.",
     "google_2fa_not_available_1": "❌ 2FA is not available for Google OAuth users.",
@@ -255,35 +250,45 @@
     "usage": "Usage: 2fa <enable|disable|status>",
     "enable_usage": "  2fa enable  - Enable two-factor authentication",
     "disable_usage": "  2fa disable - Disable two-factor authentication",
-    "status_usage": "  2fa status  - Check current 2FA status",
-    "twofa_already_enabled": "2FA is already enabled. Use \"2fa disable\" to disable it first.",
-    "starting_setup": "Starting 2FA setup process...",
-    "enable_success": "✅ 2FA has been successfully enabled!",
+    "status_usage": "  2fa status  - Check 2FA status",
+    "twofa_already_enabled": "🔒 2FA is already enabled on your account.",
+    "starting_setup": "Starting 2FA setup...",
+    "enable_success": "✅ 2FA enabled successfully!",
     "account_more_secure": "Your account is now more secure.",
     "setup_cancelled": "2FA setup cancelled.",
     "failed_start_setup": "❌ Failed to start 2FA setup. Please try again.",
-    "twofa_already_disabled": "2FA is already disabled.",
+    "twofa_already_disabled": "🔓 2FA is already disabled on your account.",
     "starting_disable": "Starting 2FA disable process...",
-    "disable_success": "✅ 2FA has been successfully disabled!",
+    "disable_success": "✅ 2FA disabled successfully.",
     "account_security_updated": "Your account security has been updated.",
-    "disable_cancelled": "2FA disable cancelled.",
-    "failed_start_disable": "❌ Failed to start 2FA disable process. Please try again.",
-    "status_unavailable": "Unable to check 2FA status - user data not available.",
-    "current_status": "{{statusIcon}} Two-Factor Authentication: {{status}}",
-    "account_protected": "Your account is protected with 2FA.",
-    "consider_enabling": "Consider enabling 2FA for better security. Use \"2fa enable\" to set it up."
+    "disable_cancelled": "2FA disable process cancelled.",
+    "failed_start_disable": "❌ Failed to start 2FA disable. Please try again.",
+    "status_unavailable": "Unable to determine 2FA status. Please log in again.",
+    "current_status": "{{statusIcon}} 2FA status: {{status}}",
+    "account_protected": "Your account is protected by an additional layer of security.",
+    "consider_enabling": "Consider enabling 2FA for better account security."
   },
   "setCommand": {
-    "login_first": "Please login first to update profile settings.",
-    "usage": "Usage: set <avatar|name> [value]",
-    "avatar_usage": "  set avatar        - Upload a new avatar image",
-    "name_usage": "  set name <name>   - Update your display name",
+    "login_first": "Please login first to update your settings.",
+    "usage": "Usage: set <avatar|name> [new_name]",
+    "avatar_usage": "  set avatar     - Open avatar upload dialog",
+    "name_usage": "  set name <name>  - Update your display name",
     "failed_open_avatar_upload": "❌ Failed to open avatar upload. Please try again.",
     "set_name_usage": "Usage: set name <new_name>",
-    "set_name_example": "Example: set name \"John Doe\"",
+    "set_name_example": "Example: set name NewNickname",
     "provide_valid_name": "Please provide a valid name.",
-    "updating_name": "Updating name to: \"{{newName}}\"",
-    "name_update_success": "✅ Name updated successfully to: \"{{nickname}}\"",
+    "updating_name": "Updating name to {{newName}}...",
+    "name_update_success": "✅ Name updated successfully. Your new nickname is {{nickname}}.",
     "failed_update_name": "❌ Failed to update name. Please try again."
+  },
+  "langCommand": {
+    "usage": "Usage: lang [en|ko|ja]",
+    "change_success": "Language changed to {{language}}.",
+    "change_failed": "Failed to change language to {{lang}}."
+  },
+  "languages": {
+    "en": "English",
+    "ko": "Korean",
+    "ja": "Japanese"
   }
 } 
