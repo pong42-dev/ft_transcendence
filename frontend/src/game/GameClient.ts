@@ -8,7 +8,7 @@ import { ModalManager } from '../managers/ModalManager';
 export interface GameClientCallbacks {
   onPreGameCountdown: (remainingTime: number) => void;
   onGameStart: () => void;
-  onFinish: () => void;
+  onFinish: (gameResult?: GameResult) => void;
 }
 
 export class GameClient {
@@ -17,12 +17,13 @@ export class GameClient {
   private gameMode: string | null = null;
   
   // 플레이어 ID 정보
-  private playerId: number | null = null;   // '나'의 ID 또는 로컬 1P
-  private player2Id: number | null = null;  // 로컬 2P의 ID
+  private playerId: number | null = null;   // [역할 변경] 왼쪽 플레이어 ID
+  private player2Id: number | null = null;  // [역할 변경] 오른쪽 플레이어 ID
   
   private isLocalMultiplayer: boolean = false;
   private playerInfoUpdated: boolean = false; // 플레이어 정보 업데이트 여부
   private callbacks: GameClientCallbacks;
+  private isTournament: boolean; // gameMode에 따라 결정될 내부 플래그
   private aiDifficulty?: 'easy' | 'medium' | 'hard'; // AI 난이도 저장
 
   // 게임 상태 추적
@@ -39,6 +40,16 @@ export class GameClient {
     ) {
       this.callbacks = callbacks;
       this.aiDifficulty = aiDifficulty;
+      // gameInfo.type을 보고 토너먼트 모드인지 스스로 판단
+      this.isTournament = this.gameInfo.type.startsWith('tournament');
+
+      if (this.gameInfo.players && this.gameInfo.players.length >= 1) {
+        this.playerId = this.gameInfo.players[0].id;
+        this.player2Id = this.gameInfo.players[1]?.id ?? null;
+      } else {
+        console.error('GameClient Error: Insufficient player data provided.');
+        this.callbacks.onFinish(); // 플레이어 정보가 없으면 게임을 진행할 수 없음
+      }
     }
 
   /**
@@ -56,21 +67,14 @@ export class GameClient {
       console.log('[LOG] GameClient WebSocket 연결 성공');
     });
 
-    // 2. WebSocket에 연결합니다.
-    const userPlayer = this.gameInfo.players.find(p => p.type === 'user');
-        if (!userPlayer) {
-      console.error("User player not found");
-      this.callbacks.onFinish();
-      return;
+    // [수정] 토너먼트 모드가 아닐 때만 직접 연결합니다.
+    if (!this.isTournament) {
+      const backendHost = 'localhost:3000';
+      // [수정] URL에서 playerId 쿼리 파라미터를 제거합니다. gameId로 충분합니다.
+      const wsUrl = `ws://${backendHost}/ws/game/${this.gameId}`;
+      this.webSocketService.connect(wsUrl);
     }
-    if (userPlayer)
-    this.playerId = userPlayer.id;
-    
-    // ROUND2 에는 user 참가자가 없으므로 round 는 FINISH 상태가 됩니다.
-
-    const backendHost = 'localhost:3000';
-    const wsUrl = `ws://${backendHost}/ws/game/${this.gameId}?playerId=${this.playerId}`;
-    this.webSocketService.connect(wsUrl);
+    // 토너먼트 모드에서는 TournamentClient가 연결을 관리하므로 아무것도 하지 않습니다.
   }
   
   /**
@@ -106,7 +110,7 @@ export class GameClient {
         this.playerInfoUpdated = true;
       }
       
-      // 렌더러에 공을 표시하라고 알립니다.
+      // 렌더러에 공을 표시하라고 알리는 대신 콜백 호출
       this.renderer.showBall();
     }
     else if (gameEvent.event === 'game_canceled') {
@@ -121,7 +125,7 @@ export class GameClient {
    */
   private setupInGameListeners(): void {
     this.gameMode = this.gameInfo.type;
-    this.isLocalMultiplayer = this.gameMode === 'local_1v1';
+    this.isLocalMultiplayer = this.gameMode !== 'ai_1v1';
     if (this.isLocalMultiplayer) {
       const guestPlayer = this.gameInfo.players.find(p => p.type === 'guest');
       this.player2Id = guestPlayer?.id ?? null;
@@ -142,7 +146,6 @@ export class GameClient {
     switch (gameEvent.event) {
       // 'countdown'과 'round_start'는 pre-game에서 처리했으므로 여기서는 제외됩니다.
       case 'intermission_countdown': // 3단계에서 추가될 라운드 간 카운트다운
-          console.log('Intermission countdown:', gameEvent.data?.remainingTime);
          if (gameEvent.data?.remainingTime !== undefined && gameEvent.data?.round !== undefined) {
            this.renderer.showCountdownWithRound(gameEvent.data.remainingTime, gameEvent.data.round);
          }
@@ -164,68 +167,30 @@ export class GameClient {
     }
   }
 
-  // public async startGame(): Promise<void> {
-  //   try {
-  //     this.gameId = this.gameInfo.gameId;
-  //     this.gameMode = this.gameInfo.type;
-
-  //     this.isLocalMultiplayer = this.gameMode === 'local_1v1';
-      
-  //     // 플레이어 ID 설정
-  //     const userPlayer = this.gameInfo.players.find(p => p.type === 'user');
-  //     if (!userPlayer) throw new Error('User player not found');
-  //     this.playerId = userPlayer.id;
-
-  //     if (this.isLocalMultiplayer) {
-  //       const guestPlayer = this.gameInfo.players.find(p => p.type === 'guest');
-  //       this.player2Id = guestPlayer?.id ?? null;
-  //     }
-
-  //     this.setupWebSocketListeners();
-  //     this.setupInputHandling();
-
-  //     const backendHost = 'localhost:3000';
-  //     const wsUrl = `ws://${backendHost}/ws/game/${this.gameId}?playerId=${this.playerId}`;
-  //     this.webSocketService.connect(wsUrl);
-
-  //   } catch (error) {
-  //     console.error('Failed to start game:', error);
-  //     this.onFinishCallback(); // 에러 발생 시 종료
-  //     throw error;
-  //   }
-  // }
-
   /**
    * [반영 완료] 사용자 입력을 처리하여 웹소켓 메시지를 전송하는 메서드
    */
   private handleInput = (action: 'UP' | 'DOWN' | 'NONE', playerSide?: 'left' | 'right') => {
-    if (this.isLocalMultiplayer && playerSide) {
-      // 로컬 멀티플레이어: 'left' 또는 'right' 사이드에 따라 ID를 결정하여 전송
-      const targetPlayerId = playerSide === 'left' ? this.playerId : this.player2Id;
-      
-      // targetPlayerId가 null이 아닌지 확인 후 전송
-      if (targetPlayerId !== null) {
-        const message: WSPlayerInputMessage = {
-          type: 'player_input',
-          data: {
-            playerId: targetPlayerId,
-            input: { action }
-          }
-        };
-        this.webSocketService.sendMessage(message);
-      }
-    } else if (!this.isLocalMultiplayer) {
-      // 싱글플레이어 (vs AI): 자신의 ID로만 전송
-      if (this.playerId !== null) {
-        const message: WSPlayerInputMessage = {
-          type: 'player_input',
-          data: {
-            playerId: this.playerId,
-            input: { action }
-          }
-        };
-        this.webSocketService.sendMessage(message);
-      }
+    let targetPlayerId: number | null = null;
+
+    // [수정] AI 모드와 그 외 모드를 구분하여 입력받을 플레이어 ID를 결정합니다.
+    if (this.gameMode === 'ai_1v1') {
+      // AI 모드: 사용자는 항상 오른쪽 플레이어(player2Id)를 조작합니다.
+      targetPlayerId = this.player2Id;
+    } else {
+      // 로컬 1v1 및 토너먼트: W/S는 왼쪽(playerId), Up/Down은 오른쪽(player2Id)
+      targetPlayerId = playerSide === 'left' ? this.playerId : this.player2Id;
+    }
+    
+    if (targetPlayerId !== null) {
+      const message: WSPlayerInputMessage = {
+        type: 'player_input',
+        data: {
+          playerId: targetPlayerId,
+          input: { action }
+        }
+      };
+      this.webSocketService.sendMessage(message);
     }
   }
   
@@ -241,35 +206,21 @@ export class GameClient {
     console.log('Game info:', this.gameInfo);
     
     const players = this.gameInfo.players;
-    const userPlayer = players.find(p => p.type === 'user');
-    const guestPlayer = players.find(p => p.type === 'guest');
 
     let leftPlayerName: string;
     let rightPlayerName: string;
     let leftPlayerAvatar: string | undefined;
     let rightPlayerAvatar: string | undefined;
 
-    if (this.gameMode === 'ai_1v1') {
-      // AI 모드: AI가 왼쪽, 유저가 오른쪽
-      leftPlayerName = 'AI';
-      rightPlayerName = userPlayer?.name || 'Player';
-      leftPlayerAvatar = undefined; // AI는 기본 아바타 사용
-      rightPlayerAvatar = userPlayer?.avatarUrl;
-      
-    } else if (this.gameMode === 'local_1v1') {
-      // 로컬 모드: 유저가 왼쪽, 게스트가 오른쪽
-      leftPlayerName = userPlayer?.name || 'Player 1';
-      rightPlayerName = guestPlayer?.name || 'Player 2';
-      leftPlayerAvatar = userPlayer?.avatarUrl;
-      rightPlayerAvatar = guestPlayer?.avatarUrl;
-      
-    } else {
-      // 기본값 (다른 모드들)
-      leftPlayerName = players[0]?.name || 'Player 1';
-      rightPlayerName = players[1]?.name || 'Player 2';
-      leftPlayerAvatar = players[0]?.avatarUrl;
-      rightPlayerAvatar = players[1]?.avatarUrl;
+    if (players.length < 2) {
+      console.error('GameClient Error: Not enough players in game info.');
+      return;
     }
+
+    leftPlayerName = players[0]?.name || 'Player 1';
+    rightPlayerName = players[1]?.name || 'Player 2';
+    leftPlayerAvatar = players[0]?.avatarUrl;
+    rightPlayerAvatar = players[1]?.avatarUrl;
 
     console.log('Player info:', {
       leftPlayerName,
@@ -299,23 +250,6 @@ export class GameClient {
     this.currentScores.left = gameState.scores.player1;
     this.currentScores.right = gameState.scores.player2;
   }
-
-  // private handleGameEvent = (gameEvent: GameEventDto) => {
-  //   switch (gameEvent.event) {
-  //     case 'countdown':
-  //       this.renderer.showCountdown(gameEvent.data?.remainingTime);
-  //       break;
-  //     case 'round_start':
-  //       this.renderer.showBall();
-  //       break;
-  //     case 'round_end':
-  //       // 라운드 종료 시 특별한 처리 없음 (점수는 gameState에서 업데이트됨)
-  //       break;
-  //     case 'game_end':
-  //       this.handleGameEnd(gameEvent.data?.winnerId, gameEvent.data?.finalScores);
-  //       break;
-  //   }
-  // }
 
   private handleGameEnd(winnerId?: number, finalScores?: { player1: number; player2: number }): void {
     // 게임 종료 처리
@@ -390,40 +324,37 @@ export class GameClient {
       gameMode: 'regular' as const
     };
 
-    // ModalManager를 통해 GameEndModal 띄우기
-    const modalManager = ModalManager.getInstance();
-    modalManager.showGameEndModal({
-      gameResult,
-      isTournament: false,
-      isFinal: false,
-      onProfileClick: () => {
-        // onProfileClick - 프로필 보기하고 게임 종료
-        this.callbacks.onFinish();
-      },
-      onNextMatch: undefined, // 토너먼트가 아니므로 불필요
-      onGameFinish: () => {
-        // onGameFinish - Close 버튼을 눌렀을 때만 게임 종료
-        this.callbacks.onFinish();
-      },
-      gameMode: this.gameInfo.type, // 게임 모드 전달
-      aiDifficulty: this.gameInfo.type === 'ai_1v1' ? (this.aiDifficulty || 'medium') : undefined // AI 모드일 때만 난이도 전달
-    });
+    // 모드에 따라 분기하여 처리
+    if (this.isTournament) {
+      // 토너먼트 모드: 콜백으로 결과만 전달
+      this.callbacks.onFinish(gameResult);
+    } else {
+      // 단일 게임 모드: 기존처럼 모달을 직접 띄움
+      const modalManager = ModalManager.getInstance();
+      modalManager.showGameEndModal({
+        gameResult,
+        isTournament: false, // 단일 게임이므로 항상 false
+        isFinal: false,
+        onProfileClick: () => {
+          // onProfileClick - 프로필 보기하고 게임 종료
+          this.callbacks.onFinish();
+        },
+        onGameFinish: () => {
+          // onGameFinish - Close 버튼을 눌렀을 때만 게임 종료
+          this.callbacks.onFinish();
+        },
+        gameMode: this.gameInfo.type, // 게임 모드 전달
+        aiDifficulty: this.gameInfo.type === 'ai_1v1' ? (this.aiDifficulty || 'medium') : undefined // AI 모드일 때만 난이도 전달
+      });
+    }
   }
   
   private handleError = (error: any) => {
     console.error('WebSocket error:', error);
-    // 게임이 정상적으로 끝나지 않은 경우에만 콜백 호출
-    // if (!this.gameEnded) {
-    //   this.callbacks.onFinish();
-    // }
   }
 
   private handleConnectionClose = () => {
     console.warn('WebSocket connection closed.');
-    // 게임이 정상적으로 끝나지 않은 경우에만 콜백 호출
-    // if (!this.gameEnded) {
-    //   this.callbacks.onFinish();
-    // }
   }
 
   public destroy(): void {
@@ -434,7 +365,12 @@ export class GameClient {
     this.webSocketService.off('error', this.handleError);
     this.webSocketService.off('close', this.handleConnectionClose);
     this.inputHandler.off('input', this.handleInput);
-    this.webSocketService.disconnect();
+
+    // 토너먼트 모드가 아닐 때만 연결 해제
+    if (!this.isTournament) {
+      this.webSocketService.disconnect();
+    }
+    
     this.inputHandler.deactivate();
   }
 }
