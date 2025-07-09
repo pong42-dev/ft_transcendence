@@ -271,14 +271,11 @@ export class UIRenderer {
     const mainContent = this.appElement.querySelector('.main-content') as HTMLElement;
     if (!mainContent) return;
 
-    // 터미널 메시지 업데이트
-    this.mainTerminal.updateWelcomeMessage(true, otherUser.username);
-
     // 기존 UserProfile 정리
     if (this.userProfile) {
       this.userProfile.destroy();
     }
-
+8
     // 다른 사용자 프로필 생성 (isCurrentUser = false)
     this.userProfile = new UserProfile(otherUser, false);
 

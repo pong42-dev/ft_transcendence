@@ -527,9 +527,8 @@ export class AuthManager {
       // 로그인 성공 처리
       authStore.login(user);
       UserStateCache.cache(user);
-      this.terminal.reset();
       this.terminal.updateWelcomeMessage(true, user.username);
-      this.terminal.appendOutput(`Welcome back, ${user.username}!`);
+      this.terminal.reset();
       this.terminal.appendOutput('Type "help" to see available commands.');
       
       setTimeout(() => {
