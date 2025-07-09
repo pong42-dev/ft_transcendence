@@ -41,7 +41,7 @@ export class GameSetupModal {
 
   private show(): void {
     const modalContent: ModalContent = {
-      title: 'Select Game Mode',
+      title: i18n.t('gameSetupModal.select_game_mode'),
       content: () => {
         this.contentElement = document.createElement('div');
         this.contentElement.className = 'modal-body';
@@ -180,8 +180,8 @@ export class GameSetupModal {
 
     const isMultiplePlayers = playerCount > 1;
     const title = isMultiplePlayers ? 
-      `Enter ${playerCount} Guest Player Names` : 
-      'Enter Guest Player Name';
+      i18n.t('gameSetupModal.enter_guest_names', { count: playerCount }) : 
+      i18n.t('gameSetupModal.enter_guest_name');
 
     let inputFields = '';
     for (let i = 0; i < playerCount; i++) {
@@ -189,12 +189,12 @@ export class GameSetupModal {
       inputFields += `
         <div class="mb-4">
           <label class="block text-terminal-gray text-sm font-medium mb-2">
-            Guest Player${playerNumber} Nickname
+            ${i18n.t('gameSetupModal.guest_player_nickname', { number: playerNumber })}
           </label>
           <input 
             type="text" 
             id="guest-name-input-${i}" 
-            placeholder="Enter guest player${playerNumber} name..."
+            placeholder="${i18n.t('gameSetupModal.enter_guest_player_name_placeholder', { number: playerNumber })}"
             class="w-full px-4 py-3 bg-terminal-black border border-terminal-gray rounded-lg text-terminal-green focus:outline-none focus:border-terminal-green"
             maxlength="20"
             autocomplete="off"
@@ -214,20 +214,20 @@ export class GameSetupModal {
       <div class="mb-6">
         ${inputFields}
         <div class="text-xs text-terminal-gray mt-1">
-          Enter ${isMultiplePlayers ? 'nicknames' : 'a nickname'} for the guest player${isMultiplePlayers ? 's' : ''} (max 20 characters each)
+          ${isMultiplePlayers ? i18n.t('gameSetupModal.enter_nicknames_hint') : i18n.t('gameSetupModal.enter_nickname_hint')}
         </div>
       </div>
       
       <div class="flex justify-between gap-2">
         <button id="back-btn" class="px-4 py-2 text-terminal-gray border border-terminal-gray rounded hover:bg-terminal-gray hover:bg-opacity-10 transition-all">
-          Back
+          ${i18n.t('common.back')}
         </button>
         <div class="flex gap-2">
           <button id="cancel-btn" class="px-4 py-2 text-terminal-gray border border-terminal-gray rounded hover:bg-terminal-gray hover:bg-opacity-10 transition-all">
-            Cancel
+            ${i18n.t('common.cancel')}
           </button>
           <button id="start-game-btn" class="px-4 py-2 bg-terminal-green text-terminal-black rounded hover:bg-opacity-80 transition-all disabled:opacity-50 disabled:cursor-not-allowed" disabled>
-            Start Game
+            ${i18n.t('gameSetupModal.start_game')}
           </button>
         </div>
       </div>
@@ -325,7 +325,7 @@ export class GameSetupModal {
 
     this.contentElement.innerHTML = `
       <div class="flex items-center justify-between mb-6">
-        <h3 class="text-terminal-green text-xl font-bold">AI Difficulty</h3>
+        <h3 class="text-terminal-green text-xl font-bold">${i18n.t('gameSetupModal.ai_difficulty_title')}</h3>
         <button class="text-terminal-gray hover:text-terminal-green transition-all" id="close-btn">
           ✕
         </button>
@@ -334,27 +334,27 @@ export class GameSetupModal {
       <div class="space-y-4">
         <!-- Difficulty Selection -->
         <div>
-          <h4 class="text-terminal-gray text-lg font-medium mb-3">Choose your challenge level</h4>
+          <h4 class="text-terminal-gray text-lg font-medium mb-3">${i18n.t('gameSetupModal.choose_challenge_level')}</h4>
           <div class="grid grid-cols-1 gap-3">
             <label class="flex items-center space-x-3 p-4 rounded-lg border border-terminal-gray cursor-pointer hover:bg-terminal-gray hover:bg-opacity-10 transition-all">
               <input type="radio" name="difficulty" value="easy" class="text-terminal-green focus:ring-terminal-green">
               <div>
-                <div class="text-terminal-green font-medium">🟢 Easy</div>
-                <div class="text-sm text-terminal-gray">Slower reactions, more mistakes (Updates every 2 seconds)</div>
+                <div class="text-terminal-green font-medium">🟢 ${i18n.t('gameSetupModal.easy')}</div>
+                <div class="text-sm text-terminal-gray">${i18n.t('gameSetupModal.easy_description')}</div>
               </div>
             </label>
             <label class="flex items-center space-x-3 p-4 rounded-lg border border-terminal-gray cursor-pointer hover:bg-terminal-gray hover:bg-opacity-10 transition-all">
               <input type="radio" name="difficulty" value="medium" class="text-terminal-green focus:ring-terminal-green" checked>
               <div>
-                <div class="text-terminal-green font-medium">🟡 Medium</div>
-                <div class="text-sm text-terminal-gray">Balanced gameplay, good challenge (Updates every 1 second)</div>
+                <div class="text-terminal-green font-medium">🟡 ${i18n.t('gameSetupModal.medium')}</div>
+                <div class="text-sm text-terminal-gray">${i18n.t('gameSetupModal.medium_description')}</div>
               </div>
             </label>
             <label class="flex items-center space-x-3 p-4 rounded-lg border border-terminal-gray cursor-pointer hover:bg-terminal-gray hover:bg-opacity-10 transition-all">
               <input type="radio" name="difficulty" value="hard" class="text-terminal-green focus:ring-terminal-green">
               <div>
-                <div class="text-terminal-green font-medium">🔴 Hard</div>
-                <div class="text-sm text-terminal-gray">Fast reactions, strategic play (Updates every 0.5 seconds)</div>
+                <div class="text-terminal-green font-medium">🔴 ${i18n.t('gameSetupModal.hard')}</div>
+                <div class="text-sm text-terminal-gray">${i18n.t('gameSetupModal.hard_description')}</div>
               </div>
             </label>
           </div>
@@ -363,14 +363,14 @@ export class GameSetupModal {
       
       <div class="flex justify-between gap-2 mt-6">
         <button id="back-btn" class="px-4 py-2 text-terminal-gray border border-terminal-gray rounded hover:bg-terminal-gray hover:bg-opacity-10 transition-all">
-          Back
+          ${i18n.t('common.back')}
         </button>
         <div class="flex gap-2">
           <button id="cancel-btn" class="px-4 py-2 text-terminal-gray border border-terminal-gray rounded hover:bg-terminal-gray hover:bg-opacity-10 transition-all">
-            Cancel
+            ${i18n.t('common.cancel')}
           </button>
           <button id="start-ai-game-btn" class="px-4 py-2 bg-terminal-green text-terminal-black rounded hover:bg-opacity-80 transition-all">
-            Start AI Game
+            ${i18n.t('gameSetupModal.start_ai_game')}
           </button>
         </div>
       </div>

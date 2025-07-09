@@ -326,7 +326,7 @@ export class RegisterModal {
     if (!isValid) return;
 
     this.isSubmitting = true;
-    DOMUpdater.toggleLoading('#register-btn', true, 'Creating account...');
+    DOMUpdater.toggleLoading('#register-btn', true, i18n.t('registerModal.creating_account'));
     this.hideGeneralError();
 
     try {
@@ -385,7 +385,7 @@ export class RegisterModal {
     const name = nameInput.value.trim();
     
     if (!name) {
-      const result = { isValid: false, message: i18n.t('validation.username_required') };
+      const result = { isValid: false, message: i18n.t('validation.nickname_required') };
       DOMUpdater.updateValidationResult('name-input', result);
       this.validationStates.set('name', { isValid: false, isChecking: false });
       return false;
@@ -679,7 +679,7 @@ export class RegisterModal {
       inputElement.classList.add('border-terminal-red');
     } else if (result.isValid) {
       // 성공 상태
-      errorElement.textContent = 'Password meets all requirements';
+      errorElement.textContent = i18n.t('validation.password_meets_requirements');
       errorElement.classList.remove('hidden', 'text-terminal-red', 'text-terminal-gray');
       errorElement.classList.add('text-terminal-green');
       

@@ -216,13 +216,13 @@ export class FileModal {
   private validateAndSetFile(file: File): void {
     // 크기 검증
     if (file.size > this.maxSize) {
-      DOMUpdater.showError('#error-message', `File size must be less than ${this.formatFileSize(this.maxSize)}`);
+      DOMUpdater.showError('#error-message', i18n.t('fileModal.file_size_too_large', { maxSize: this.formatFileSize(this.maxSize) }));
       return;
     }
 
     // 타입 검증 (간단한 MIME 타입 체크)
     if (this.accept !== '*/*' && !file.type.match(this.accept.replace('*', '.*'))) {
-      DOMUpdater.showError('#error-message', `File type not supported. Please select: ${this.accept}`);
+      DOMUpdater.showError('#error-message', i18n.t('fileModal.file_type_not_supported', { accept: this.accept }));
       return;
     }
 
@@ -287,10 +287,10 @@ export class FileModal {
   }
 
   private formatFileSize(bytes: number): string {
-    if (bytes === 0) return '0 Bytes';
+    if (bytes === 0) return `0 ${i18n.t('common.bytes')}`;
     
     const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const sizes = [i18n.t('common.bytes'), i18n.t('common.kilobytes'), i18n.t('common.megabytes'), i18n.t('common.gigabytes')];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];

@@ -204,7 +204,7 @@ export class LoginModal {
     if (!isValid) return;
 
     this.isSubmitting = true;
-    DOMUpdater.toggleLoading('#login-btn', true, 'Signing in...');
+    DOMUpdater.toggleLoading('#login-btn', true, i18n.t('loginModal.signing_in'));
 
     try {
       const emailInput = document.querySelector('#email-input') as HTMLInputElement;
@@ -225,7 +225,7 @@ export class LoginModal {
     } catch (error: any) {
       console.error('Login error:', error);
       this.showGeneralError(
-        error.message || 'Login failed. Please check your credentials and try again.'
+        error.message || i18n.t('loginModal.login_failed')
       );
     } finally {
       this.isSubmitting = false;
@@ -242,7 +242,7 @@ export class LoginModal {
       this.apiClient.auth.loginWithGoogle();
     } catch (error) {
       console.error('Google login error:', error);
-      this.showGeneralError('Failed to initiate Google login. Please try again.');
+      this.showGeneralError(i18n.t('loginModal.google_login_failed'));
     }
   }
 

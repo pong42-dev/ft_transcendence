@@ -29,7 +29,10 @@
     "enter_password": "Enter your password",
     "sign_in": "Sign In",
     "continue_with_google": "Continue with Google",
-    "no_account_signup": "Don't have an account? Sign up"
+    "no_account_signup": "Don't have an account? Sign up",
+    "signing_in": "Signing in...",
+    "google_login_failed": "Failed to initiate Google login. Please try again.",
+    "login_failed": "Login failed. Please check your credentials and try again."
   },
   "registerModal": {
     "create_account": "Create Account",
@@ -87,7 +90,12 @@
     "next_match": "Next Match",
     "view_tournament_results": "View Tournament Results",
     "view_profile": "View Profile",
-    "ai_won": "AI won the game"
+    "ai_won": "AI won the game",
+    "title": "Game Result",
+    "ai_difficulty": "AI Difficulty",
+    "ai_difficulty_easy": "Easy",
+    "ai_difficulty_medium": "Medium",
+    "ai_difficulty_hard": "Hard"
   },
   "gameSetupModal": {
     "select_game_mode": "Select Game Mode",
@@ -100,13 +108,34 @@
     "select_opponent": "Select Opponent",
     "search_friends": "Search friends...",
     "send_invite": "Send Invite",
-    "no_friends_found": "No friends found"
+    "no_friends_found": "No friends found",
+    "play_with_a_guest": "Play with a guest",
+    "tournament": "Tournament",
+    "play_tournament_with_3_guests": "Play tournament with 3 guests",
+    "enter_guest_names": "Enter {{count}} Guest Player Names",
+    "enter_guest_name": "Enter Guest Player Name",
+    "guest_player_nickname": "Guest Player{{number}} Nickname",
+    "enter_guest_player_name_placeholder": "Enter guest player{{number}} name...",
+    "enter_nicknames_hint": "Enter nicknames for the guest players (max 20 characters each)",
+    "enter_nickname_hint": "Enter a nickname for the guest player (max 20 characters)",
+    "start_game": "Start Game",
+    "ai_difficulty_title": "AI Difficulty",
+    "choose_challenge_level": "Choose your challenge level",
+    "easy": "Easy",
+    "medium": "Medium",
+    "hard": "Hard",
+    "easy_description": "Slower reactions, more mistakes (Updates every 2 seconds)",
+    "medium_description": "Balanced gameplay, good challenge (Updates every 1 second)",
+    "hard_description": "Fast reactions, strategic play (Updates every 0.5 seconds)",
+    "start_ai_game": "Start AI Game"
   },
   "fileModal": {
     "select_file": "Select File",
     "click_or_drag_drop": "Click to select or drag & drop",
     "max_size_formats": "Max size: {{size}} • {{formats}}",
-    "remove_file": "Remove file"
+    "remove_file": "Remove file",
+    "file_size_too_large": "File size must be less than {{maxSize}}",
+    "file_type_not_supported": "File type not supported. Please select: {{accept}}"
   },
   "newTournamentTestModal": {
     "title": "Tournament Vertical Flow Test",
@@ -162,7 +191,12 @@
     "invalid_input": "Invalid input",
     "error_occurred_try_again": "An error occurred. Please try again.",
     "mock_data": "MOCK DATA",
-    "live_api": "LIVE API"
+    "live_api": "LIVE API",
+    "bytes": "Bytes",
+    "kilobytes": "KB",
+    "megabytes": "MB",
+    "gigabytes": "GB",
+    "remove": "Remove"
   },
   "validation": {
     "passwords_match": "Passwords match",
@@ -175,6 +209,7 @@
     "password_no_uppercase": "Password must contain at least one uppercase letter.",
     "password_no_number": "Password must contain at least one number.",
     "password_no_special_char": "Password must contain at least one special character (!@#$%^&*).",
+    "password_meets_requirements": "Password meets all requirements",
     "nickname_too_short": "Nickname must be at least 2 characters long.",
     "nickname_too_long": "Nickname must be at most 12 characters long.",
     "nickname_invalid_chars": "Nickname can only contain letters, numbers, and underscores.",

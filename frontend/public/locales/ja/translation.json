@@ -29,7 +29,10 @@
     "enter_password": "パスワードを入力してください",
     "sign_in": "サインイン",
     "continue_with_google": "Googleで続行",
-    "no_account_signup": "アカウントをお持ちではありませんか？サインアップ"
+    "no_account_signup": "アカウントをお持ちではありませんか？サインアップ",
+    "signing_in": "サインイン中...",
+    "google_login_failed": "Googleログインの開始に失敗しました。もう一度お試しください。",
+    "login_failed": "ログインに失敗しました。資格情報を確認して、もう一度お試しください。"
   },
   "registerModal": {
     "create_account": "アカウント作成",
@@ -87,7 +90,12 @@
     "next_match": "次の試合",
     "view_tournament_results": "トーナメント結果を見る",
     "view_profile": "プロフィールを見る",
-    "ai_won": "AIがゲームに勝利しました"
+    "ai_won": "AIがゲームに勝利しました",
+    "title": "ゲーム結果",
+    "ai_difficulty": "AI難易度",
+    "ai_difficulty_easy": "簡単",
+    "ai_difficulty_medium": "普通",
+    "ai_difficulty_hard": "難しい"
   },
   "gameSetupModal": {
     "select_game_mode": "ゲームモードを選択",
@@ -100,13 +108,34 @@
     "select_opponent": "対戦相手を選択",
     "search_friends": "友達を検索...",
     "send_invite": "招待を送る",
-    "no_friends_found": "友達が見つかりません"
+    "no_friends_found": "友達が見つかりません",
+    "play_with_a_guest": "ゲストと対戦",
+    "tournament": "トーナメント",
+    "play_tournament_with_3_guests": "3人のゲストとトーナメントで対戦",
+    "enter_guest_names": "{{count}}人のゲストプレイヤー名を入力",
+    "enter_guest_name": "ゲストプレイヤー名を入力",
+    "guest_player_nickname": "ゲストプレイヤー{{number}}のニックネーム",
+    "enter_guest_player_name_placeholder": "ゲストプレイヤー{{number}}の名前を入力してください...",
+    "enter_nicknames_hint": "ゲストプレイヤーのニックネームを入力してください（各最大20文字）",
+    "enter_nickname_hint": "ゲストプレイヤーのニックネームを入力してください（最大20文字）",
+    "start_game": "ゲーム開始",
+    "ai_difficulty_title": "AIの難易度",
+    "choose_challenge_level": "挑戦レベルを選択してください",
+    "easy": "簡単",
+    "medium": "普通",
+    "hard": "難しい",
+    "easy_description": "反応が遅く、ミスが多い（2秒ごとに更新）",
+    "medium_description": "バランスの取れたゲームプレイ、良い挑戦（1秒ごとに更新）",
+    "hard_description": "素早い反応、戦略的なプレイ（0.5秒ごとに更新）",
+    "start_ai_game": "AI対戦を開始"
   },
   "fileModal": {
     "select_file": "ファイルを選択",
     "click_or_drag_drop": "クリックして選択またはドラッグ＆ドロップ",
     "max_size_formats": "最大サイズ：{{size}} • {{formats}}",
-    "remove_file": "ファイルを削除"
+    "remove_file": "ファイルを削除",
+    "file_size_too_large": "ファイルサイズは{{maxSize}}未満である必要があります",
+    "file_type_not_supported": "サポートされていないファイルタイプです。{{accept}}を選択してください"
   },
   "newTournamentTestModal": {
     "title": "トーナメント垂直フローテスト",
@@ -162,7 +191,12 @@
     "invalid_input": "無効な入力",
     "error_occurred_try_again": "エラーが発生しました。もう一度お試しください。",
     "mock_data": "モックデータ",
-    "live_api": "ライブAPI"
+    "live_api": "ライブAPI",
+    "bytes": "バイト",
+    "kilobytes": "KB",
+    "megabytes": "MB",
+    "gigabytes": "GB",
+    "remove": "削除"
   },
   "validation": {
     "passwords_match": "パスワードが一致します",
@@ -175,6 +209,7 @@
     "password_no_uppercase": "パスワードには少なくとも1つの大文字を含める必要があります。",
     "password_no_number": "パスワードには少なくとも1つの数字を含める必要があります。",
     "password_no_special_char": "パスワードには少なくとも1つの特殊文字（!@#$%^&*）を含める必要があります。",
+    "password_meets_requirements": "パスワードはすべての要件を満たしています",
     "nickname_too_short": "ニックネームは2文字以上である必要があります。",
     "nickname_too_long": "ニックネームは12文字以下である必要があります。",
     "nickname_invalid_chars": "ニックネームは文字、数字、アンダースコアのみを含めることができます。",

@@ -44,7 +44,7 @@ export class GameEndModal {
 
   public show(): void {
     const modalContent: ModalContent = {
-      title: 'Game Result',
+      title: i18n.t('gameEndModal.title'),
       content: () => {
         this.contentElement = document.createElement('div');
         this.contentElement.className = 'modal-body';
@@ -147,8 +147,8 @@ export class GameEndModal {
           </div>
           ${isAIMode ? `
           <div class="bg-terminal-gray bg-opacity-10 rounded-lg p-2">
-            <div class="text-xl font-bold mb-1">${(this.aiDifficulty || 'MEDIUM').toUpperCase()}</div>
-            <div class="text-xs opacity-50">${i18n.t('AI Difficulty')}</div>
+            <div class="text-xl font-bold mb-1">${i18n.t(`gameEndModal.ai_difficulty_${this.aiDifficulty || 'medium'}`)}</div>
+            <div class="text-xs opacity-50">${i18n.t('gameEndModal.ai_difficulty')}</div>
           </div>
           ` : ''}
         </div>
