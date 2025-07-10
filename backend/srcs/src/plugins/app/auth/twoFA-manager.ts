@@ -9,7 +9,7 @@ declare module 'fastify' {
 			init2FA: (request: FastifyRequest, reply: FastifyReply) => Promise<InitUser2FA>;
 			verify2FAToken: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
 			verify2FATokenWithoutTmpToken: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
-			require2FA: (request: FastifyRequest, reply: FastifyReply, userId: number) => Promise<string>;
+			require2FA: (request: FastifyRequest, reply: FastifyReply, userId: number, forSetup?: boolean) => Promise<string>;
 			cleanExpired2FA(): Promise<void>;
 		}
 	}
@@ -44,7 +44,7 @@ export function manageTwoFA(fastify: FastifyInstance) {
 			console.log(userId);
 			console.log(secret.base32);
 			await user2FARepository.insertRow(userId, secret.base32);
-			const tmpToken = await twoFAManager.require2FA(request, reply, userId);
+			const tmpToken = await twoFAManager.require2FA(request, reply, userId, true);
 			console.log(tmpToken);
 			return {
 				qrCodeUrl,
@@ -111,11 +111,11 @@ export function manageTwoFA(fastify: FastifyInstance) {
 			}
 		},
 
-		async require2FA(request: FastifyRequest, reply: FastifyReply, userId: number): Promise<string> {
+		async require2FA(request: FastifyRequest, reply: FastifyReply, userId: number, forSetup?: boolean): Promise<string> {
 			const { user2FARepository, tmpTokenRepository, generateUUID } = request.server;
 			const user2FA = await user2FARepository.getRowByColumnValue('user_id', userId);
 			console.log('user2FA: ', user2FA);
-			if (user2FA) {
+			if (user2FA && (forSetup || user2FA.is_enabled)) {
 				const token = generateUUID();
 				const createdAt = new Date();
 				const expiresAt = new Date(createdAt.getTime() + 5 * 60 * 1000); // 5m

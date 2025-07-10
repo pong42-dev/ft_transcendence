@@ -205,6 +205,7 @@
     "dash": "-",
     "enabled": "Enabled",
     "disabled": "Disabled",
+    "verify": "Verify",
     "verifying": "Verifying...",
     "invalid_input": "Invalid input",
     "error_occurred_try_again": "An error occurred. Please try again.",

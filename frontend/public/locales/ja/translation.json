@@ -205,6 +205,7 @@
     "dash": "-",
     "enabled": "有効",
     "disabled": "無効",
+    "verify": "確認",
     "verifying": "確認中...",
     "invalid_input": "無効な入力",
     "error_occurred_try_again": "エラーが発生しました。もう一度お試しください。",

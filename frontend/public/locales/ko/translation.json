@@ -205,6 +205,7 @@
     "dash": "-",
     "enabled": "활성화됨",
     "disabled": "비활성화됨",
+    "verify": "확인",
     "verifying": "인증 중...",
     "invalid_input": "잘못된 입력",
     "error_occurred_try_again": "오류가 발생했습니다. 다시 시도해주세요.",
