@@ -444,9 +444,6 @@ export class GamePage {
             this.container,
             tournamentId,
             Number(userId), // JWT에서 추출한 user_id를 number로 변환
-            this.renderer,
-            inputHandler,
-            this // GamePage 인스턴스 전달
         );
         this.tournamentClient.start();
     }
