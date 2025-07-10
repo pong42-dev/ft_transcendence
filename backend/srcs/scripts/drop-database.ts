@@ -1,8 +1,8 @@
 import fs from 'fs'
 import path from 'path'
 
-if (Number(process.env.CAN_DROP_DATABASE) !== 1) {
-	throw new Error("You can't drop the database. Set `CAN_DROP_DATABASE=1` environment variable to allow this operation.")
+if (process.env.CAN_DROP_DATABASE !== 'true') {
+	throw new Error("You can't drop the database. Set `CAN_DROP_DATABASE=true` environment variable to allow this operation.")
 }
 
 async function dropDatabase () {

@@ -2,8 +2,8 @@ import { open } from 'sqlite'
 import sqlite3 from 'sqlite3'
 import { createPasswordManager } from "../src/plugins/app/auth/password-manager"
 
-if (Number(process.env.CAN_SEED_DATABASE) !== 1) {
-  throw new Error("You can't seed the database. Set `CAN_SEED_DATABASE=1` environment variable to allow this operation.")
+if (process.env.CAN_SEED_DATABASE !== 'true') {
+  throw new Error("You can't seed the database. Set `CAN_SEED_DATABASE=true` environment variable to allow this operation.")
 }
 
 async function seed() {

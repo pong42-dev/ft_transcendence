@@ -67,7 +67,6 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				console.log("oneOnOneHistory: ", oneOnOneHistory);
 				const tournHistory = await tournamentsRepository.getTournamentHistoryForProfile(userId);
 				console.log("tournHistory: ", tournHistory);
-				// console.log(JSON.stringify(tournHistory[0].rounds, null, 2));
 
 				reply.status(200).send({
 					success: true,

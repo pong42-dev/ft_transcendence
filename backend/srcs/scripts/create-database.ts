@@ -3,8 +3,8 @@ import path from 'path'
 import sqlite3 from 'sqlite3'
 import { open } from 'sqlite'
 
-if (Number(process.env.CAN_CREATE_DATABASE) !== 1) {
-	throw new Error("You can't create the database. Set `CAN_CREATE_DATABASE=1` environment variable to allow this operation.")
+if (process.env.CAN_CREATE_DATABASE !== 'true') {
+	throw new Error("You can't create the database. Set `CAN_CREATE_DATABASE=true` environment variable to allow this operation.")
 }
 
 const DB_FILE = process.env.SQLITE_DB_PATH || './database/database.sqlite'

@@ -96,4 +96,61 @@ export default async function serviceApp (
 
       return { message: 'Not Found' }
     })
+
+  fastify.ready().then(() => {
+    console.log('=== [ Loaded Environment Variables ] ===');
+
+    // Server
+    console.log('PORT:', fastify.config.PORT);
+    console.log('FASTIFY_CLOSE_GRACE_DELAY:', fastify.config.FASTIFY_CLOSE_GRACE_DELAY);
+    console.log('LOG_LEVEL:', fastify.config.LOG_LEVEL);
+
+    // Database
+    console.log('CAN_CREATE_DATABASE:', fastify.config.CAN_CREATE_DATABASE);
+    console.log('CAN_DROP_DATABASE:', fastify.config.CAN_DROP_DATABASE);
+    console.log('CAN_SEED_DATABASE:', fastify.config.CAN_SEED_DATABASE);
+    console.log('SQLITE_DB_PATH:', fastify.config.SQLITE_DB_PATH);
+
+    // Files
+    console.log('PUBLIC_DIRNAME:', fastify.config.PUBLIC_DIRNAME);
+    console.log('USERS_DIRNAME:', fastify.config.USERS_DIRNAME);
+    console.log('AVATAR_DIRNAME:', fastify.config.AVATAR_DIRNAME);
+
+    // Cookie
+    console.log('COOKIE_SECRET:', fastify.config.COOKIE_SECRET);
+    console.log('COOKIE_NAME:', fastify.config.COOKIE_NAME);
+    console.log('COOKIE_SECURED:', fastify.config.COOKIE_SECURED);
+
+    // Rate Limits
+    console.log('RATE_LIMIT_DEV_MAX:', fastify.config.RATE_LIMIT_DEV_MAX);
+    console.log('RATE_LIMIT_DEV_WINDOW:', fastify.config.RATE_LIMIT_DEV_WINDOW);
+    console.log('RATE_LIMIT_PUBLIC_MAX:', fastify.config.RATE_LIMIT_PUBLIC_MAX);
+    console.log('RATE_LIMIT_PUBLIC_WINDOW:', fastify.config.RATE_LIMIT_PUBLIC_WINDOW);
+    console.log('RATE_LIMIT_AUTH_MAX:', fastify.config.RATE_LIMIT_AUTH_MAX);
+    console.log('RATE_LIMIT_AUTH_WINDOW:', fastify.config.RATE_LIMIT_AUTH_WINDOW);
+    console.log('RATE_LIMIT_USER_MAX:', fastify.config.RATE_LIMIT_USER_MAX);
+    console.log('RATE_LIMIT_USER_WINDOW:', fastify.config.RATE_LIMIT_USER_WINDOW);
+    console.log('RATE_LIMIT_SENSITIVE_MAX:', fastify.config.RATE_LIMIT_SENSITIVE_MAX);
+    console.log('RATE_LIMIT_SENSITIVE_WINDOW:', fastify.config.RATE_LIMIT_SENSITIVE_WINDOW);
+    console.log('RATE_LIMIT_APIKEY_MAX:', fastify.config.RATE_LIMIT_APIKEY_MAX);
+    console.log('RATE_LIMIT_APIKEY_WINDOW:', fastify.config.RATE_LIMIT_APIKEY_WINDOW);
+
+    // Client
+    console.log('CLIENT_ORIGIN:', fastify.config.CLIENT_ORIGIN);
+
+    // Google OAuth
+    console.log('GOOGLE_CLIENT_ID:', fastify.config.GOOGLE_CLIENT_ID);
+    console.log('GOOGLE_CLIENT_SECRET:', fastify.config.GOOGLE_CLIENT_SECRET);
+    console.log('GOOGLE_OAUTH_URL:', fastify.config.GOOGLE_OAUTH_URL);
+    console.log('GOOGLE_REDIRECT_URI:', fastify.config.GOOGLE_REDIRECT_URI);
+
+    // JWT
+    console.log('JWT_SECRET:', fastify.config.JWT_SECRET);
+    console.log('ACCESS_TOKEN_EXPIRES_IN:', fastify.config.ACCESS_TOKEN_EXPIRES_IN);
+    console.log('REFRESH_TOKEN_EXPIRES_IN:', fastify.config.REFRESH_TOKEN_EXPIRES_IN);
+    console.log('REFRESH_COOKIE_NAME:', fastify.config.REFRESH_COOKIE_NAME);
+    console.log('REFRESH_COOKIE_MAX_AGE:', fastify.config.REFRESH_COOKIE_MAX_AGE);
+
+    console.log('=== [ End of Config Dump ] ===');
+  });
 }

@@ -3,40 +3,49 @@ import env from '@fastify/env'
 declare module 'fastify' {
 export interface FastifyInstance {
 		config: {
+		// Server
+		PORT: number;
+		FASTIFY_CLOSE_GRACE_DELAY: number;
+		LOG_LEVEL: string;
+		// Database
+		CAN_CREATE_DATABASE: boolean;
+		CAN_DROP_DATABASE: boolean;
+		CAN_SEED_DATABASE: boolean;
 		SQLITE_DB_PATH: string;
-		COOKIE_SECRET: string;
-		COOKIE_NAME: string;
-		COOKIE_SECURED: boolean;
-		// Rate Limit 변수들 추가
-		RATE_LIMIT_DEV_MAX: number;
-		RATE_LIMIT_DEV_WINDOW: string;
-
-		RATE_LIMIT_PUBLIC_MAX: number;
-		RATE_LIMIT_PUBLIC_WINDOW: string;
-
-		RATE_LIMIT_AUTH_MAX: number;
-		RATE_LIMIT_AUTH_WINDOW: string;
-
-		RATE_LIMIT_USER_MAX: number;
-		RATE_LIMIT_USER_WINDOW: string;
-
-		RATE_LIMIT_SENSITIVE_MAX: number;
-		RATE_LIMIT_SENSITIVE_WINDOW: string;
-
-		RATE_LIMIT_APIKEY_MAX: number;
-		RATE_LIMIT_APIKEY_WINDOW: string;
-
-
-		// ASSETS_DIRNAME: string;
+		// Files
 		PUBLIC_DIRNAME: string;
 		USERS_DIRNAME: string;
 		AVATAR_DIRNAME: string;
-		JWT_SECRET: string;
+		// Cookie
+		COOKIE_SECRET: string;
+		COOKIE_NAME: string;
+		COOKIE_SECURED: boolean;
+		// Rate Limit
+		RATE_LIMIT_DEV_MAX: number;
+		RATE_LIMIT_DEV_WINDOW: string;
+		RATE_LIMIT_PUBLIC_MAX: number;
+		RATE_LIMIT_PUBLIC_WINDOW: string;
+		RATE_LIMIT_AUTH_MAX: number;
+		RATE_LIMIT_AUTH_WINDOW: string;
+		RATE_LIMIT_USER_MAX: number;
+		RATE_LIMIT_USER_WINDOW: string;
+		RATE_LIMIT_SENSITIVE_MAX: number;
+		RATE_LIMIT_SENSITIVE_WINDOW: string;
+		RATE_LIMIT_APIKEY_MAX: number;
+		RATE_LIMIT_APIKEY_WINDOW: string
+		// Client
+		CLIENT_ORIGIN: string;
+		// Google OAuth
 		GOOGLE_CLIENT_ID: string;
 		GOOGLE_CLIENT_SECRET: string;
 		GOOGLE_OAUTH_URL: string;
 		GOOGLE_REDIRECT_URI: string;
-		CLIENT_ORIGIN: string;
+		// JWT
+		JWT_SECRET: string;
+		ACCESS_TOKEN_EXPIRES_IN: string;
+		REFRESH_TOKEN_EXPIRES_IN: string;
+		REFRESH_COOKIE_NAME: string;
+		REFRESH_COOKIE_MAX_AGE: number;
 		};
 	}
 }
@@ -44,70 +53,47 @@ export interface FastifyInstance {
 const schema = {
 	type: 'object',
 	required: [
+		// Database
+		// 'CAN_CREATE_DATABASE',
+		// 'CAN_DROP_DATABASE',
+		// 'CAN_SEED_DATABASE',
 		'SQLITE_DB_PATH',
-		'COOKIE_SECRET',
-		'COOKIE_NAME',
-		'COOKIE_SECURED',
+		// Files
 		'PUBLIC_DIRNAME', 
 		'USERS_DIRNAME', 
 		'AVATAR_DIRNAME', 
-		'JWT_SECRET',
+		// Cookie
+		'COOKIE_SECRET',
+		'COOKIE_NAME',
+		'COOKIE_SECURED',
+		// Client
+		'CLIENT_ORIGIN',
+		// Google OAuth
 		'GOOGLE_CLIENT_ID',
 		'GOOGLE_CLIENT_SECRET',
 		'GOOGLE_OAUTH_URL',
 		'GOOGLE_REDIRECT_URI',
-		'CLIENT_ORIGIN'
+		// JWT
+		'JWT_SECRET',
+		'ACCESS_TOKEN_EXPIRES_IN',
+		'REFRESH_TOKEN_EXPIRES_IN',
+		'REFRESH_COOKIE_NAME',
+		'REFRESH_COOKIE_MAX_AGE'
 	],
 	properties: {
+    	// Server
+		PORT: { type: 'number', default: 3000 },
+		FASTIFY_CLOSE_GRACE_DELAY: { type: 'number', default: 500 },
+		LOG_LEVEL: { type: 'string', default: 'info' },
+
 		// Database
+		CAN_CREATE_DATABASE: { type: 'boolean', default: false },
+		CAN_DROP_DATABASE: { type: 'boolean', default: false },
+		CAN_SEED_DATABASE: { type: 'boolean', default: false },
 		SQLITE_DB_PATH: {
 			type: 'string',
 			default: 'database/database.sqlite'
 		},
-
-		// Security
-		COOKIE_SECRET: { type: 'string' },
-		COOKIE_NAME: { type: 'string' },
-		COOKIE_SECURED: { type: 'boolean', default: true },
-
-		// Rate Limit 설정 (6가지 상황별)
-		// // 개발/테스트 환경: 편하게 테스트하기 위해 제한을 느슨하게
-		// RATE_LIMIT_DEV_MAX: { type: 'number', default: 100 },
-		// RATE_LIMIT_DEV_WINDOW: { type: 'string', default: '1 minute' },
-		// // 일반 사용자 대상 API (비 로그인 상태): 비정상적인 트래픽 차단 목적
-		// RATE_LIMIT_PUBLIC_MAX: { type: 'number', default: 20 },
-		// RATE_LIMIT_PUBLIC_WINDOW: { type: 'string', default: '1 minute' },
-		// // 인증 또는 로그인 시도 API: brute-force 방지
-		// RATE_LIMIT_AUTH_MAX: { type: 'number', default: 5 },
-		// RATE_LIMIT_AUTH_WINDOW: { type: 'string', default: '5 minutes' },
-		// // 로그인된 사용자용 API: 사용자당 충분한 요청 허용
-		// RATE_LIMIT_USER_MAX: { type: 'number', default: 100 },
-		// RATE_LIMIT_USER_WINDOW: { type: 'string', default: '1 minute' },
-		// // 공격 방어가 중요한 민감 API: 챗봇/스크래퍼/공격자 차단
-		// RATE_LIMIT_SENSITIVE_MAX: { type: 'number', default: 3 },
-		// RATE_LIMIT_SENSITIVE_WINDOW: { type: 'string', default: '1 minute' },
-		// // 퍼블릭 API with API Key: 사용량 제한 목적, 과금 기준 사용 가능
-		// RATE_LIMIT_APIKEY_MAX: { type: 'number', default: 1000 },
-		// RATE_LIMIT_APIKEY_WINDOW: { type: 'string', default: '1 hour' },
-
-		// 개발/테스트 환경: 편하게 테스트하기 위해 제한을 느슨하게
-		RATE_LIMIT_DEV_MAX: { type: 'number', default: 100 },
-		RATE_LIMIT_DEV_WINDOW: { type: 'string', default: '1 minute' },
-		// 일반 사용자 대상 API (비 로그인 상태): 비정상적인 트래픽 차단 목적
-		RATE_LIMIT_PUBLIC_MAX: { type: 'number', default: 100 },
-		RATE_LIMIT_PUBLIC_WINDOW: { type: 'string', default: '1 minute' },
-		// 인증 또는 로그인 시도 API: brute-force 방지
-		RATE_LIMIT_AUTH_MAX: { type: 'number', default: 100 },
-		RATE_LIMIT_AUTH_WINDOW: { type: 'string', default: '1 minutes' },
-		// 로그인된 사용자용 API: 사용자당 충분한 요청 허용
-		RATE_LIMIT_USER_MAX: { type: 'number', default: 100 },
-		RATE_LIMIT_USER_WINDOW: { type: 'string', default: '1 minute' },
-		// 공격 방어가 중요한 민감 API: 챗봇/스크래퍼/공격자 차단
-		RATE_LIMIT_SENSITIVE_MAX: { type: 'number', default: 100 },
-		RATE_LIMIT_SENSITIVE_WINDOW: { type: 'string', default: '1 minute' },
-		// 퍼블릭 API with API Key: 사용량 제한 목적, 과금 기준 사용 가능
-		RATE_LIMIT_APIKEY_MAX: { type: 'number', default: 100 },
-		RATE_LIMIT_APIKEY_WINDOW: { type: 'string', default: '1 minute' },
 
 		// Files
 		PUBLIC_DIRNAME: {
@@ -119,12 +105,34 @@ const schema = {
 		USERS_DIRNAME: { type: 'string', default: 'users' },
 		AVATAR_DIRNAME: { type: 'string', default: 'avatar' },
 
-		// Client Configuration
+		// Cookie
+		COOKIE_SECRET: { type: 'string' },
+		COOKIE_NAME: { type: 'string' },
+		COOKIE_SECURED: { type: 'boolean', default: true },
+
+		// Rate Limit
+		// Development/Test Environment: relaxed limits for easier testing
+		RATE_LIMIT_DEV_MAX: { type: 'number', default: 100 },
+		RATE_LIMIT_DEV_WINDOW: { type: 'string', default: '1 minute' },
+		// Public APIs (unauthenticated users): prevent abnormal traffic
+		RATE_LIMIT_PUBLIC_MAX: { type: 'number', default: 20 },
+		RATE_LIMIT_PUBLIC_WINDOW: { type: 'string', default: '1 minute' },
+		// Auth-related APIs (login attempts, etc.): prevent brute-force attacks
+		RATE_LIMIT_AUTH_MAX: { type: 'number', default: 5 },
+		RATE_LIMIT_AUTH_WINDOW: { type: 'string', default: '5 minutes' },
+		// Authenticated User APIs: allow sufficient requests per user
+		RATE_LIMIT_USER_MAX: { type: 'number', default: 100 },
+		RATE_LIMIT_USER_WINDOW: { type: 'string', default: '1 minute' },
+		// Sensitive APIs (security-critical): block bots/scrapers/attackers
+		RATE_LIMIT_SENSITIVE_MAX: { type: 'number', default: 3 },
+		RATE_LIMIT_SENSITIVE_WINDOW: { type: 'string', default: '1 minute' },
+		// Public APIs with API Key: limit usage, possibly for billing purposes
+		RATE_LIMIT_APIKEY_MAX: { type: 'number', default: 1000 },
+		RATE_LIMIT_APIKEY_WINDOW: { type: 'string', default: '1 hour' },
+
+		// Client
 		CLIENT_ORIGIN: { type: 'string', default: 'http://localhost:8080' },
-
-		// JWT Configuration
-		JWT_SECRET: { type: 'string' },
-
+		
 		// Google OAuth
 		GOOGLE_CLIENT_ID: { type: 'string' },
 		GOOGLE_CLIENT_SECRET: { type: 'string' },
@@ -132,10 +140,16 @@ const schema = {
 			type: 'string',
 			default: 'https://accounts.google.com/o/oauth2/v2/auth'
 		},
-		GOOGLE_REDIRECT_URI: { type: 'string' }
+		GOOGLE_REDIRECT_URI: { type: 'string' },
+		
+		// JWT
+		JWT_SECRET: { type: 'string' },
+		ACCESS_TOKEN_EXPIRES_IN: { type: 'string',default: '20m' },
+		REFRESH_TOKEN_EXPIRES_IN: { type: 'string', default: '7d' },
+		REFRESH_COOKIE_NAME: { type: 'string', default: 'refresh_token' },
+		REFRESH_COOKIE_MAX_AGE: { type: 'number', default: 60 * 60 * 24 * 7 },
 	}
 }
-
 
 export const autoConfig = {
 	// Decorate Fastify instance with `config` key

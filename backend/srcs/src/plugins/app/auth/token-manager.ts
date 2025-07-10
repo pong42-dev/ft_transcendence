@@ -17,14 +17,7 @@ expiresAt: Date;
 }
 
 export function manageTokens(fastify: FastifyInstance) {
-	const ACCESS_TOKEN_EXPIRES_IN = '20m';
-	// const REFRESH_TOKEN_EXPIRES_IN = '60m';
-	// const ACCESS_TOKEN_EXPIRES_IN = '10m';
-	const REFRESH_TOKEN_EXPIRES_IN = '7d';
-	const REFRESH_COOKIE_NAME = 'refresh_token';
-	// const ACCESS_COOKIE_NAME = 'access_token';
-	const REFRESH_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
-	// const ACCESS_COOKIE_MAX_AGE = 60 * 5;
+	const { config } = fastify;
 
 	return {
 		async generateToken(
@@ -43,7 +36,13 @@ export function manageTokens(fastify: FastifyInstance) {
 		},
 
 		async generateRefreshToken(userData: TokenData): Promise<CookieReturn> {
-			const refreshToken = await this.generateToken(userData, REFRESH_TOKEN_EXPIRES_IN, 'refresh');
+			console.log("config.REFRESH_COOKIE_NAME: ", config.REFRESH_COOKIE_NAME);
+			console.log("config.REFRESH_COOKIE_MAX_AGE: ", config.REFRESH_COOKIE_MAX_AGE);
+			console.log("config.REFRESH_TOKEN_EXPIRES_IN: ", config.REFRESH_TOKEN_EXPIRES_IN);
+			console.log("config.ACCESS_TOKEN_EXPIRES_IN: ", config.ACCESS_TOKEN_EXPIRES_IN);
+			console.log("config.COOKIE_SECURED: ", config.COOKIE_SECURED);
+			console.log("config.COOKIE_SECRET: ", config.COOKIE_SECRET);
+			const refreshToken = await this.generateToken(userData, config.REFRESH_TOKEN_EXPIRES_IN, 'refresh');
 			return this.createRefreshTokenCookie(refreshToken);
 		},
 
@@ -53,7 +52,7 @@ export function manageTokens(fastify: FastifyInstance) {
 		// },
 
 		async generateAccessToken(userData: TokenData): Promise<string> {
-			return this.generateToken(userData, ACCESS_TOKEN_EXPIRES_IN, 'access');
+			return this.generateToken(userData, config.ACCESS_TOKEN_EXPIRES_IN, 'access');
 		},
 
 		createCookie(name: string, token: string, maxAge: number): CookieReturn {
@@ -78,9 +77,9 @@ export function manageTokens(fastify: FastifyInstance) {
 
 		createRefreshTokenCookie(token: string): CookieReturn {
 			return this.createCookie(
-				REFRESH_COOKIE_NAME,
+				config.REFRESH_COOKIE_NAME,
 				token,
-				REFRESH_COOKIE_MAX_AGE
+				config.REFRESH_COOKIE_MAX_AGE
 			);
 		},
 
