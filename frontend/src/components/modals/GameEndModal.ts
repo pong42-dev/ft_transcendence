@@ -125,17 +125,17 @@ export class GameEndModal {
         </div>
         
         <div class="flex justify-between items-center mb-4">
-          <div class="flex items-center gap-2">
-            <div class="w-8 h-8 rounded-lg ${this.gameResult.winner === 'left' ? 'bg-terminal-green bg-opacity-20' : 'bg-terminal-gray bg-opacity-20'} flex items-center justify-center font-bold text-sm">
-              ${this.gameResult.leftPlayer.nickname ? this.gameResult.leftPlayer.nickname.substring(0, 2) : 'L'}
+          <div class="flex-1 flex items-center gap-2">
+            <div class="h-8 px-3 rounded-lg ${this.gameResult.winner === 'left' ? 'bg-terminal-green bg-opacity-20' : 'bg-terminal-gray bg-opacity-20'} flex items-center justify-center font-bold text-sm">
+              ${this.gameResult.leftPlayer.nickname ? this.gameResult.leftPlayer.nickname : 'L'}
             </div>
             <div class="text-xl font-bold">${this.gameResult.leftPlayer.score}</div>
           </div>
           <div class="text-xs opacity-50">${i18n.t('common.vs')}</div>
-          <div class="flex items-center gap-2">
+          <div class="flex-1 flex items-center gap-2 justify-end">
             <div class="text-xl font-bold">${this.gameResult.rightPlayer.score}</div>
-            <div class="w-8 h-8 rounded-lg ${this.gameResult.winner === 'right' ? 'bg-terminal-green bg-opacity-20' : 'bg-terminal-red bg-opacity-20'} flex items-center justify-center font-bold text-sm">
-              ${this.gameResult.rightPlayer.nickname ? this.gameResult.rightPlayer.nickname.substring(0, 2) : 'R'}
+            <div class="h-8 px-3 rounded-lg ${this.gameResult.winner === 'right' ? 'bg-terminal-green bg-opacity-20' : 'bg-terminal-red bg-opacity-20'} flex items-center justify-center font-bold text-sm">
+              ${this.gameResult.rightPlayer.nickname ? this.gameResult.rightPlayer.nickname : 'R'}
             </div>
           </div>
         </div>
