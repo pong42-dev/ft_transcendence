@@ -338,6 +338,13 @@ export class TournamentSession {
         }
       };
       this.currentGameSessionId = await this.gameManager.createGame('tournament', playersForNextMatch, customCallbacks);
+      
+      // 토너먼트 모드에서는 게임 생성 후 자동으로 모든 참가자를 연결 처리합니다
+      for (const player of playersForNextMatch) {
+        this.gameManager.handlePlayerConnection(this.currentGameSessionId, player.id);
+        (this.fastify as any).log.info(`[Session ${this.tournamentId}] Auto-connected player ${player.id} to game ${this.currentGameSessionId}`);
+      }
+      
       if (this.socket) {
         const message: MatchStartingDto = {
           type: 'match_starting',
