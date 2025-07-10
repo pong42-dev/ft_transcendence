@@ -4,6 +4,7 @@ import {
   CreateGameRequestDto,
   GameResponseDto,
 } from '../../types/types';
+import i18next from 'i18next';
 
 export class GameApiService extends BaseApiService {
   constructor() {

@@ -275,7 +275,7 @@ export class App {
         }
         console.log('Hash set to:', window.location.hash);
 
-        this.mainTerminal.appendOutput('Game ended. Returning to profile.');
+        this.mainTerminal.appendOutput(i18next.t('app.game_ended_return_profile'));
       }
     );
   }

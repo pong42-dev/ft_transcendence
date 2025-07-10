@@ -3,6 +3,7 @@ import { TokenManager } from '../core/TokenManager';
 import { ErrorLevel } from '../../utils/ErrorHandler';
 import { getConfig } from '../../config/environment';
 import * as Types from '../../types/types';
+import i18next from 'i18next';
 
 export class AuthApiService extends BaseApiService {
   constructor() {
@@ -55,7 +56,7 @@ export class AuthApiService extends BaseApiService {
     
     // 디버깅을 위한 로그
     console.error('[Auth] Login response structure:', JSON.stringify(response, null, 2));
-    throw new ApiError(401, 'Login failed', { message: 'Invalid response from server' });
+    throw new ApiError(401, i18next.t('auth.loginFailed'), { message: i18next.t('auth.invalidResponseFromServer') });
   }
 
   // 2FA 로그인 완료 - tmpToken과 2FA 코드로 로그인 마무리
@@ -98,7 +99,7 @@ export class AuthApiService extends BaseApiService {
     // - 성공: 201 상태코드 + success 필드 없음
     // - 실패: 200 상태코드 + success: false
     if (registerResponse.success === false) {
-      throw new ApiError(400, 'Registration failed', { message: registerResponse.msg });
+      throw new ApiError(400, i18next.t('auth.registrationFailed'), { message: registerResponse.msg });
     }
     
     console.info('[Auth] Registration successful - no auto-login');
@@ -252,7 +253,7 @@ export class AuthApiService extends BaseApiService {
     
     // 토큰이 없으면 에러
     if (!currentToken) {
-      throw new ApiError(401, 'Authentication required', { message: 'No access token available for verification' });
+      throw new ApiError(401, i18next.t('auth.authenticationRequired'), { message: i18next.t('auth.noAccessTokenForVerification') });
     }
     
     // 기본값 사용
@@ -337,7 +338,7 @@ export class AuthApiService extends BaseApiService {
     
     if (!token) {
       console.error('[Auth] No access token available for 2FA initialization');
-      throw new ApiError(401, 'Authentication required', { message: 'No access token available for 2FA initialization' });
+      throw new ApiError(401, i18next.t('auth.authenticationRequired'), { message: i18next.t('auth.noAccessTokenFor2FAInit') });
     }
     
     const response = await this.post<{
@@ -360,7 +361,7 @@ export class AuthApiService extends BaseApiService {
     // 토큰이 있는지 확인
     const token = TokenManager.getAccessToken();
     if (!token) {
-      throw new ApiError(401, 'Authentication required', { message: 'No access token available for 2FA activation' });
+      throw new ApiError(401, i18next.t('auth.authenticationRequired'), { message: i18next.t('auth.noAccessTokenFor2FAActivation') });
     }
     
     await this.post<{
@@ -392,7 +393,7 @@ export class AuthApiService extends BaseApiService {
     
     // 2FA 검증 실패 시 에러 던지기
     if (!response.success) {
-      throw new ApiError(409, '2FA verification failed', { message: response.msg });
+      throw new ApiError(409, i18next.t('auth.twoFAVerificationFailed'), { message: response.msg });
     }
     
     return response.data;
@@ -403,7 +404,7 @@ export class AuthApiService extends BaseApiService {
     // 토큰이 있는지 확인
     const token = TokenManager.getAccessToken();
     if (!token) {
-      throw new ApiError(401, 'Authentication required', { message: 'No access token available for 2FA deactivation' });
+      throw new ApiError(401, i18next.t('auth.authenticationRequired'), { message: i18next.t('auth.noAccessTokenFor2FADeactivation') });
     }
     
     await this.post<{
@@ -441,13 +442,13 @@ export class AuthApiService extends BaseApiService {
       console.warn('[Auth] Using legacy API structure (data.me)');
     } else {
       console.error('[Auth] Invalid API response structure:', userProfileResponse);
-      throw new Error('Invalid API response structure: missing userInfo or me');
+      throw new Error(i18next.t('auth.invalidApiResponseStructure'));
     }
     
     // 필수 필드 검증
     if (!userData.name) {
       console.error('[Auth] Missing required field: name');
-      throw new Error('Invalid user data: missing name field');
+      throw new Error(i18next.t('auth.invalidUserDataMissingName'));
     }
     
     // 2FA 상태 결정 로직: 서버 제공 → fallback
@@ -503,13 +504,13 @@ export class AuthApiService extends BaseApiService {
       console.warn('[Auth] Using legacy API structure (data.me)');
     } else {
       console.error('[Auth] Invalid API response structure:', userProfileResponse);
-      throw new Error('Invalid API response structure: missing userInfo or me');
+      throw new Error(i18next.t('auth.invalidApiResponseStructure'));
     }
     
     // 필수 필드 검증
     if (!userData.name) {
       console.error('[Auth] Missing required field: name');
-      throw new Error('Invalid user data: missing name field');
+      throw new Error(i18next.t('auth.invalidUserDataMissingName'));
     }
     
     // 서버에서 제공된 2FA 상태 사용, 없으면 기본값(false) 사용

@@ -1,5 +1,6 @@
 import { BaseApiService } from './BaseApiService';
 import * as Types from '../../types/types';
+import i18next from 'i18next';
 
 export class UserApiService extends BaseApiService {
   constructor() {
@@ -28,13 +29,13 @@ export class UserApiService extends BaseApiService {
       console.warn('[UserApi] Using legacy API structure (data.me)');
     } else {
       console.error('[UserApi] Invalid API response structure:', response);
-      throw new Error('Invalid API response structure: missing userInfo or me');
+      throw new Error(i18next.t('user.invalidApiResponseStructure'));
     }
     
     // 필수 필드 검증
     if (!userData.name) {
       console.error('[UserApi] Missing required field: name');
-      throw new Error('Invalid user data: missing name field');
+      throw new Error(i18next.t('user.invalidUserDataMissingName'));
     }
     
     // User 객체로 변환
@@ -79,7 +80,7 @@ export class UserApiService extends BaseApiService {
     
     // 백엔드에서 success: false를 반환하는 경우 처리
     if (response && response.success === false) {
-      throw new Error(response.msg || 'Name update failed');
+      throw new Error(response.msg || i18next.t('user.nameUpdateFailed'));
     }
     
     // 업데이트 후 최신 프로필 조회
@@ -104,7 +105,7 @@ export class UserApiService extends BaseApiService {
     
     const friend = friendsResponse.data.friends.find(f => f.name === username);
     if (!friend) {
-      throw new Error(`User "${username}" is not in your friends list. Use 'friend follow ${username}' to add them first.`);
+      throw new Error(i18next.t('user.userNotFoundOrNotInFriendsList', { username }));
     }
     
     // 친구 상세 프로필 조회

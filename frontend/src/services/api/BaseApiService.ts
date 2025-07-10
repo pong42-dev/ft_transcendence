@@ -11,6 +11,7 @@ import {
   CacheConfig, 
   CacheEntry
 } from '../../types/types';
+import i18next from 'i18next';
 
 export class ApiError extends Error {
   constructor(
@@ -142,7 +143,7 @@ export abstract class BaseApiService {
   ): Promise<T> {
     // 정리된 서비스에서 요청 방지
     if (this.isDisposed) {
-      throw new Error(`Cannot make request from disposed service: ${this.serviceName}`);
+      throw new Error(`${i18next.t('baseApi.cannotMakeRequestFromDisposedService')}: ${this.serviceName}`);
     }
 
     // Mock 데이터 사용 시 MockInterceptor로 처리
@@ -169,8 +170,8 @@ export abstract class BaseApiService {
         // Mock 로딩 실패 시 기본 Mock 응답
         return {
           success: false,
-          error: 'Mock loading failed',
-          message: `Failed to load mock data for ${this.serviceName}`
+          error: i18next.t('baseApi.mockLoadingFailed'),
+          message: `${i18next.t('baseApi.failedToLoadMockDataFor')} ${this.serviceName}`
         } as T;
       }
     }
@@ -314,10 +315,10 @@ export abstract class BaseApiService {
       const newToken = await TokenManager.refreshToken();
       if (newToken) {
         // TokenManager가 이미 새 토큰을 저장했으므로 추가 작업 불필요
-        console.info('🔄 Token refreshed successfully in BaseApiService');
+        console.info(i18next.t('baseApi.tokenRefreshedSuccessfully'));
         return true;
       } else {
-        console.warn('Token refresh failed');
+        console.warn(i18next.t('baseApi.tokenRefreshFailed'));
         return false;
       }
     } catch (error) {
@@ -330,7 +331,7 @@ export abstract class BaseApiService {
   private handleUnauthorized(): void {
     TokenManager.clearTokens();
     this.errorHandler.handleError(
-      new Error('Authentication failed'),
+      new Error(i18next.t('baseApi.authenticationFailed')),
       'BaseApiService.handleUnauthorized',
       ErrorLevel.WARNING,
       {

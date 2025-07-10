@@ -312,6 +312,11 @@
     "your_friends": "📋 Your Friends ({{count}}):",
     "failed_load_friends": "❌ Failed to load friends list. Please try again."
   },
+  "friend": {
+    "invalidResponseFormat": "Invalid response format",
+    "failedToAddFriend": "Failed to add friend",
+    "failedToRemoveFriend": "Failed to remove friend"
+  },
   "profileCommand": {
     "login_first": "Please login first to view profiles."
   },
@@ -377,7 +382,32 @@
     "twoFAVerifying": "Verifying 2FA code...",
     "twoFAFailed": "2FA verification failed. Please try again.",
     "twoFAFailedWithMessage": "2FA verification failed: {{message}}",
-    "invalidCode": "Invalid code"
+    "invalidCode": "Invalid code",
+    "loginFailed": "Login failed",
+    "invalidResponseFromServer": "Invalid response from server",
+    "registrationFailed": "Registration failed",
+    "authenticationRequired": "Authentication required",
+    "noAccessTokenForVerification": "No access token available for verification",
+    "noAccessTokenFor2FAInit": "No access token available for 2FA initialization",
+    "noAccessTokenFor2FAActivation": "No access token available for 2FA activation",
+    "twoFAVerificationFailed": "2FA verification failed",
+    "noAccessTokenFor2FADeactivation": "No access token available for 2FA deactivation",
+    "invalidApiResponseStructure": "Invalid API response structure: missing userInfo or me",
+    "invalidUserDataMissingName": "Invalid user data: missing name field"
+  },
+  "baseApi": {
+    "cannotMakeRequestFromDisposedService": "Cannot make request from disposed service",
+    "mockLoadingFailed": "Mock loading failed",
+    "failedToLoadMockDataFor": "Failed to load mock data for",
+    "tokenRefreshedSuccessfully": "🔄 Token refreshed successfully in BaseApiService",
+    "tokenRefreshFailed": "Token refresh failed",
+    "authenticationFailed": "Authentication failed"
+  },
+  "user": {
+    "invalidApiResponseStructure": "Invalid API response structure: missing userInfo or me",
+    "invalidUserDataMissingName": "Invalid user data: missing name field",
+    "nameUpdateFailed": "Name update failed",
+    "userNotFoundOrNotInFriendsList": "User \"{{username}}\" is not in your friends list. Use 'friend follow {{username}}' to add them first."
   },
   "languages": {
     "en": "English",

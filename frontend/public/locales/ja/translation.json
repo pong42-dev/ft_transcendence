@@ -274,8 +274,8 @@
   "helpCommand": {
     "api_status": "APIステータス",
     "full_help_text": {
-      "true": "利用可能なコマンド:\n  help       - このヘルプメッセージを表示\n  profile    - ユーザープロフィールを表示 (profile <username>)\n  play       - ポンゲームを開始\n  logout     - 現在のセッションからログアウト\n  friend     - 友達を管理 (friend follow|unfollow|list)\n  2fa        - 2要素認証を管理 (2fa enable|disable|status)\n  set        - プロフィール設定を更新 (set avatar|name)\n  lang       - Change language (lang en|ko|ja)\n  clear      - ターミナル画面をクリア",
-      "false": "利用可能なコマンド:\n  help       - このヘルプメッセージを表示\n  login      - アカウントにログイン\n  register   - 新しいアカウントを作成\n  lang       - Change language (lang en|ko|ja)\n  clear      - ターミナル画面をクリア"
+      "true": "利用可能なコマンド:\n  help       - このヘルプメッセージを表示\n  profile    - ユーザープロフィールを表示 (profile <username>)\n  play       - ポンゲームを開始\n  logout     - 現在のセッションからログアウト\n  friend     - 友達を管理 (friend follow|unfollow|list)\n  2fa        - 2要素認証を管理 (2fa enable|disable|status)\n  set        - プロフィール設定を更新 (set avatar|name)\n  lang       - 言語を変更 (lang en|ko|ja)\n  clear      - ターミナル画面をクリア",
+      "false": "利用可能なコマンド:\n  help       - このヘルプメッセージを表示\n  login      - アカウントにログイン\n  register   - 新しいアカウントを作成\n  lang       - 言語を変更 (lang en|ko|ja)\n  clear      - ターミナル画面をクリア"
     }
   },
   "loginCommand": {
@@ -311,6 +311,11 @@
     "add_friends_hint": "   友達を追加するには\"friend follow <username>\"を使用してください。",
     "your_friends": "📋 あなたの友達 ({{count}}):",
     "failed_load_friends": "❌ 友達リストの読み込みに失敗しました。もう一度お試しください。"
+  },
+  "friend": {
+    "invalidResponseFormat": "無効な応答形式",
+    "failedToAddFriend": "友達の追加に失敗しました",
+    "failedToRemoveFriend": "友達の削除に失敗しました"
   },
   "profileCommand": {
     "login_first": "プロフィールを表示するには、まずログインしてください。"
@@ -377,7 +382,32 @@
     "twoFAVerifying": "2FAコードを確認しています...",
     "twoFAFailed": "二要素認証に失敗しました。もう一度お試しください。",
     "twoFAFailedWithMessage": "二要素認証に失敗しました: {{message}}",
-    "invalidCode": "無効なコード"
+    "invalidCode": "無効なコード",
+    "loginFailed": "ログイン失敗",
+    "invalidResponseFromServer": "サーバーからの無効な応答",
+    "registrationFailed": "登録失敗",
+    "authenticationRequired": "認証が必要です",
+    "noAccessTokenForVerification": "検証に利用できるアクセストークンがありません",
+    "noAccessTokenFor2FAInit": "2FA初期化に利用できるアクセストークンがありません",
+    "noAccessTokenFor2FAActivation": "2FAアクティベーションに利用できるアクセストークンがありません",
+    "twoFAVerificationFailed": "2段階認証に失敗しました",
+    "noAccessTokenFor2FADeactivation": "2FA無効化に利用できるアクセストークンがありません",
+    "invalidApiResponseStructure": "無効なAPI応答構造: userInfoまたはmeがありません",
+    "invalidUserDataMissingName": "無効なユーザーデータ: 名前フィールドがありません"
+  },
+  "baseApi": {
+    "cannotMakeRequestFromDisposedService": "解放されたサービスからリクエストを作成できません",
+    "mockLoadingFailed": "モックの読み込みに失敗しました",
+    "failedToLoadMockDataFor": "モックデータの読み込みに失敗しました:",
+    "tokenRefreshedSuccessfully": "🔄 BaseApiServiceでトークンが正常に更新されました",
+    "tokenRefreshFailed": "トークンの更新に失敗しました",
+    "authenticationFailed": "認証に失敗しました"
+  },
+  "user": {
+    "invalidApiResponseStructure": "無効なAPI応答構造: userInfoまたはmeがありません",
+    "invalidUserDataMissingName": "無効なユーザーデータ: 名前フィールドがありません",
+    "nameUpdateFailed": "名前の更新に失敗しました",
+    "userNotFoundOrNotInFriendsList": "ユーザー\"{{username}}\"は見つからないか、友達リストにいません。まず'friend follow {{username}}'で追加してください。"
   },
   "languages": {
     "en": "英語",

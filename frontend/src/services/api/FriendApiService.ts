@@ -1,6 +1,7 @@
 import { BaseApiService } from './BaseApiService';
 import { ErrorLevel } from '../../utils/ErrorHandler';
 import * as Types from '../../types/types';
+import i18next from 'i18next';
 
 export class FriendApiService extends BaseApiService {
   constructor() {
@@ -25,7 +26,7 @@ export class FriendApiService extends BaseApiService {
       
       // 응답 검증
       if (!response.success || !response.data?.friends) {
-        throw new Error(response.msg || 'Invalid response format');
+        throw new Error(response.msg || i18next.t('friend.invalidResponseFormat'));
       }
       
       // Friend 객체로 변환 (id 포함)
@@ -65,7 +66,7 @@ export class FriendApiService extends BaseApiService {
       
       // 응답 검증
       if (!response.success) {
-        throw new Error(response.msg || 'Failed to add friend');
+        throw new Error(response.msg || i18next.t('friend.failedToAddFriend'));
       }
       
       console.log('[Friend] Successfully followed user:', friendName);
@@ -103,7 +104,7 @@ export class FriendApiService extends BaseApiService {
       
       // 응답 검증
       if (!response.success) {
-        throw new Error(response.msg || 'Failed to remove friend');
+        throw new Error(response.msg || i18next.t('friend.failedToRemoveFriend'));
       }
       
       console.log('[Friend] Successfully unfollowed user:', friendId);
@@ -147,7 +148,7 @@ export class FriendApiService extends BaseApiService {
       
       // 응답 검증 (백엔드는 userInfo로 반환)
       if (!response.success || !response.data?.userInfo) {
-        throw new Error(response.msg || 'Invalid response format');
+        throw new Error(response.msg || i18next.t('friend.invalidResponseFormat'));
       }
       
       // User 객체로 변환
