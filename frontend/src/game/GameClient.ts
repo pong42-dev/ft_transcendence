@@ -359,19 +359,29 @@ export class GameClient {
   }
 
   public destroy(): void {
-    // 모든 이벤트 리스너를 제거해야 합니다.
-    this.webSocketService.off('game_event', this.handlePreGameEvent);
-    this.webSocketService.off('game_state', this.handleGameState);
-    this.webSocketService.off('game_event', this.handleInGameEvent);
-    this.webSocketService.off('error', this.handleError);
-    this.webSocketService.off('close', this.handleConnectionClose);
-    this.inputHandler.off('input', this.handleInput);
-
-    // 토너먼트 모드가 아닐 때만 연결 해제
-    if (!this.isTournament) {
-      this.webSocketService.disconnect();
+    // 이미 destroy가 진행 중이거나 완료된 경우 중복 실행 방지
+    if (this.gameEnded) {
+      return;
     }
     
+    this.gameEnded = true;
+    
+    // 입력 핸들러를 먼저 비활성화하여 추가 입력 차단
     this.inputHandler.deactivate();
+    this.inputHandler.off('input', this.handleInput);
+    
+    // 웹소켓 이벤트 리스너를 비동기로 정리
+    setTimeout(() => {
+      this.webSocketService.off('game_event', this.handlePreGameEvent);
+      this.webSocketService.off('game_state', this.handleGameState);
+      this.webSocketService.off('game_event', this.handleInGameEvent);
+      this.webSocketService.off('error', this.handleError);
+      this.webSocketService.off('close', this.handleConnectionClose);
+      
+      // 토너먼트 모드가 아닐 때만 연결 해제
+      if (!this.isTournament) {
+        this.webSocketService.disconnect();
+      }
+    }, 50);
   }
 }

@@ -39,6 +39,15 @@ export class TournamentBracketModal {
   }
 
   private renderBracketResult(): string {
+    // 안전성 확인
+    if (!this.result.participants || !Array.isArray(this.result.participants)) {
+      return '<div class="text-center text-red-500">매치 결과 데이터가 올바르지 않습니다.</div>';
+    }
+    
+    if (!this.result.scores || !Array.isArray(this.result.scores)) {
+      return '<div class="text-center text-red-500">점수 데이터가 올바르지 않습니다.</div>';
+    }
+
     const winner = this.result.participants.find(p => p.id === this.result.winnerId);
     const playerBlocks = this.result.participants.map(participant => {
       const scoreObj = this.result.scores.find(s => s.playerId === participant.id);
@@ -247,10 +256,12 @@ export class TournamentClient {
 
     this.webSocketService.on('open', () => {
       // 연결 성공 시 tournament_start 메시지 자동 전송
-      this.webSocketService?.sendMessage({
-        type: 'tournament_start',
-        data: { playerId: this.currentUserId }
-      });
+      if (this.currentUserId !== null) {
+        this.webSocketService?.sendMessage({
+          type: 'tournament_start',
+          data: { playerId: this.currentUserId }
+        });
+      }
     });
 
     this.webSocketService.on('tournament_bracket', (data: any) => {
@@ -441,7 +452,15 @@ export class TournamentClient {
         onGameStart: () => this.gamePage.transitionToGameScreen(),
         onFinish: (result: any) => {
           if (result) {
-            this.showBracketResultModal(result);
+            try {
+              // GameResult를 TournamentMatchResult로 변환
+              const tournamentResult = this.convertGameResultToTournamentResult(result);
+              this.showBracketResultModal(tournamentResult);
+            } catch (error) {
+              console.error('Error converting game result to tournament result:', error);
+              // 변환 실패 시 기본 메시지 표시
+              console.log('Game result that failed to convert:', result);
+            }
           }
           this.handleMatchFinish(matchId);
         }
@@ -455,65 +474,102 @@ export class TournamentClient {
     this.handleMatchFinish();
   };
 
-  public async handleMatchFinish(matchId?: number) {
+  public handleMatchFinish(matchId?: number) {
     if (matchId === undefined) {
       console.warn('[WARN] handleMatchFinish: matchId가 undefined입니다.');
       return;
     }
-    // 게임 클라이언트 리소스 정리
-    this.gameClient?.destroy();
-    this.gameClient = null;
+
+    // 중복 처리 방지
+    if (this.currentMatch && this.currentMatch.resultSent) {
+      console.log('Match result already sent, skipping...');
+      return;
+    }
+    if (this.currentMatch) this.currentMatch.resultSent = true;
+
+    // 게임 클라이언트 리소스 정리 (비동기로 처리)
+    setTimeout(() => {
+      this.gameClient?.destroy();
+      this.gameClient = null;
+    }, 100);
+
+    // UI 업데이트를 먼저 수행 (빠른 피드백)
+    this.renderMainView({ status: 'in_progress', message: '매치 결과 처리 중...' });
+    if (this.bracketMatches) {
+      this.updateBracketDisplay();
+    }
+
+    // 매치 정보 조회를 비동기로 처리
+    this.fetchMatchResultAsync(matchId);
+  }
+
+  private async fetchMatchResultAsync(matchId: number) {
     try {
       const res = await fetch(`/api/tournaments/${this.tournamentId}/matches/${matchId}`);
       const match = await res.json();
+      
       if (match.status !== 'finished') {
         console.warn('[WARN] handleMatchFinish: match가 아직 finished 상태가 아님', match);
+        // 잠시 후 다시 시도
+        setTimeout(() => this.fetchMatchResultAsync(matchId), 1000);
         return;
       }
-      const winner = match.winner_id;
-      const scores = match.participants.map((p: any) => ({ id: p.id, score: p.score, display_name: p.display_name }));
-      // 이하 기존 winner, scores로 결과 렌더링 로직
-      let winnerId = winner;
+
+      const winnerId = match.winner_id;
+      const scores = match.participants.map((p: any) => ({ 
+        id: p.id, 
+        score: p.score, 
+        display_name: p.display_name 
+      }));
+
       if (winnerId === undefined || winnerId === null) {
         console.warn('[WARN] handleMatchFinish: winnerId가 undefined/null입니다. match:', match);
         return;
       }
-      if (this.currentMatch && this.currentMatch.resultSent) {
-        console.log('Match result already sent, skipping...');
-        return;
-      }
-      if (this.currentMatch) this.currentMatch.resultSent = true;
-      this.renderMainView({ status: 'in_progress', message: i18next.t('tournament.client.status.waitingForNextMatch') });
+
+      // UI 업데이트
+      this.renderMainView({ status: 'in_progress', message: '다음 경기를 기다리는 중...' });
       if (this.bracketMatches) {
         this.updateBracketDisplay();
       }
-      // 결과 모달 띄우기 등 기존 로직 유지
-      const isFinal = this.currentMatch?.round_number === 2;
-      const gameResult = this.makeGameResult({ id: winnerId }, scores);
-      const resultModal = new GameEndModal(
-        gameResult,
-        true, // isTournament
-        isFinal,
-        () => {
-          this.modalManager.hide();
-          this.resultModalId = null;
-          if (!isFinal) {
-            this.openBracketModal('waiting', i18next.t('tournament.client.modal.waitingForNextMatch'));
-          }
-        },
-        isFinal ? undefined : () => {
-          this.modalManager.hide();
-          this.resultModalId = null;
-          this.openBracketModal('waiting', i18next.t('tournament.client.modal.waitingForNextMatch'));
-        },
-        undefined,
-        'tournament'
-      );
-      resultModal.show();
-      this.resultModalId = null;
+
+      // 결과 모달을 비동기로 표시
+      setTimeout(() => {
+        this.showMatchResultModal(winnerId, scores);
+      }, 300);
+
     } catch (e) {
-      console.error(i18next.t('tournament.client.error.matchInfoFetchFailed'), e);
+      console.error('handleMatchFinish: match 정보 조회 실패', e);
+      // 에러 발생 시 기본 메시지 표시
+      this.renderMainView({ status: 'error', message: '매치 결과 조회 중 오류가 발생했습니다.' });
     }
+  }
+
+  private showMatchResultModal(winnerId: number, scores: any[]) {
+    const isFinal = this.currentMatch?.round_number === 2;
+    const gameResult = this.makeGameResult({ id: winnerId }, scores);
+    
+    const resultModal = new GameEndModal(
+      gameResult,
+      true, // isTournament
+      isFinal,
+      () => {
+        this.modalManager.hide();
+        this.resultModalId = null;
+        if (!isFinal) {
+          this.openBracketModal('waiting', '다음 매치 대기 중...');
+        }
+      },
+      isFinal ? undefined : () => {
+        this.modalManager.hide();
+        this.resultModalId = null;
+        this.openBracketModal('waiting', '다음 매치 대기 중...');
+      },
+      undefined,
+      'tournament'
+    );
+    resultModal.show();
+    this.resultModalId = null;
   }
 
   private updateBracketDisplay(): void {
@@ -528,10 +584,12 @@ export class TournamentClient {
   private startTournament(): void {
     console.log(i18next.t('tournament.client.log.startingTournament'));
     
-    this.webSocketService?.sendMessage({
-      type: 'tournament_start',
-      data: { playerId: this.currentUserId }
-    });
+    if (this.currentUserId !== null) {
+      this.webSocketService?.sendMessage({
+        type: 'tournament_start',
+        data: { playerId: this.currentUserId }
+      });
+    }
     
     // 토너먼트 시작 상태로 UI 업데이트
     const startButton = this.container.querySelector('#start-tournament-btn');
@@ -542,37 +600,39 @@ export class TournamentClient {
     }
   }
 
-  private startCountdown(): void {
-    let countdown = 5;
-    const statusElement = this.container.querySelector('#tournament-status');
+  // private startCountdown(): void {
+  //   let countdown = 5;
+  //   const statusElement = this.container.querySelector('#tournament-status');
     
-    const countdownInterval = setInterval(() => {
-      if (statusElement) {
-        statusElement.textContent = i18next.t('tournament.client.countdown.startingIn', { countdown });
-      }
+  //   const countdownInterval = setInterval(() => {
+  //     if (statusElement) {
+  //       statusElement.textContent = `Starting in ${countdown}...`;
+  //     }
       
-      countdown--;
+  //     countdown--;
       
-      if (countdown < 0) {
-        clearInterval(countdownInterval);
-        console.log(i18next.t('tournament.client.countdown.finished'));
+  //     if (countdown < 0) {
+  //       clearInterval(countdownInterval);
+  //       console.log('Countdown finished, starting tournament...');
         
-        this.webSocketService?.sendMessage({
-          type: 'tournament_start',
-            data: { playerId: this.currentUserId }
-        });
+  //       if (this.currentUserId !== null) {
+  //         this.webSocketService?.sendMessage({
+  //           type: 'tournament_start',
+  //           data: { playerId: this.currentUserId }
+  //         });
+  //       }
         
-        // 상태 업데이트
-        if (statusElement) {
-          statusElement.textContent = i18next.t('tournament.client.status.startingTournament');
-          statusElement.className = 'text-lg mb-4 text-terminal-green';
-        }
-      }
-    }, 1000);
+  //       // 상태 업데이트
+  //       if (statusElement) {
+  //         statusElement.textContent = 'Starting tournament...';
+  //         statusElement.className = 'text-lg mb-4 text-terminal-green';
+  //       }
+  //     }
+  //   }, 1000);
     
-    // 카운트다운 인터벌을 클래스 멤버로 저장하여 취소 시 중단할 수 있도록 함
-    (this as any).countdownInterval = countdownInterval;
-  }
+  //   // 카운트다운 인터벌을 클래스 멤버로 저장하여 취소 시 중단할 수 있도록 함
+  //   (this as any).countdownInterval = countdownInterval;
+  // }
 
   private cancelTournament(): void {
     console.log(i18next.t('tournament.client.log.cancelingTournament'));
@@ -593,6 +653,58 @@ export class TournamentClient {
       totalRounds: (scores.find(p => p.id === this.currentMatch?.participants[0]?.id)?.score || 0) + (scores.find(p => p.id === this.currentMatch?.participants[1]?.id)?.score || 0),
       gameMode: 'tournament'
     };
+  }
+
+  // GameResult를 TournamentMatchResult로 변환하는 헬퍼 메서드
+  private convertGameResultToTournamentResult(gameResult: any): TournamentMatchResult {
+    if (!this.currentMatch) {
+      throw new Error('Current match is not available for result conversion');
+    }
+
+    console.log('Converting game result:', gameResult);
+    console.log('Current match:', this.currentMatch);
+
+    const matchId = this.currentMatch.id;
+    const participants = this.currentMatch.participants.map((p, index) => ({
+      id: p.id || index + 1, // fallback ID
+      name: p.display_name || p.name || `Player ${index + 1}`,
+      type: (p.type || 'guest') as 'user' | 'guest',
+      displayName: p.display_name || p.name,
+      userId: p.user_id || null
+    }));
+
+    // GameResult에서 winnerId 추출 (더 안전한 방식)
+    let winnerId: number;
+    const leftScore = gameResult.leftPlayer?.score || 0;
+    const rightScore = gameResult.rightPlayer?.score || 0;
+    
+    if (gameResult.winner === 'left' || leftScore > rightScore) {
+      winnerId = participants[0]?.id || 1;
+    } else {
+      winnerId = participants[1]?.id || 2;
+    }
+
+    // 점수 정보 생성
+    const scores = [
+      {
+        playerId: participants[0]?.id || 1,
+        score: leftScore
+      },
+      {
+        playerId: participants[1]?.id || 2,
+        score: rightScore
+      }
+    ];
+
+    const result: TournamentMatchResult = {
+      matchId,
+      winnerId,
+      scores,
+      participants
+    };
+
+    console.log('Converted tournament result:', result);
+    return result;
   }
 
   // result를 받아 브라켓 상태를 갱신하고 렌더링하는 public 메서드
@@ -644,4 +756,4 @@ export class TournamentClient {
     const modal = new TournamentBracketModal(result);
     modal.show();
   }
-} 
+}
