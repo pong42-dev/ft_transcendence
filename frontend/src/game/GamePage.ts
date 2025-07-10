@@ -23,10 +23,24 @@ export class GamePage {
     private isGameActive: boolean = false;
     private isInitializing: boolean = false; // 초기화 중복 방지
     private isTournamentCreating: boolean = false; // 토너먼트 생성 중복 방지
+    private isGameEndCallbackCalled: boolean = false; // 콜백 중복 호출 방지
     private beforeUnloadHandler?: (e: BeforeUnloadEvent) => void;
     private visibilityChangeHandler?: () => void;
     private popStateHandler?: (event: PopStateEvent) => void;
     private pageHideHandler?: () => void;
+
+    /**
+     * 게임 종료 콜백을 안전하게 호출합니다 (중복 호출 방지)
+     */
+    private safeCallGameEndCallback(): void {
+        if (!this.isGameEndCallbackCalled) {
+            this.isGameEndCallbackCalled = true;
+            console.log('Calling onGameEndCallback');
+            this.onGameEndCallback();
+        } else {
+            console.log('onGameEndCallback already called, skipping');
+        }
+    }
 
     /**
      * @param container - 이 페이지가 렌더링될 부모 DOM 요소
@@ -60,7 +74,7 @@ export class GamePage {
         
         if (!setupResult) {
             console.log('No setup result, ending game');
-            this.onGameEndCallback();
+            this.safeCallGameEndCallback();
             return;
         }
 
@@ -73,7 +87,7 @@ export class GamePage {
 
         if (!gameSettings) {
             console.log('Failed to create game settings, ending game');
-            this.onGameEndCallback();
+            this.safeCallGameEndCallback();
             return;
         }
 
@@ -103,9 +117,9 @@ export class GamePage {
                 const userId = this.decodeUserIdFromAccessToken();
                 console.log(i18next.t('game.page.log.decodedUserId'), userId);
                 if (!userId) {
-                    console.error(i18next.t('game.page.error.loginRequiredForTournament'));
-                    alert(i18next.t('game.page.alert.loginRequiredForTournament'));
-                    this.onGameEndCallback();
+                    console.error('User must be logged in to participate in tournament');
+                    alert('토너먼트에 참가하려면 로그인이 필요합니다.');
+                    this.safeCallGameEndCallback();
                     return;
                 }
                 
@@ -129,7 +143,7 @@ export class GamePage {
                     } else {
                         alert(i18next.t('game.page.alert.tournamentCreationFailed') + (error.message || i18next.t('common.error.unknownError')));
                     }
-                    this.onGameEndCallback();
+                    this.safeCallGameEndCallback();
                     return;
                 } finally {
                     // 토너먼트 생성 완료 (성공 또는 실패)
@@ -138,9 +152,9 @@ export class GamePage {
 
             }
         } catch (error) {
-            console.error(i18next.t('game.page.error.failedToCreateGameOrTournament'), error);
-            alert(i18next.t('game.page.alert.failedToStartGame'));
-            this.onGameEndCallback();
+            console.error('Failed to create game or tournament:', error);
+            alert('게임을 시작하는 중 오류가 발생했습니다.');
+            this.safeCallGameEndCallback();
         } finally {
             this.isInitializing = false;
         }
@@ -229,6 +243,7 @@ export class GamePage {
         this.isGameActive = false;
         this.isInitializing = false;
         this.isTournamentCreating = false;
+        this.isGameEndCallbackCalled = false; // 콜백 플래그 초기화
         this.removeBrowserEventListeners();
         this.gameClient?.destroy();
         this.tournamentClient?.destroy();
@@ -320,7 +335,7 @@ export class GamePage {
         }
         
         // 페이지 닫기
-        this.onGameEndCallback();
+        this.safeCallGameEndCallback();
     }
 
     /**
@@ -333,15 +348,14 @@ export class GamePage {
 
         // beforeunload 이벤트: 페이지를 떠나려고 할 때 (새로고침, 창 닫기 등)
         this.beforeUnloadHandler = (e: BeforeUnloadEvent) => {
+            console.log('beforeunload event triggered');
             if (this.isGameActive && (this.gameClient || this.tournamentClient)) {
                 // 게임이 진행 중이면 경고 메시지 표시
                 e.preventDefault();
-                e.returnValue = i18next.t('game.page.alert.gameInProgressWarning');
                 
                 // 백그라운드에서 게임 취소 처리
                 this.handleUnexpectedExit();
-                
-                return e.returnValue;
+                this.safeCallGameEndCallback();
             }
         };
 
@@ -374,6 +388,7 @@ export class GamePage {
             if (document.hidden && this.isGameActive && (this.gameClient || this.tournamentClient)) {
                 console.log('Page became hidden during active game, canceling...');
                 this.handleUnexpectedExit();
+                this.safeCallGameEndCallback();
             }
         };
 
@@ -442,7 +457,7 @@ export class GamePage {
     private handleGameFinish() {
         this.isGameActive = false;
         this.removeBrowserEventListeners();
-        this.onGameEndCallback();
+        this.safeCallGameEndCallback();
     }
 
     /**

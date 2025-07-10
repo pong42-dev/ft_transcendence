@@ -129,6 +129,16 @@ export class App {
     this.uiRenderer.render(); // Show UI immediately (loading state)
     this.setupRouting(); // Routes are safe because DOM exists
     
+    // 새로고침 후 리다이렉트 처리
+    if (sessionStorage.getItem('redirectToProfile') === 'true') {
+      sessionStorage.removeItem('redirectToProfile');
+      // 라우터가 설정된 후 profile로 이동
+      setTimeout(() => {
+        console.log('Redirecting to profile after refresh');
+        window.location.hash = '#/profile';
+      }, 100);
+    }
+    
     // 즉시 세션 스토리지에서 토큰 복원 시도
     this.authManager.tryRestoreSessionToken();
     
@@ -249,8 +259,23 @@ export class App {
         this.gamePage = null;
         this.gameSetupResult = null; // 게임 설정 데이터 정리
         this.uiRenderer.setGameState(false);
-        this.router.navigate('/profile');
-        this.mainTerminal.appendOutput(i18next.t('app.game_ended_return_profile'));
+        
+        // 새로고침 중이 아닐 때만 라우팅 처리
+        console.log('Current hash before navigate:', window.location.hash);
+        
+        // 페이지가 새로고침 중인지 확인
+        sessionStorage.setItem('redirectToProfile', 'true');
+        if (window.location.hash === '#/profile') {
+          window.location.hash = '#/';
+          setTimeout(() => {
+            window.location.hash = '#/profile';
+          }, 10);
+        } else {
+          window.location.hash = '#/profile';
+        }
+        console.log('Hash set to:', window.location.hash);
+
+        this.mainTerminal.appendOutput('Game ended. Returning to profile.');
       }
     );
   }
