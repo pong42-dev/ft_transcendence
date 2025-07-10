@@ -20,13 +20,15 @@ async function authenticate(request: FastifyRequest, reply: FastifyReply) {
 		return reply.status(401).send({ msg: 'Authorization header is missing or improperly formatted.' });
 	}
 	const token = authHeader.split(' ')[1];
+	console.log("token:", token);
+	let decoded : TokenData | null = null;
 	try {
-		let decoded;
-		try {
-			decoded = await request.server.jwt.verify(token) as TokenData;
-		} catch (err) {
-			return reply.status(401).send({ msg: 'Invalid or expired token.' });
-		}
+		decoded = await request.server.jwt.verify(token) as TokenData;
+	} catch (err) {
+		console.error("Token verification error:", err);
+		return reply.status(401).send({ msg: 'Invalid or expired token.' });
+	}
+	try {
 		console.log("decoded:", decoded);
 		const userProfileRow = await userProfilesRepository.getRowByColumnValue("user_id", Number(decoded.user_id));			
 		if (!userProfileRow) {

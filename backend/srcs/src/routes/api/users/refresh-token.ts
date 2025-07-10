@@ -36,25 +36,28 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 			}
 		},
 		async (request: FastifyRequest, reply: FastifyReply) => {
-			const { userTokensRepository, passwordManager } = fastify
-			const { refresh_token: refreshToken } = request.cookies
+			const { userTokensRepository, passwordManager, tokenManager } = fastify
+			const refreshToken = request.cookies?.refresh_token;
+			if (!refreshToken) {
+				return reply.status(401).send({ msg: 'Invalid or expired token.'});
+			}
+			let decoded: TokenData | null = null;
 			// console.log('refreshToken:', refreshToken);
 			try {
-				if (!refreshToken) {
-					return reply.status(401).send({ msg: 'Invalid or expired token.'});
-				}
-				const decoded = await fastify.jwt.verify(refreshToken) as TokenData
-				if (!decoded || !decoded.user_id) {
-					return reply.status(401).send({ msg: 'Invalid or expired token.'});
-				}
-				// console.log("decoded:", decoded);
+				decoded = await fastify.jwt.verify(refreshToken) as TokenData
+			}	catch(err) {
+				fastify.log.error("Token verification error:", err);
+				return reply.status(401).send({ msg: 'Invalid or expired token.'});		
+			}
+			try {
+				console.log("decoded:", decoded);
 				const row = await userTokensRepository.getRowByColumnValue('user_id', decoded.user_id)
 				const hashedRefreshToken = row?.server_refresh_token
 				// console.log("hashedRefreshToken:", hashedRefreshToken);
 				if (!hashedRefreshToken || !passwordManager.comparePassword(refreshToken, hashedRefreshToken)) {
 					return reply.status(401).send({ msg: 'Invalid or expired token.'});
 				}
-				const newAccessToken = fastify.jwt.sign({ user_id: decoded.user_id })
+				const newAccessToken = await tokenManager.generateAccessToken({ user_id: decoded.user_id });
 				return reply.send({
 					success: true,
 					msg: "Token refreshed successfully.",

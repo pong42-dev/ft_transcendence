@@ -39,7 +39,6 @@ export function manageTokens(fastify: FastifyInstance) {
 			console.log("config.REFRESH_COOKIE_NAME: ", config.REFRESH_COOKIE_NAME);
 			console.log("config.REFRESH_COOKIE_MAX_AGE: ", config.REFRESH_COOKIE_MAX_AGE);
 			console.log("config.REFRESH_TOKEN_EXPIRES_IN: ", config.REFRESH_TOKEN_EXPIRES_IN);
-			console.log("config.ACCESS_TOKEN_EXPIRES_IN: ", config.ACCESS_TOKEN_EXPIRES_IN);
 			console.log("config.COOKIE_SECURED: ", config.COOKIE_SECURED);
 			console.log("config.COOKIE_SECRET: ", config.COOKIE_SECRET);
 			const refreshToken = await this.generateToken(userData, config.REFRESH_TOKEN_EXPIRES_IN, 'refresh');
@@ -52,6 +51,7 @@ export function manageTokens(fastify: FastifyInstance) {
 		// },
 
 		async generateAccessToken(userData: TokenData): Promise<string> {
+			console.log("config.ACCESS_TOKEN_EXPIRES_IN: ", config.ACCESS_TOKEN_EXPIRES_IN);
 			return this.generateToken(userData, config.ACCESS_TOKEN_EXPIRES_IN, 'access');
 		},
 
