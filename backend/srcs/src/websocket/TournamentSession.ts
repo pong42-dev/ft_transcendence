@@ -125,8 +125,7 @@ export class TournamentSession {
     // 4) 모두 모였으면 처리 → 한 번만 실행
     this.resultBuffers.delete(matchId);
     await this.onAllResultsCollected(matchId, Array.from(buf.values()));
-    // 오직 여기서만 다음 매치 트리거
-    await this.startNextMatch();
+    // 다음 매치 트리거는 handleMatchEnded에서 처리됨
   }
 
   /**
@@ -149,24 +148,27 @@ export class TournamentSession {
     const matchesRepository = (this.fastify as any).matchesRepository;
     await matchesRepository.updateMatchStatus(matchId, 'finished', winnerId);
 
-    // c) 토너먼트 상태 내부 갱신
-    this.handleMatchEnded(matchId);
+    // c) 토너먼트 상태 내부 갱신 - winnerId를 직접 전달
+    this.handleMatchEnded(matchId, winnerId);
 
-    // d) 다음 매치 시작
-    // await this.startNextMatch(); // 이 부분은 onRawMatchResult에서 처리
+    // d) 다음 매치 시작 (handleMatchEnded에서 처리)
   }
 
   // [기존 handleMatchEnd → handleMatchEnded로 이름만 변경, 내부 로직 그대로]
-  private async handleMatchEnded(matchId: number) {
-    const gameRepository = (this.fastify as any).gameRepository;
+  private async handleMatchEnded(matchId: number, providedWinnerId?: number) {
     const matchesRepository = (this.fastify as any).matchesRepository;
 
     // 0. 진입 로그
-    (this.fastify as any).log?.info?.(`[handleMatchEnded] 진입: matchId=${matchId}`);
+    (this.fastify as any).log?.info?.(`[handleMatchEnded] 진입: matchId=${matchId}, providedWinnerId=${providedWinnerId}`);
 
-    // 1. 이번 매치 결과 정보 조회
-    const gameInfo = await gameRepository.getGameById(matchId);
-    const winnerId = gameInfo?.winner_id;
+    // 1. 이번 매치 결과 정보 조회 - 제공된 winnerId가 있으면 사용, 없으면 DB에서 조회
+    let winnerId = providedWinnerId;
+    if (!winnerId) {
+      const matchInfo = await matchesRepository.getMatchById(matchId);
+      winnerId = matchInfo?.winner_id;
+    }
+    
+    (this.fastify as any).log?.info?.(`[handleMatchEnded] 최종 winnerId: ${winnerId}`);
 
     // 2. 이번 매치 상태/승자 정보 세션에 반영
     const finishedMatch = this.matches.find(m => m.id === matchId);
@@ -179,7 +181,17 @@ export class TournamentSession {
     // 3. 4강전이 모두 끝난 경우 결승전 참가자 세팅
     if (finishedMatch.round_number === 1) {
       const semifinals = this.matches.filter(m => m.round_number === 1);
-      const finishedSemifinals = semifinals.filter(m => m.status === 'finished' && m.winner_id);
+      (this.fastify as any).log?.info?.(`[디버깅] 모든 준결승:`, semifinals.map(m => `id=${m.id},status=${m.status},winner=${m.winner_id}`).join(', '));
+      
+      // 현재 방금 끝난 매치도 포함해서 체크하기 위해 조건 수정
+      const finishedSemifinals = semifinals.filter(m => 
+        (m.status === 'finished' || m.id === matchId) && m.winner_id
+      );
+      (this.fastify as any).log?.info?.(`[준결승 완료 확인] 완료된 준결승: ${finishedSemifinals.length}/2, 세부: ${finishedSemifinals.map(m => `id=${m.id},status=${m.status},winner=${m.winner_id}`).join(', ')}`);
+      
+      // 추가 디버깅: winnerId가 제대로 설정되었는지 확인
+      (this.fastify as any).log?.info?.(`[디버깅] 현재 매치 ${matchId}의 winnerId: ${winnerId}, finishedMatch.winner_id: ${finishedMatch.winner_id}`);
+      
       if (finishedSemifinals.length === 2) {
         // winner_id 검증 로그 추가
         finishedSemifinals.forEach(m => {
@@ -188,9 +200,20 @@ export class TournamentSession {
         const winnerIds = finishedSemifinals.map(m => m.winner_id);
         const finalMatch = this.matches.find(m => m.round_number === 2);
         (this.fastify as any).log?.info?.(`[결승 참가자 등록 시도] semifinals: ${semifinals.map(m => m.id).join(',')}, winnerIds: ${winnerIds}, finalMatchId: ${finalMatch?.id}`);
+        
         if (finalMatch) {
           (this.fastify as any).log?.info?.(`[결승 참가자 등록] matchId=${finalMatch.id}, winners=${winnerIds}`);
+          
+          // DB에 결승전 참가자 업데이트
           await matchesRepository.updateNextMatchPlayers(finalMatch.id, winnerIds[0], winnerIds[1]);
+          
+          // 세션 내 결승전 매치 참가자 정보도 업데이트 - DB에서 다시 조회해서 동기화
+          const updatedFinalMatch = await matchesRepository.getMatchById(finalMatch.id);
+          if (updatedFinalMatch) {
+            finalMatch.participants = updatedFinalMatch.participants;
+            (this.fastify as any).log?.info?.(`[결승 참가자 세션 갱신] matchId=${finalMatch.id}, participants=${JSON.stringify(finalMatch.participants)}`);
+          }
+          
           (this.fastify as any).log?.info?.(`[결승 참가자 등록 완료] matchId=${finalMatch.id}`);
         } else {
           (this.fastify as any).log?.info?.(`[결승전 매치가 존재하지 않음]`);
@@ -200,33 +223,15 @@ export class TournamentSession {
       }
     }
 
-    // 4. 다음 매치(결승 등) 참가자 세팅
-    const nextMatchId = (finishedMatch as any).nextMatchId;
-    if (nextMatchId) {
-      // 반드시 matchesRepository에서 결승전 match 정보 조회
-      const nextMatch = await matchesRepository.getMatchById(nextMatchId);
-
-      // 결승전 참가자 등록/업데이트
-      let updatedPlayer1 = nextMatch.participants[0]?.id;
-      let updatedPlayer2 = nextMatch.participants[1]?.id;
-      if (!updatedPlayer1) updatedPlayer1 = winnerId;
-      else if (!updatedPlayer2) updatedPlayer2 = winnerId;
-
-      // DB에 결승전 참가자 반영
-      await matchesRepository.updateNextMatchPlayers(nextMatchId, updatedPlayer1, updatedPlayer2);
-
-      // 결승전 참가자 정보 로그
-      const updatedNextMatch = await matchesRepository.getMatchById(nextMatchId);
-      (this.fastify as any).log?.info?.(`[NextMatch] id: ${nextMatchId}, participants: ${JSON.stringify(updatedNextMatch.participants)}`);
-    }
-
-    // 4. 브라켓 갱신 및 startNextMatch 호출
+    // 4. 브라켓 갱신
     const bracket = makeBracketFromMatches(this.matches);
     const bracketUpdateMessage = {
       type: 'bracket_update',
       data: { matches: this.matches, bracket },
     };
     this.sendToClient(bracketUpdateMessage);
+
+    // 5. 다음 매치 시작
     await this.startNextMatch();
   }
 
@@ -318,10 +323,26 @@ export class TournamentSession {
    * 다음 경기를 찾아 시작시키는 메소드
    */
   private async startNextMatch() {
+    (this.fastify as any).log?.info?.(`[startNextMatch] 현재 매치 상태:`, this.matches.map(m => ({ 
+      id: m.id, 
+      round: m.round_number, 
+      status: m.status, 
+      participants: m.participants?.length || 0,
+      participantIds: m.participants?.map(p => p.id) || []
+    })));
+
     const nextMatch = this.matches.find(
-      match => match.status === 'waiting' && match.participants[0] && match.participants[1]
+      match => match.status === 'waiting' && match.participants && match.participants.length >= 2
     );
+    
     if (!nextMatch) {
+      // 대기 중인 매치가 있지만 참가자가 부족한 경우를 확인
+      const waitingMatches = this.matches.filter(m => m.status === 'waiting');
+      if (waitingMatches.length > 0) {
+        (this.fastify as any).log?.info?.(`[Session ${this.tournamentId}] 대기 중인 매치가 있지만 참가자가 부족:`, 
+          waitingMatches.map(m => ({ id: m.id, participants: m.participants?.length || 0 })));
+      }
+      
       // 모든 매치가 끝났으면 토너먼트 종료
       const isTournamentFinished = !this.matches.some(m => m.status !== 'finished');
       if (isTournamentFinished) {
@@ -357,7 +378,10 @@ export class TournamentSession {
             const message: WSGameInTournamentEventMessage = { type: 'game_event', data: gameEvent };
             this.sendToClient(message);
             if (gameEvent.event === 'game_end') {
-              this.handleMatchEnded(nextMatch.id);
+              // game_end 이벤트에서 winnerId를 추출해서 전달
+              const winnerId = gameEvent.data?.winnerId;
+              (this.fastify as any).log?.info?.(`[game_end] 이벤트에서 받은 winnerId: ${winnerId}`);
+              this.handleMatchEnded(nextMatch.id, winnerId);
             }
           } catch (err) {
             (this.fastify as any).log?.error?.(`[Session ${this.tournamentId}] Error in onEvent callback:`, err);
