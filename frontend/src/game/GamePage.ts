@@ -4,8 +4,8 @@ import { InputHandler } from '../game/InputHandler';
 import { TournamentClient } from '../game/TournamentClient';
 import { ApiClient } from '../services/ApiClient'; // ApiClient를 직접 import
 import { WebSocketService } from '../services/websocket/WebSocketService';
-import { tournamentWebSocketService } from '../services/websocket/TournamentWebSocketService';
 import { GameMode, GameSetupResult, CreateGameRequestDto, GameResponseDto } from '../types/types';
+import { GameEndModal } from '../components/modals/GameEndModal';
 import i18next from 'i18next';
 
 export class GamePage {
@@ -149,6 +149,10 @@ export class GamePage {
      * [신규] 대기 화면을 설정하고 GameClient의 연결을 시작합니다.
      */
     private startWaitingFlow(gameInfo: GameResponseDto) {
+        // 토너먼트 모드면 아무 동작도 하지 않음. (TournamentClient가 GameClient를 직접 생성/관리)
+        if (gameInfo.type === 'tournament') {
+            return;
+        }
         // 1. UI 컴포넌트들을 미리 생성합니다.
         this.renderer = new GameRenderer();
         const inputHandler = new InputHandler();
@@ -397,8 +401,6 @@ export class GamePage {
      */
     private startTournament(tournamentInfo: any) {
         if (!this.container) return;
-
-        // 기존 토너먼트 클라이언트가 있다면 정리
         if (this.tournamentClient) {
             console.log(i18next.t('game.page.log.destroyingExistingTournamentClient'));
             this.tournamentClient.destroy();
@@ -428,9 +430,9 @@ export class GamePage {
             tournamentId,
             Number(userId), // JWT에서 추출한 user_id를 number로 변환
             this.renderer,
-            inputHandler
+            inputHandler,
+            this // GamePage 인스턴스 전달
         );
-        
         this.tournamentClient.start();
     }
 
