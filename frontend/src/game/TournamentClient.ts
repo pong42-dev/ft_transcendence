@@ -462,7 +462,18 @@ export class TournamentClient {
               console.log('Game result that failed to convert:', result);
             }
           }
-          this.handleMatchFinish(matchId);
+          // handleMatchFinish 내용 직접 삽입
+          // 게임 클라이언트 리소스 정리 (비동기로 처리)
+          setTimeout(() => {
+            this.gameClient?.destroy();
+            this.gameClient = null;
+          }, 100);
+
+          // UI 업데이트를 먼저 수행 (빠른 피드백)
+          this.renderMainView({ status: 'in_progress', message: '매치 결과 처리 중...' });
+          if (this.bracketMatches) {
+            this.updateBracketDisplay();
+          }
         }
       }
     );
@@ -471,79 +482,8 @@ export class TournamentClient {
 
   private handleTournamentEnd = (data: any): void => {
     // 최종 결과 모달만 띄우고, 브라켓은 그대로 유지
-    this.handleMatchFinish();
+    // 필요하다면 후처리 로직을 여기에 직접 작성
   };
-
-  public handleMatchFinish(matchId?: number) {
-    if (matchId === undefined) {
-      console.warn('[WARN] handleMatchFinish: matchId가 undefined입니다.');
-      return;
-    }
-
-    // 중복 처리 방지
-    if (this.currentMatch && this.currentMatch.resultSent) {
-      console.log('Match result already sent, skipping...');
-      return;
-    }
-    if (this.currentMatch) this.currentMatch.resultSent = true;
-
-    // 게임 클라이언트 리소스 정리 (비동기로 처리)
-    setTimeout(() => {
-      this.gameClient?.destroy();
-      this.gameClient = null;
-    }, 100);
-
-    // UI 업데이트를 먼저 수행 (빠른 피드백)
-    this.renderMainView({ status: 'in_progress', message: '매치 결과 처리 중...' });
-    if (this.bracketMatches) {
-      this.updateBracketDisplay();
-    }
-
-    // 매치 정보 조회를 비동기로 처리
-    this.fetchMatchResultAsync(matchId);
-  }
-
-  private async fetchMatchResultAsync(matchId: number) {
-    try {
-      const res = await fetch(`/api/tournaments/${this.tournamentId}/matches/${matchId}`);
-      const match = await res.json();
-      
-      if (match.status !== 'finished') {
-        console.warn('[WARN] handleMatchFinish: match가 아직 finished 상태가 아님', match);
-        // 잠시 후 다시 시도
-        setTimeout(() => this.fetchMatchResultAsync(matchId), 1000);
-        return;
-      }
-
-      const winnerId = match.winner_id;
-      const scores = match.participants.map((p: any) => ({ 
-        id: p.id, 
-        score: p.score, 
-        display_name: p.display_name 
-      }));
-
-      if (winnerId === undefined || winnerId === null) {
-        console.warn('[WARN] handleMatchFinish: winnerId가 undefined/null입니다. match:', match);
-        return;
-      }
-
-      // UI 업데이트
-      this.renderMainView({ status: 'in_progress', message: '다음 경기를 기다리는 중...' });
-      if (this.bracketMatches) {
-        this.updateBracketDisplay();
-      }
-
-      // 결과 모달을 비동기로 표시
-      setTimeout(() => {
-        this.showMatchResultModal(winnerId, scores);
-      }, 300);
-
-    } catch (e) {
-      console.error('handleMatchFinish: match 정보 조회 실패', e);
-      // 에러 발생 시 기본 메시지 표시
-      this.renderMainView({ status: 'error', message: '매치 결과 조회 중 오류가 발생했습니다.' });
-    }
-  }
 
   private showMatchResultModal(winnerId: number, scores: any[]) {
     const isFinal = this.currentMatch?.round_number === 2;
