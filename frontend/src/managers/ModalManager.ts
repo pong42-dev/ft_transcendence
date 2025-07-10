@@ -4,7 +4,8 @@ import { Terminal } from '../components/Terminal.js';
 import { User } from '../types/types.js';
 import { TwoFAModal } from '../components/modals/TwoFAModal.js';
 import { FileModal } from '../components/modals/FileModal.js';
-import i18next from 'i18next';
+import { DOMUpdater } from '../utils/DOMUpdater.js';
+import i18n from '../services/i18n';
 
 /**
  * ModalManager - 모달의 중앙 집중식 관리
@@ -241,7 +242,7 @@ export class ModalManager {
     if (!this.modalContent) return;
 
     // 기존 콘텐츠 정리
-    this.modalContent.innerHTML = '';
+    DOMUpdater.updateHTML(this.modalContent, '');
 
     // 제목 추가 (있는 경우)
     if (modalContent.title) {
@@ -259,7 +260,7 @@ export class ModalManager {
       if (config.closable) {
         const closeButton = document.createElement('button');
         closeButton.className = 'text-terminal-gray hover:text-terminal-green transition-all';
-        closeButton.innerHTML = '✕';
+        DOMUpdater.updateText(closeButton, '✕');
         closeButton.addEventListener('click', () => this.hide());
         titleElement.appendChild(closeButton);
       }
@@ -275,7 +276,7 @@ export class ModalManager {
       const contentElement = modalContent.content();
       contentWrapper.appendChild(contentElement);
     } else {
-      contentWrapper.innerHTML = modalContent.content;
+      DOMUpdater.updateHTML(contentWrapper, modalContent.content);
     }
 
     this.modalContent.appendChild(contentWrapper);
@@ -427,7 +428,7 @@ export class ModalManager {
    */
   public async showFileModal(options?: any): Promise<File | null> {
     const {
-      title = i18next.t('fileModal.selectAvatarTitle'),
+      title = i18n.t('fileModal.selectAvatarTitle'),
       accept = 'image/*',
       maxSize = 5 * 1024 * 1024,
       onFileSelected

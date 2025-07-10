@@ -214,7 +214,18 @@
     "kilobytes": "KB",
     "megabytes": "MB",
     "gigabytes": "GB",
-    "remove": "Remove"
+    "remove": "Remove",
+    "error": {
+      "unknownError": "Unknown error"
+    },
+    "status": {
+      "exists": "exists",
+      "notFound": "not found"
+    },
+    "player": {
+      "unknown": "Unknown"
+    },
+    "id": "ID"
   },
   "header": {
     "title": "PONG-CLI v1.0.0"
@@ -512,19 +523,6 @@
         "finished": "Countdown finished, starting tournament..."
       }
     }
-  },
-  "common": {
-    "error": {
-      "unknownError": "Unknown error"
-    },
-    "status": {
-      "exists": "exists",
-      "notFound": "not found"
-    },
-    "player": {
-      "unknown": "Unknown"
-    },
-    "id": "ID"
   },
   "app": {
     "loading_profile": "Loading profile for {{username}}...",
