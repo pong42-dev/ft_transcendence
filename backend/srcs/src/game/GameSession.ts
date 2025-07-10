@@ -131,7 +131,7 @@ export class GameSession {
   }
 
   public startCountdown() {
-    if (this.status !== 'waiting') return;
+    // if (this.status !== 'waiting') return;
     let remainingTime = 5;
     this.status = 'countdown';
     
