@@ -112,8 +112,27 @@ export interface WSConnectionStatusMessage {
   };
 }
 
+// Tournament 관련 메시지
+export interface WSStartTournamentMessage {
+  type: 'tournament_start';
+  data: {
+    playerId: number;
+  };
+}
+
+export interface WSCancelTournamentMessage {
+  type: 'cancel_tournament';
+  data: {
+    tournamentId: number;
+  };
+}
+
 // Union Types
-export type WSClientMessage = WSPlayerInputMessage | WSPlayerReadyMessage;
+export type WSClientMessage =
+  | WSPlayerInputMessage
+  | WSPlayerReadyMessage
+  | WSStartTournamentMessage
+  | WSCancelTournamentMessage;
 export type WSServerMessage =
   | WSGameStateMessage
   | WSGameEventMessage
