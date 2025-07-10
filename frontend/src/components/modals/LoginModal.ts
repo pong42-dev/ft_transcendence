@@ -21,6 +21,7 @@ export class LoginModal {
   private callbacks: LoginModalCallbacks;
   private modalManager: ModalManager;
   private isSubmitting: boolean = false;
+  private debounceTimers: Map<string, number> = new Map();
 
   constructor(apiClient: ApiClient, callbacks: LoginModalCallbacks) {
     this.apiClient = apiClient;
@@ -172,9 +173,15 @@ export class LoginModal {
     emailInput?.addEventListener('blur', () => this.validateEmail());
     passwordInput?.addEventListener('blur', () => this.validatePassword());
 
-    // 에러 제거 (포커스 잃을 때만)
-    emailInput?.addEventListener('focus', () => this.clearGeneralError());
-    passwordInput?.addEventListener('focus', () => this.clearGeneralError());
+    // 실시간 검증 (debounced)
+    emailInput?.addEventListener('input', () => {
+      this.hideGeneralError();
+      this.debouncedValidateEmail();
+    });
+    passwordInput?.addEventListener('input', () => {
+      this.hideGeneralError();
+      this.debouncedValidatePassword();
+    });
   }
 
   /**
@@ -263,9 +270,21 @@ export class LoginModal {
    */
   private validateEmail(): boolean {
     const emailInput = document.querySelector('#email-input') as HTMLInputElement;
-    const result = validateEmail(emailInput.value);
+    const email = emailInput.value.trim();
     
-    DOMUpdater.updateValidationResult('email-input', result);
+    if (!email) {
+      this.showValidationError('email-input', i18n.t('validation.email_required'));
+      return false;
+    }
+    
+    const result = validateEmail(email);
+    
+    if (!result.isValid) {
+      this.showValidationError('email-input', i18n.t(result.error || 'validation.invalid_email'));
+    } else {
+      this.clearValidationState('email-input');
+    }
+    
     return result.isValid;
   }
 
@@ -274,9 +293,21 @@ export class LoginModal {
    */
   private validatePassword(): boolean {
     const passwordInput = document.querySelector('#password-input') as HTMLInputElement;
-    const result = validatePassword(passwordInput.value);
+    const password = passwordInput.value.trim();
     
-    DOMUpdater.updateValidationResult('password-input', result);
+    if (!password) {
+      this.showValidationError('password-input', i18n.t('validation.password_required'));
+      return false;
+    }
+    
+    const result = validatePassword(password);
+    
+    if (!result.isValid) {
+      this.showValidationError('password-input', i18n.t(result.error || 'validation.invalid_password'));
+    } else {
+      this.clearValidationState('password-input');
+    }
+    
     return result.isValid;
   }
 
@@ -290,20 +321,61 @@ export class LoginModal {
     return emailValid && passwordValid;
   }
 
+  /**
+   * 디바운싱된 이메일 검증
+   */
+  private debouncedValidateEmail(): void {
+    this.clearDebounceTimer('email');
+    
+    const emailInput = document.querySelector('#email-input') as HTMLInputElement;
+    if (!emailInput?.value.trim()) {
+      this.clearValidationState('email-input');
+      return;
+    }
+    
+    const timer = setTimeout(() => {
+      this.validateEmail();
+    }, 500);
+    
+    this.debounceTimers.set('email', timer);
+  }
+
+  /**
+   * 디바운싱된 비밀번호 검증
+   */
+  private debouncedValidatePassword(): void {
+    this.clearDebounceTimer('password');
+    
+    const passwordInput = document.querySelector('#password-input') as HTMLInputElement;
+    if (!passwordInput?.value.trim()) {
+      this.clearValidationState('password-input');
+      return;
+    }
+    
+    const timer = setTimeout(() => {
+      this.validatePassword();
+    }, 500);
+    
+    this.debounceTimers.set('password', timer);
+  }
+
+  /**
+   * 디바운스 타이머 정리
+   */
+  private clearDebounceTimer(field: string): void {
+    const timer = this.debounceTimers.get(field);
+    if (timer) {
+      clearTimeout(timer);
+      this.debounceTimers.delete(field);
+    }
+  }
+
 
   /**
    * 일반 에러 표시
    */
   private showGeneralError(message: string): void {
     DOMUpdater.showError('#general-error', message, { animate: true });
-    
-    // 에러 메시지를 10초 후에 자동으로 숨기기
-    setTimeout(() => {
-      const errorElement = document.querySelector('#general-error');
-      if (errorElement && !errorElement.classList.contains('hidden')) {
-        DOMUpdater.hideError('#general-error', { animate: true, duration: 500 });
-      }
-    }, 10000);
   }
 
   /**
@@ -314,13 +386,25 @@ export class LoginModal {
   }
 
   /**
-   * 일반 에러 클리어 (사용자가 입력 시작할 때)
+   * 검증 에러 상태 표시
    */
-  private clearGeneralError(): void {
-    const errorElement = document.querySelector('#general-error');
-    if (errorElement && !errorElement.classList.contains('hidden')) {
-      DOMUpdater.hideError('#general-error', { animate: true, duration: 300 });
-    }
+  private showValidationError(inputId: string, message: string): void {
+    const errorId = inputId.replace('-input', '-error');
+    DOMUpdater.showError(`#${errorId}`, message, { animate: true });
+    DOMUpdater.toggleClasses(`#${errorId}`, ['text-terminal-red'], true);
+    DOMUpdater.toggleClasses(`#${errorId}`, ['text-terminal-green', 'text-terminal-gray'], false);
+    DOMUpdater.toggleClasses(`#${inputId}`, ['border-terminal-red'], true);
+    DOMUpdater.toggleClasses(`#${inputId}`, ['border-terminal-green', 'border-terminal-gray'], false);
+  }
+
+  /**
+   * 검증 상태 초기화
+   */
+  private clearValidationState(inputId: string): void {
+    const errorId = inputId.replace('-input', '-error');
+    DOMUpdater.hideError(`#${errorId}`, { animate: true });
+    DOMUpdater.toggleClasses(`#${inputId}`, ['border-terminal-red', 'border-terminal-green'], false);
+    DOMUpdater.toggleClasses(`#${inputId}`, ['border-terminal-gray'], true);
   }
 
   /**
@@ -331,23 +415,12 @@ export class LoginModal {
     form?.reset();
     
     this.hideGeneralError();
+    this.clearValidationState('email-input');
+    this.clearValidationState('password-input');
     
-    // 필드 에러 및 스타일 초기화
-    const emailError = document.querySelector('#email-error');
-    const passwordError = document.querySelector('#password-error');
-    const emailInput = document.querySelector('#email-input');
-    const passwordInput = document.querySelector('#password-input');
-    
-    [emailError, passwordError].forEach(element => {
-      if (element) element.classList.add('hidden');
-    });
-    
-    [emailInput, passwordInput].forEach(element => {
-      if (element) {
-        element.classList.remove('border-terminal-red');
-        element.classList.add('border-terminal-gray');
-      }
-    });
+    // 디바운스 타이머 정리
+    this.debounceTimers.forEach(timer => clearTimeout(timer));
+    this.debounceTimers.clear();
     
     this.isSubmitting = false;
   }

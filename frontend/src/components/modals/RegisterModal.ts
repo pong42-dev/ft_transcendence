@@ -12,7 +12,6 @@ import i18n from '../../services/i18n';
 export interface RegisterModalCallbacks {
   onRegisterSuccess: (user: User, avatarFile?: File) => void;
   onSwitchToLogin: () => void;
-  on2FARequired: (tmpToken: string) => void;
 }
 
 export class RegisterModal {
@@ -22,7 +21,6 @@ export class RegisterModal {
   private isSubmitting: boolean = false;
   private selectedAvatarFile: File | null = null;
   private debounceTimers: Map<string, number> = new Map();
-  private validationStates: Map<string, { isValid: boolean; isChecking: boolean }> = new Map();
 
   constructor(apiClient: ApiClient, callbacks: RegisterModalCallbacks) {
     this.apiClient = apiClient;
@@ -314,12 +312,6 @@ export class RegisterModal {
     
     if (this.isSubmitting) return;
 
-    // 검증 중인 필드가 있으면 대기
-    const isAnyFieldChecking = Array.from(this.validationStates.values()).some(state => state.isChecking);
-    if (isAnyFieldChecking) {
-      this.showGeneralError(i18n.t('registerModal.please_wait_validation'));
-      return;
-    }
 
     // 폼 검증
     const isValid = await this.validateForm();
@@ -385,43 +377,33 @@ export class RegisterModal {
     const name = nameInput.value.trim();
     
     if (!name) {
-      const result = { isValid: false, message: i18n.t('validation.nickname_required') };
-      DOMUpdater.updateValidationResult('name-input', result);
-      this.validationStates.set('name', { isValid: false, isChecking: false });
+      this.showValidationError('name-input', i18n.t('validation.nickname_required'));
       return false;
     }
     
     // 1. 형식 검증
     const formatResult = validateNickname(name);
     if (!formatResult.isValid) {
-      DOMUpdater.updateValidationResult('name-input', { isValid: formatResult.isValid, message: i18n.t(formatResult.error || 'validation.unknown_error_format') });
-      this.validationStates.set('name', { isValid: false, isChecking: false });
+      this.showValidationError('name-input', i18n.t(formatResult.error || 'validation.unknown_error_format'));
       return false;
     }
     
     // 2. 중복 체크
-    this.validationStates.set('name', { isValid: false, isChecking: true });
     this.showValidationLoading('name-input', i18n.t('validation.checking_availability'));
     
     try {
       const isDuplicate = await this.apiClient.auth.checkNicknameExists(name);
       
       if (isDuplicate) {
-        const result = { isValid: false, message: i18n.t('validation.username_already_taken') };
-        DOMUpdater.updateValidationResult('name-input', result);
-        
-        this.validationStates.set('name', { isValid: false, isChecking: false });
+        this.showValidationError('name-input', i18n.t('validation.username_already_taken'));
         return false;
       } else {
         this.showValidationSuccess('name-input', i18n.t('validation.username_available'));
-        this.validationStates.set('name', { isValid: true, isChecking: false });
         return true;
       }
     } catch (error) {
       console.error('Name duplicate check error:', error);
-      const result = { isValid: false, message: i18n.t('validation.unable_to_check_availability') };
-      DOMUpdater.updateValidationResult('name-input', result);
-      this.validationStates.set('name', { isValid: false, isChecking: false });
+      this.showValidationError('name-input', i18n.t('validation.unable_to_check_availability'));
       return false;
     }
   }
@@ -434,43 +416,33 @@ export class RegisterModal {
     const email = emailInput.value.trim();
     
     if (!email) {
-      const result = { isValid: false, message: i18n.t('validation.email_required') };
-      DOMUpdater.updateValidationResult('email-input', result);
-      this.validationStates.set('email', { isValid: false, isChecking: false });
+      this.showValidationError('email-input', i18n.t('validation.email_required'));
       return false;
     }
     
     // 1. 형식 검증
     const formatResult = validateEmail(email);
     if (!formatResult.isValid) {
-      DOMUpdater.updateValidationResult('email-input', { isValid: formatResult.isValid, message: i18n.t(formatResult.error || 'validation.unknown_error_format') });
-      this.validationStates.set('email', { isValid: false, isChecking: false });
+      this.showValidationError('email-input', i18n.t(formatResult.error || 'validation.unknown_error_format'));
       return false;
     }
     
     // 2. 중복 체크
-    this.validationStates.set('email', { isValid: false, isChecking: true });
     this.showValidationLoading('email-input', i18n.t('validation.checking_availability'));
     
     try {
       const isDuplicate = await this.apiClient.auth.checkEmailExists(email);
       
       if (isDuplicate) {
-        const result = { isValid: false, message: i18n.t('validation.email_already_registered') };
-        DOMUpdater.updateValidationResult('email-input', result);
-        
-        this.validationStates.set('email', { isValid: false, isChecking: false });
+        this.showValidationError('email-input', i18n.t('validation.email_already_registered'));
         return false;
       } else {
         this.showValidationSuccess('email-input', i18n.t('validation.email_available'));
-        this.validationStates.set('email', { isValid: true, isChecking: false });
         return true;
       }
     } catch (error) {
       console.error('Email duplicate check error:', error);
-      const result = { isValid: false, message: i18n.t('validation.unable_to_check_availability') };
-      DOMUpdater.updateValidationResult('email-input', result);
-      this.validationStates.set('email', { isValid: false, isChecking: false });
+      this.showValidationError('email-input', i18n.t('validation.unable_to_check_availability'));
       return false;
     }
   }
@@ -498,20 +470,7 @@ export class RegisterModal {
         } else {
           // 형식이 틀렸으면 형식 에러만 표시
           if (formatResult.error) {
-            const errorElement = document.querySelector('#name-error') as HTMLElement;
-            const inputElement = document.querySelector('#name-input') as HTMLInputElement;
-            
-            if (errorElement) {
-              errorElement.textContent = formatResult.error;
-              errorElement.classList.remove('hidden');
-              errorElement.classList.add('text-terminal-red');
-              errorElement.classList.remove('text-terminal-gray', 'text-terminal-green');
-            }
-            
-            if (inputElement) {
-              inputElement.classList.add('border-terminal-red');
-              inputElement.classList.remove('border-terminal-gray', 'border-terminal-green');
-            }
+            this.showValidationError('name-input', i18n.t(formatResult.error));
           }
         }
       }
@@ -538,20 +497,7 @@ export class RegisterModal {
         const formatResult = validateEmail(email);
         if (!formatResult.isValid && formatResult.error) {
           // 형식이 틀렸으면 형식 에러만 표시
-          const errorElement = document.querySelector('#email-error') as HTMLElement;
-          const inputElement = document.querySelector('#email-input') as HTMLInputElement;
-          
-          if (errorElement) {
-            errorElement.textContent = formatResult.error;
-            errorElement.classList.remove('hidden');
-            errorElement.classList.add('text-terminal-red');
-            errorElement.classList.remove('text-terminal-gray', 'text-terminal-green');
-          }
-          
-          if (inputElement) {
-            inputElement.classList.add('border-terminal-red');
-            inputElement.classList.remove('border-terminal-gray', 'border-terminal-green');
-          }
+          this.showValidationError('email-input', i18n.t(formatResult.error));
         }
         // 형식이 올바르면 아무것도 표시하지 않음 (중복 체크는 blur에서만)
       }
@@ -576,44 +522,37 @@ export class RegisterModal {
    * 검증 로딩 상태 표시
    */
   private showValidationLoading(inputId: string, message: string): void {
-    // inputId가 'name-input'이면 errorId는 'name-error'
     const errorId = inputId.replace('-input', '-error');
-    const errorElement = document.querySelector(`#${errorId}`) as HTMLElement;
-    const inputElement = document.querySelector(`#${inputId}`) as HTMLInputElement;
-    
-    if (errorElement) {
-      errorElement.textContent = message;
-      errorElement.classList.remove('hidden');
-      errorElement.classList.add('text-terminal-gray');
-      errorElement.classList.remove('text-terminal-red', 'text-terminal-green');
-    }
-    
-    if (inputElement) {
-      inputElement.classList.add('border-terminal-gray');
-      inputElement.classList.remove('border-terminal-red', 'border-terminal-green');
-    }
+    DOMUpdater.showError(`#${errorId}`, message, { animate: true });
+    DOMUpdater.toggleClasses(`#${errorId}`, ['text-terminal-gray'], true);
+    DOMUpdater.toggleClasses(`#${errorId}`, ['text-terminal-red', 'text-terminal-green'], false);
+    DOMUpdater.toggleClasses(`#${inputId}`, ['border-terminal-gray'], true);
+    DOMUpdater.toggleClasses(`#${inputId}`, ['border-terminal-red', 'border-terminal-green'], false);
   }
 
   /**
    * 검증 성공 상태 표시
    */
   private showValidationSuccess(inputId: string, message: string): void {
-    // inputId가 'name-input'이면 errorId는 'name-error'
     const errorId = inputId.replace('-input', '-error');
-    const errorElement = document.querySelector(`#${errorId}`) as HTMLElement;
-    const inputElement = document.querySelector(`#${inputId}`) as HTMLInputElement;
-    
-    if (errorElement) {
-      errorElement.textContent = message;
-      errorElement.classList.remove('hidden');
-      errorElement.classList.add('text-terminal-green');
-      errorElement.classList.remove('text-terminal-red', 'text-terminal-gray');
-    }
-    
-    if (inputElement) {
-      inputElement.classList.add('border-terminal-green');
-      inputElement.classList.remove('border-terminal-red', 'border-terminal-gray');
-    }
+    DOMUpdater.updateText(`#${errorId}`, message, { animate: true });
+    DOMUpdater.toggleVisibility(`#${errorId}`, true, { animate: true });
+    DOMUpdater.toggleClasses(`#${errorId}`, ['text-terminal-green'], true);
+    DOMUpdater.toggleClasses(`#${errorId}`, ['text-terminal-red', 'text-terminal-gray'], false);
+    DOMUpdater.toggleClasses(`#${inputId}`, ['border-terminal-green'], true);
+    DOMUpdater.toggleClasses(`#${inputId}`, ['border-terminal-red', 'border-terminal-gray'], false);
+  }
+
+  /**
+   * 검증 에러 상태 표시
+   */
+  private showValidationError(inputId: string, message: string): void {
+    const errorId = inputId.replace('-input', '-error');
+    DOMUpdater.showError(`#${errorId}`, message, { animate: true });
+    DOMUpdater.toggleClasses(`#${errorId}`, ['text-terminal-red'], true);
+    DOMUpdater.toggleClasses(`#${errorId}`, ['text-terminal-green', 'text-terminal-gray'], false);
+    DOMUpdater.toggleClasses(`#${inputId}`, ['border-terminal-red'], true);
+    DOMUpdater.toggleClasses(`#${inputId}`, ['border-terminal-green', 'border-terminal-gray'], false);
   }
 
   /**
@@ -621,19 +560,9 @@ export class RegisterModal {
    */
   private clearValidationState(inputId: string): void {
     const errorId = inputId.replace('-input', '-error');
-    const errorElement = document.querySelector(`#${errorId}`) as HTMLElement;
-    const inputElement = document.querySelector(`#${inputId}`) as HTMLInputElement;
-    
-    if (errorElement) {
-      errorElement.classList.add('hidden');
-      errorElement.textContent = '';
-      errorElement.classList.remove('text-terminal-red', 'text-terminal-green', 'text-terminal-gray');
-    }
-    
-    if (inputElement) {
-      inputElement.classList.remove('border-terminal-red', 'border-terminal-green');
-      inputElement.classList.add('border-terminal-gray');
-    }
+    DOMUpdater.hideError(`#${errorId}`, { animate: true });
+    DOMUpdater.toggleClasses(`#${inputId}`, ['border-terminal-red', 'border-terminal-green'], false);
+    DOMUpdater.toggleClasses(`#${inputId}`, ['border-terminal-gray'], true);
   }
 
   /**
@@ -702,20 +631,15 @@ export class RegisterModal {
     }
     
     const isValid = passwordInput.value === confirmPasswordInput.value;
-    const result = {
-      isValid,
-      message: isValid ? undefined : i18n.t('validation.passwords_do_not_match')
-    };
     
     if (!isValid) {
-      const result = { isValid: false, message: i18n.t('validation.passwords_do_not_match') };
-      DOMUpdater.updateValidationResult('confirm-password-input', result);
+      this.showValidationError('confirm-password-input', i18n.t('validation.passwords_do_not_match'));
     } else {
       // 비밀번호가 일치하는 경우 성공 상태 표시
       this.showValidationSuccess('confirm-password-input', i18n.t('validation.passwords_match'));
     }
     
-    return result.isValid;
+    return isValid;
   }
 
   /**
@@ -731,22 +655,6 @@ export class RegisterModal {
     return nameValid && emailValid && passwordValid && confirmPasswordValid;
   }
 
-  /**
-   * 필드 에러 제거
-   */
-  private clearFieldError(fieldType: 'name' | 'email' | 'password' | 'confirm-password'): void {
-    const errorElement = document.querySelector(`#${fieldType}-error`) as HTMLElement;
-    const inputElement = document.querySelector(`#${fieldType}-input`) as HTMLElement;
-    
-    if (errorElement) {
-      DOMUpdater.hideError(errorElement);
-    }
-    
-    if (inputElement) {
-      DOMUpdater.updateClass(inputElement, 'border-terminal-red', false);
-      DOMUpdater.updateClass(inputElement, 'border-terminal-gray', true);
-    }
-  }
 
   /**
    * 일반 에러 표시
@@ -770,17 +678,15 @@ export class RegisterModal {
     form?.reset();
     
     this.hideGeneralError();
-    this.clearFieldError('name');
-    this.clearFieldError('email');
-    this.clearFieldError('password');
-    this.clearFieldError('confirm-password');
+    this.clearValidationState('name-input');
+    this.clearValidationState('email-input');
+    this.clearValidationState('password-input');
+    this.clearValidationState('confirm-password-input');
     
     // 디바운스 타이머 정리
     this.debounceTimers.forEach(timer => clearTimeout(timer));
     this.debounceTimers.clear();
     
-    // 검증 상태 초기화
-    this.validationStates.clear();
     
     this.isSubmitting = false;
     this.selectedAvatarFile = null;
