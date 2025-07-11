@@ -127,10 +127,6 @@ export class GameClient {
   private setupInGameListeners(): void {
     this.gameMode = this.gameInfo.type;
     this.isLocalMultiplayer = this.gameMode !== 'ai_1v1';
-    if (this.isLocalMultiplayer) {
-      const guestPlayer = this.gameInfo.players.find(p => p.type === 'guest');
-      this.player2Id = guestPlayer?.id ?? null;
-    }
 
     // 플레이어 정보 업데이트 (이름, 아바타)
     this.updatePlayerInfoFromGameInfo();
