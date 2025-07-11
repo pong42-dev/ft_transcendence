@@ -83,8 +83,8 @@ export class GameWebSocketHandler {
     socket.on('close', () => {
       this.removeClientFromRoom(gameId, socket)
       console.log(`Client disconnected from game ${gameId}`)
-      // 필요 시 GameManager에 연결 종료 알림
-      // this.gameManager.handleGameDisconnection(gameId)
+      // 게임 disconnect 처리 - 즉시 게임 종료
+      this.gameManager.handleGameDisconnection(gameId)
     })
 
     socket.on('error', (error) => {

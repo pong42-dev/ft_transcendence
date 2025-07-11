@@ -84,10 +84,20 @@ export class GameSession {
     }
 
   public removePlayer(playerId: number) {
+    console.log(`[GameSession] Removing player ${playerId} from game ${this.id}, current status: ${this.status}`);
+    
     this.players.delete(playerId);
     this.playerInputs.delete(playerId);
+    
     // 플레이어가 나가면 게임 중단 (대기 상태 포함)
     if (this.status === 'playing' || this.status === 'countdown' || this.status === 'waiting') {
+      console.log(`[GameSession] Player left, stopping game ${this.id}`);
+      this.stop('player_left');
+    }
+    
+    // 플레이어가 모두 나갔다면 확실히 종료
+    if (this.players.size === 0) {
+      console.log(`[GameSession] No players left, force stopping game ${this.id}`);
       this.stop('player_left');
     }
   }

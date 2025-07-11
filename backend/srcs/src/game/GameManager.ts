@@ -145,6 +145,34 @@ export class GameManager {
     this.getSession(gameId)?.handlePlayerInput(playerId, input);
   }
 
+  /**
+   * WebSocket 연결 끊김으로 인한 게임 종료 처리
+   */
+  public async handleGameDisconnection(gameId: string) {
+    const gameData = this.sessions.get(gameId);
+    if (!gameData) {
+      console.log(`[GameManager] Game ${gameId} not found for disconnect handling`);
+      return;
+    }
+
+    console.log(`[GameManager] Handling disconnect for game ${gameId}`);
+    
+    try {
+      // 게임 세션에서 모든 플레이어 제거 (이렇게 하면 removePlayer 로직이 실행됨)
+      const players = gameData.session.getPlayers();
+      for (const player of players) {
+        gameData.session.removePlayer(player.id);
+      }
+      
+      // 추가로 강제 종료도 실행
+      await gameData.session.stop('player_left');
+      
+      console.log(`[GameManager] Game ${gameId} terminated due to disconnect`);
+    } catch (error) {
+      console.error(`[GameManager] Error handling disconnect for game ${gameId}:`, error);
+    }
+  }
+
   // =================================================================
   // Internal Logic
   // =================================================================
