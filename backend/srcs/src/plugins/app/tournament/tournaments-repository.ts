@@ -890,20 +890,50 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 			let final_rank = 3;
 			const finalGame = rounds.find(r => r.round_number === 2);
 			if (finalGame) {
-				final_rank = finalGame.winnerId === finalGame.my_player_id ? 1 : 2;
+				console.log('[DEBUG] Final game data:', {
+					winnerId: finalGame.winnerId,
+					my_player_id: finalGame.my_player_id,
+					winnerId_type: typeof finalGame.winnerId,
+					my_player_id_type: typeof finalGame.my_player_id,
+					comparison_result: finalGame.winnerId === finalGame.my_player_id
+				});
+				
+				// null 체크 후 안전한 비교
+				if (finalGame.winnerId != null && finalGame.my_player_id != null) {
+					// 안전한 비교를 위해 둘 다 숫자로 변환해서 비교
+					const winnerId = parseInt(finalGame.winnerId.toString());
+					const myPlayerId = parseInt(finalGame.my_player_id.toString());
+					final_rank = winnerId === myPlayerId ? 1 : 2;
+				} else {
+					console.log('[DEBUG] Warning: winnerId or my_player_id is null, keeping default rank 3');
+				}
 			}
+			console.log('[DEBUG] Calculated final_rank:', final_rank);
 
 					// my_player_id는 반환할 필요 없으니 rounds에서 삭제
 					const cleanRounds = rounds.map(({ my_player_id, ...rest }) => rest);
 
-			tournHistories.push({
+			const tournamentHistory = {
 				tournament_id: tournamentInfo.id,
 				tournament_date: tournamentInfo.created_at,
 				participants: participants,
 				rounds: cleanRounds,
 				final_rank: final_rank,
-			});
+			};
+
+			// 상세한 로그 출력
+			console.log(`[DEBUG] Tournament History for userId ${userId}, tournamentId ${tournamentInfo.id}:`);
+			console.log(`[DEBUG] - tournament_id: ${tournamentHistory.tournament_id}`);
+			console.log(`[DEBUG] - tournament_date: ${tournamentHistory.tournament_date}`);
+			console.log(`[DEBUG] - participants:`, JSON.stringify(tournamentHistory.participants, null, 2));
+			console.log(`[DEBUG] - final_rank: ${tournamentHistory.final_rank}`);
+			console.log(`[DEBUG] - rounds (${tournamentHistory.rounds.length} rounds):`, JSON.stringify(tournamentHistory.rounds, null, 2));
+
+			tournHistories.push(tournamentHistory);
 			}
+
+			console.log(`[DEBUG] Final tournHistories for userId ${userId} (${tournHistories.length} tournaments):`);
+			console.log('[DEBUG] Complete result:', JSON.stringify(tournHistories, null, 2));
 
 				return tournHistories;
 			} catch (err: any) {
