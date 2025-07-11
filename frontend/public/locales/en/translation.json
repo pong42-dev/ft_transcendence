@@ -1,6 +1,6 @@
 {
   "terminal": {
-    "prompt": "$ >",
+    "prompt": "$ ",
     "initial_message_logged_out": "Welcome to ft_transcendence! Type 'login' or 'register' to begin.",
     "welcome_message_logged_in": "Welcome back, {{username}}! Type 'help' for commands."
   },

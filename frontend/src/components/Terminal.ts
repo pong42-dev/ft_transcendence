@@ -1,6 +1,5 @@
 import { DOMUpdater } from '../utils/DOMUpdater.js';
 import i18n from '../services/i18n';
-import { authStore } from '../store/index.js';
 
 export class Terminal {
   private terminalElement: HTMLElement;

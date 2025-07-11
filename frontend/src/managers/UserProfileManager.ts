@@ -28,9 +28,9 @@ export class UserProfileManager {
   async handlePendingAvatarUpload(): Promise<void> {
     if (this.pendingAvatarFile) {
       try {
-        this.terminal.appendOutput(i18next.t('uploadingProfilePicture'));
+        this.terminal.appendOutput(i18next.t('userProfile.uploadingProfilePicture'));
         await this.apiClient.user.uploadAvatar(this.pendingAvatarFile);
-        this.terminal.appendOutput(i18next.t('profilePictureUploadedSuccessfully'));
+        this.terminal.appendOutput(i18next.t('userProfile.profilePictureUploadedSuccessfully'));
         this.pendingAvatarFile = null;
         
         // 아바타 업로드 후 사용자 정보 재로드
@@ -38,13 +38,13 @@ export class UserProfileManager {
           const updatedUser = await this.apiClient.auth.verifyToken();
           authStore.login(updatedUser);
           UserStateCache.cache(updatedUser);
-          console.log(i18next.t('userProfileUpdatedWithNewAvatar'));
+          console.log(i18next.t('userProfile.userProfileUpdatedWithNewAvatar'));
         } catch (error) {
-          console.error(i18next.t('failedToRefreshUserProfileAfterAvatarUpload'), error);
+          console.error(i18next.t('userProfile.failedToRefreshUserProfileAfterAvatarUpload'), error);
         }
       } catch (error) {
-        console.error(i18next.t('avatarUploadFailed'), error);
-        this.terminal.appendOutput(i18next.t('failedToUploadProfilePictureTryAgain'));
+        console.error(i18next.t('userProfile.avatarUploadFailed'), error);
+        this.terminal.appendOutput(i18next.t('userProfile.failedToUploadProfilePictureTryAgain'));
         this.pendingAvatarFile = null;
       }
     }
@@ -55,7 +55,7 @@ export class UserProfileManager {
    */
   async handleAvatarUpload(file: File, resolve: () => void, reject: (error: any) => void, uiRenderer?: any): Promise<void> {
     try {
-      this.terminal.appendOutput(i18next.t('uploadingAvatar'));
+      this.terminal.appendOutput(i18next.t('userProfile.uploadingAvatar'));
       
       const updatedUser = await this.apiClient.user.uploadAvatar(file);
       authStore.updateUser(updatedUser);
@@ -66,11 +66,11 @@ export class UserProfileManager {
         uiRenderer.refreshUserProfile(updatedUser);
       }
       
-      this.terminal.appendOutput(i18next.t('avatarUpdatedSuccessfully'));
+      this.terminal.appendOutput(i18next.t('userProfile.avatarUpdatedSuccessfully'));
       resolve();
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : i18next.t('failedToUploadAvatar');
-      this.terminal.appendOutput(i18next.t('avatarUploadFailedWithMessage', { message: errorMsg }));
+      const errorMsg = error instanceof Error ? error.message : i18next.t('userProfile.failedToUploadAvatar');
+      this.terminal.appendOutput(i18next.t('userProfile.avatarUploadFailedWithMessage', { message: errorMsg }));
       this.errorHandler.handleError(error as Error, 'UserProfileManager.handleAvatarUpload', ErrorLevel.ERROR);
       reject(error);
     }

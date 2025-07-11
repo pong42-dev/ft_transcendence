@@ -1,6 +1,6 @@
 {
   "terminal": {
-    "prompt": "$ >",
+    "prompt": "$ ",
     "initial_message_logged_out": "ft_transcendenceへようこそ！'login'または'register'と入力して開始してください。",
     "welcome_message_logged_in": "おかえりなさい、{{username}}さん！コマンド一覧は'help'と入力してください。"
   },

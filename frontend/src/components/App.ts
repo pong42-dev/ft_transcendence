@@ -13,7 +13,6 @@ import { UserStateCache } from '../services/UserStateCache.js';
 import { UIRenderer } from '../managers/UIRenderer.js';
 import { ModalManager } from '../managers/ModalManager.js';
 import { UserProfileManager } from '../managers/UserProfileManager.js';
-import { changeLanguage } from '../services/i18n.js';
 import { GamePage } from '../game/GamePage.js';
 import i18next from '../services/i18n.js';
 
