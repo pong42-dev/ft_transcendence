@@ -154,7 +154,14 @@ export class UIRenderer {
         
         // Clear main content and append user profile using DOMUpdater
         DOMUpdater.updateHTML(mainContent, '');
-        mainContent.appendChild(this.userProfile!.render());
+        
+        // Handle async render
+        this.userProfile.render().then(profileElement => {
+          mainContent.appendChild(profileElement);
+        }).catch(error => {
+          console.error('Failed to render user profile:', error);
+          // Fallback to synchronous render if needed
+        });
       }
     } else {
       // 로그아웃 상태일 때 기존 UserProfile 정리
@@ -276,13 +283,19 @@ export class UIRenderer {
     if (this.userProfile) {
       this.userProfile.destroy();
     }
-8
+
     // 다른 사용자 프로필 생성 (isCurrentUser = false)
     this.userProfile = new UserProfile(otherUser, false);
 
     // 메인 컨텐츠 업데이트
     DOMUpdater.updateHTML(mainContent, '');
-    mainContent.appendChild(this.userProfile.render());
+    
+    // Handle async render for other users
+    this.userProfile.render().then(profileElement => {
+      mainContent.appendChild(profileElement);
+    }).catch(error => {
+      console.error('Failed to render other user profile:', error);
+    });
 
     // 상태바 업데이트
     this.updateStatusBar();

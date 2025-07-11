@@ -1,19 +1,27 @@
 import { User, MatchHistory } from '../types/types.js';
 import i18n from '../services/i18n';
+import { UserApiService } from '../services/api/UserApiService.js';
 
 export class UserProfile {
   private user: User;
   private profileElement: HTMLElement;
   private isCurrentUser: boolean;
+  private userApiService: UserApiService;
 
   constructor(user: User, isCurrentUser: boolean = false) {
     this.user = user;
     this.profileElement = document.createElement('div');
     this.isCurrentUser = isCurrentUser;
+    this.userApiService = new UserApiService();
   }
 
-  public render(): HTMLElement {
+  public async render(): Promise<HTMLElement> {
     this.profileElement.className = 'w-full h-full bg-terminal-black text-terminal-green overflow-y-auto scrollbar-hide';
+
+    // Refresh user data if current user to get latest stats and history
+    if (this.isCurrentUser) {
+      await this.refreshUserData();
+    }
 
     // Clear and update profile element
     this.profileElement.innerHTML = '';
@@ -103,6 +111,7 @@ export class UserProfile {
     const statsContainer = document.createElement('div');
     statsContainer.className = 'grid grid-cols-3 gap-3';
     
+    // Use user data which now includes real stats from backend
     const statsItems = [
       { value: this.user.gamesPlayed.toString(), label: i18n.t('userProfile.stats_games') },
       { value: this.user.gamesWon.toString(), label: i18n.t('userProfile.stats_wins') },
@@ -166,49 +175,9 @@ export class UserProfile {
     tournamentList.className = 'space-y-2 max-h-[300px] overflow-y-auto scrollbar-hide hidden';
     tournamentList.setAttribute('data-content', 'tournament');
 
-    // Add sample match history data (replace with actual data)
-    const sampleHistory: MatchHistory[] = [
-      {
-        date: '2025-01-15',
-        opponent: 'GameMaster',
-        rank: 1,
-        type: '1v1',
-        myScore: 5,
-        opponentScore: 3
-      },
-      {
-        date: '2025-01-14',
-        opponent: ['ProGamer', 'GameMaster', 'PongKing'],
-        rank: 2,
-        type: 'tournament'
-      },
-      {
-        date: '2025-01-13',
-        opponent: 'PongKing',
-        rank: 2,
-        type: '1v1',
-        myScore: 3,
-        opponentScore: 5
-      },
-      {
-        date: '2025-01-12',
-        opponent: ['Champion', 'ProPlayer', 'GameMaster', 'PongKing'],
-        rank: 1,
-        type: 'tournament'
-      },
-      {
-        date: '2025-01-11',
-        opponent: 'Champion',
-        rank: 1,
-        type: '1v1',
-        myScore: 5,
-        opponentScore: 2
-      }
-    ];
-
-    // Separate matches by type
-    const oneVsOneMatches = sampleHistory.filter(match => match.type === '1v1');
-    const tournamentMatches = sampleHistory.filter(match => match.type === 'tournament');
+    // Use user match history which now includes real data from backend
+    const oneVsOneMatches = this.user.matchHistory.filter(match => match.type === '1v1');
+    const tournamentMatches = this.user.matchHistory.filter(match => match.type === 'tournament');
 
     oneVsOneMatches.forEach(match => {
       oneVsOneList.appendChild(this.renderMatchHistoryItem(match));
@@ -342,6 +311,28 @@ export class UserProfile {
     contentWrapper.appendChild(this.renderMatchHistorySection());
     
     return contentWrapper;
+  }
+
+  /**
+   * Refresh user data with latest stats and history from backend
+   */
+  private async refreshUserData(): Promise<void> {
+    try {
+      // Get fresh user data with latest stats and history
+      const updatedUser = await this.userApiService.getProfile();
+      
+      // Update current user object with fresh data
+      this.user = updatedUser;
+      
+      console.log('Refreshed user data:', { 
+        gamesPlayed: this.user.gamesPlayed,
+        gamesWon: this.user.gamesWon,
+        matchHistoryCount: this.user.matchHistory.length
+      });
+    } catch (error) {
+      console.warn('Failed to refresh user data, using existing data:', error);
+      // Keep using existing user data as fallback
+    }
   }
 
   /**

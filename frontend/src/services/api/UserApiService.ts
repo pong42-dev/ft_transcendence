@@ -12,7 +12,7 @@ export class UserApiService extends BaseApiService {
     const response = await this.get<any>('/api/users/me');
     
     // 응답 구조 검증 및 호환성 처리
-    let userData: { name: string; avatar: string | null; twoFA?: boolean; email?: string };
+    let userData: { name: string; avatar: string | null; twoFA?: boolean; email?: string; provider?: string };
     
     if (response.data?.userInfo) {
       // 새로운 API 구조: data.userInfo
@@ -24,7 +24,8 @@ export class UserApiService extends BaseApiService {
         name: meData.name,
         avatar: meData.avatar,
         twoFA: meData.twoFactorEnabled,
-        email: meData.email
+        email: meData.email,
+        provider: meData.provider
       };
       console.warn('[UserApi] Using legacy API structure (data.me)');
     } else {
@@ -38,17 +39,42 @@ export class UserApiService extends BaseApiService {
       throw new Error(i18next.t('user.invalidUserDataMissingName'));
     }
     
+    // 게임 통계와 매치 히스토리 데이터 추출
+    const gameStats = response.data?.gameStats || { totalGames: 0, totalWins: 0, winRate: 0 };
+    const oneOnOneHistory = response.data?.oneOnOneHistory || [];
+    const tournHistory = response.data?.tournHistory || [];
+    
+    // 매치 히스토리를 MatchHistory 형식으로 변환
+    const matchHistory: Types.MatchHistory[] = [
+      ...oneOnOneHistory.map((match: any) => ({
+        date: new Date(match.endedAt).toISOString().split('T')[0],
+        opponent: match.opponent.name,
+        rank: match.winnerId === null ? 2 : (match.winnerId === match.myPlayerId ? 1 : 2),
+        type: '1v1' as const,
+        myScore: match.myScore,
+        opponentScore: match.opponentScore
+      })),
+      ...tournHistory.map((match: any) => ({
+        date: new Date(match.endedAt || match.tournament_date).toISOString().split('T')[0],
+        opponent: match.participants || ['Tournament'],
+        rank: match.userRank || match.final_rank || 1,
+        type: 'tournament' as const
+      }))
+    ];
+
     // User 객체로 변환
     const user: Types.User = {
       id: '0', // API에서 제공하지 않으므로 기본값
       username: userData.name,
       nickname: userData.name,
+      email: userData.email,
       avatarUrl: userData.avatar || undefined,
       twoFactorEnabled: userData.twoFA ?? false,
-      gamesPlayed: 0,
-      gamesWon: 0,
+      provider: userData.provider,
+      gamesPlayed: gameStats.totalGames,
+      gamesWon: gameStats.totalWins,
       friends: [],
-      matchHistory: []
+      matchHistory: matchHistory
     };
     
     return user;
