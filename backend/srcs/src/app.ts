@@ -2,6 +2,7 @@ import path from 'path'
 import fastifyAutoload from '@fastify/autoload'
 import { FastifyInstance, FastifyPluginOptions } from 'fastify'
 import fastifyStatic from '@fastify/static';
+import { cleanupIncompleteTournaments as cleanupTournaments } from './utils/tournament-cleanup';
 
 // import chatWsPlugin from './wss/chat/index.js'
 // import gameWsPlugin from './wss/game/index.js'
@@ -97,7 +98,7 @@ export default async function serviceApp (
       return { message: 'Not Found' }
     })
 
-  fastify.ready().then(() => {
+  fastify.ready().then(async () => {
     console.log('=== [ Loaded Environment Variables ] ===');
 
     // Server
@@ -152,5 +153,12 @@ export default async function serviceApp (
     console.log('REFRESH_COOKIE_MAX_AGE:', fastify.config.REFRESH_COOKIE_MAX_AGE);
 
     console.log('=== [ End of Config Dump ] ===');
+
+    // 서버 시작 시 진행 중인 토너먼트들을 정리
+    try {
+      await cleanupTournaments(fastify);
+    } catch (error) {
+      console.error('Error cleaning up incomplete tournaments:', error);
+    }
   });
 }

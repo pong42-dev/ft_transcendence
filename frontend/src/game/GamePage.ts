@@ -25,6 +25,7 @@ export class GamePage {
     private isInitializing: boolean = false; // 초기화 중복 방지
     private isTournamentCreating: boolean = false; // 토너먼트 생성 중복 방지
     private isGameEndCallbackCalled: boolean = false; // 콜백 중복 호출 방지
+    private isUnexpectedExit: boolean = false; // 비정상 종료 추적 (오류 메시지 방지용)
     private beforeUnloadHandler?: (e: BeforeUnloadEvent) => void;
     private visibilityChangeHandler?: () => void;
     private popStateHandler?: (event: PopStateEvent) => void;
@@ -442,6 +443,9 @@ export class GamePage {
         if ((this.gameClient || this.tournamentClient) && this.isGameActive) {
             console.log('Handling unexpected exit');
             
+            // 비정상 종료 플래그 설정 (오류 메시지 방지)
+            this.isUnexpectedExit = true;
+            
             // 터미널 입력 활성화
             this.terminal.enableInput();
             
@@ -679,7 +683,12 @@ export class GamePage {
     
     private showTournamentError(message: string): void {
         console.error('Tournament error:', message);
-        alert(message); // In a real app, this should be a proper modal
+        
+        // 비정상 종료 중이면 오류 메시지를 표시하지 않음
+        if (!this.isUnexpectedExit) {
+            alert(message); // In a real app, this should be a proper modal
+        }
+        
         this.safeCallGameEndCallback();
     }
 }

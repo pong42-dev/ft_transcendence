@@ -719,17 +719,18 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 		 */
 		async getUserTournamentHistory(userId: number): Promise<any[]> {
 			try {
-				// 1. 사용자가 참가한 모든 토너먼트 조회
+				// 1. 사용자가 참가한 모든 토너먼트 조회 (cancelled 상태 제외)
 				const tournaments = await knex('tournaments as t')
 					.join('games as g', 't.id', 'g.tournament_id')
 					.join('game_participants as gp', 'g.id', 'gp.game_id')
 					.join('players as p', 'gp.player_id', 'p.id')
 					.select(
-						't.id as tournament_id', 't.created_at', 't.winner_player_id',
+						't.id as tournament_id', 't.created_at', 't.winner_player_id', 't.status',
 						'g.id as game_id', 'g.round_number', 'g.winner_id',
 						'p.id as player_id', 'p.display_name', 'p.user_id'
 					)
 					.where('p.user_id', userId)
+					.whereNot('t.status', 'canceled') // canceled 상태 토너먼트 제외
 					.orderBy('t.created_at', 'desc');
 
 				// 2. 토너먼트별로 그룹화
@@ -877,11 +878,13 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 				const player = await knex('players').where('user_id', userId).first('id');
 				if (!player) return [];
 
-				// 2. 내가 참가한 토너먼트 ID 목록 조회 (중복 제거)
+				// 2. 내가 참가한 토너먼트 ID 목록 조회 (중복 제거, canceled 상태 제외)
 				const tournamentIdsRows = await knex('games as g')
 					.join('game_participants as gp', 'g.id', 'gp.game_id')
+					.join('tournaments as t', 'g.tournament_id', 't.id') // tournaments 테이블 조인
 					.where('g.type', 'tournament')
 					.where('gp.player_id', player.id)
+					.whereNot('t.status', 'canceled') // canceled 상태 토너먼트 제외
 					.distinct('g.tournament_id');
 
 				const tournamentIds = tournamentIdsRows.map(r => r.tournament_id);
@@ -890,10 +893,11 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 				const tournHistories = [];
 
 				for (const tournamentId of tournamentIds) {
-					// 토너먼트 기본 정보
+					// 토너먼트 기본 정보 (canceled 상태 제외)
 					const tournamentInfo = await knex('tournaments')
 						.where('id', tournamentId)
-						.first('id', 'created_at', 'winner_player_id');
+						.whereNot('status', 'canceled') // canceled 상태 토너먼트 제외
+						.first('id', 'created_at', 'winner_player_id', 'status');
 					if (!tournamentInfo) continue;
 
 					// 참가자 목록 조회

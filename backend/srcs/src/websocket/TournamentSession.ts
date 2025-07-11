@@ -130,6 +130,9 @@ export class TournamentSession {
     this.isDisconnecting = true;
     (this.fastify as any).log.info(`[Session ${this.tournamentId}] Player ${playerId} being removed from session.`);
     
+    // 토너먼트 상태를 즉시 종료로 변경
+    this.status = 'finished';
+    
     // 현재 진행 중인 게임이 있다면 종료 처리
     if (this.currentGameSessionId) {
       (this.fastify as any).log.info(`[Session ${this.tournamentId}] Terminating current game session: ${this.currentGameSessionId}`);
@@ -142,14 +145,11 @@ export class TournamentSession {
       }
     }
     
-    // 토너먼트 상태를 중단됨으로 업데이트
-    if (this.status === 'in_progress') {
-      this.status = 'finished';
-      (this.fastify as any).log.info(`[Session ${this.tournamentId}] Tournament marked as finished due to player disconnect.`);
-      
-      // DB 상태 업데이트
-      this.updateTournamentStatusOnDisconnect();
-    }
+    // 토너먼트의 모든 매치를 취소 상태로 업데이트
+    this.cancelAllRemainingMatches();
+    
+    // 토너먼트가 중간에 중단되었는지 확인하고 적절한 상태로 업데이트
+    this.updateTournamentStatusOnDisconnect();
     
     this.socket = null;
     (this.fastify as any).log.info(`[Session ${this.tournamentId}] Player ${playerId} disconnected and session cleaned up.`);
@@ -160,9 +160,50 @@ export class TournamentSession {
    */
   private async updateTournamentStatusOnDisconnect() {
     try {
+      const tournamentIdNum = Number(this.tournamentId);
       const tournamentsRepository = (this.fastify as any).tournamentsRepository;
-      await tournamentsRepository.updateTournamentStatus(Number(this.tournamentId), 'cancelled', null);
-      (this.fastify as any).log.info(`[Session ${this.tournamentId}] Tournament status updated to cancelled in database.`);
+      
+      // 현재 토너먼트 상태 확인
+      const currentTournament = await (this.fastify as any).knex('tournaments')
+        .where('id', tournamentIdNum)
+        .first();
+      
+      if (!currentTournament) {
+        (this.fastify as any).log.error(`[Session ${this.tournamentId}] Tournament not found in database.`);
+        return;
+      }
+      
+      // 토너먼트가 이미 완료된 상태라면 업데이트하지 않음
+      if (currentTournament.status === 'finished' && currentTournament.winner_player_id) {
+        (this.fastify as any).log.info(`[Session ${this.tournamentId}] Tournament already completed with winner, not updating status.`);
+        return;
+      }
+      
+      // 토너먼트의 매치 진행 상황 확인
+      const allMatches = await (this.fastify as any).knex('games')
+        .where('tournament_id', tournamentIdNum)
+        .select('id', 'status', 'round_number', 'winner_id');
+      
+      const finishedMatches = allMatches.filter(match => match.status === 'finished' && match.winner_id);
+      const totalMatches = allMatches.length;
+      
+      (this.fastify as any).log.info(`[Session ${this.tournamentId}] Tournament progress: ${finishedMatches.length}/${totalMatches} matches completed`);
+      
+      // 모든 매치가 완료되었다면 (결승까지 끝났다면) finished 상태 유지
+      if (finishedMatches.length === totalMatches && totalMatches > 0) {
+        // 결승 매치 찾기 (가장 높은 라운드)
+        const maxRound = Math.max(...allMatches.map(m => m.round_number));
+        const finalMatch = finishedMatches.find(m => m.round_number === maxRound);
+        
+        if (finalMatch && finalMatch.winner_id) {
+          (this.fastify as any).log.info(`[Session ${this.tournamentId}] Tournament completed naturally, keeping finished status with winner ${finalMatch.winner_id}.`);
+          return;
+        }
+      }
+      
+      // 토너먼트가 중간에 중단되었다면 canceled로 업데이트
+      await tournamentsRepository.updateTournamentStatus(tournamentIdNum, 'canceled', null);
+      (this.fastify as any).log.info(`[Session ${this.tournamentId}] Tournament status updated to canceled in database (${finishedMatches.length}/${totalMatches} matches were completed).`);
     } catch (error) {
       (this.fastify as any).log.error(`[Session ${this.tournamentId}] Error updating tournament status on disconnect:`, error);
     }
@@ -192,6 +233,10 @@ export class TournamentSession {
       case 'tournament_start':
         (this.fastify as any).log.info(`[Session ${this.tournamentId}] Starting tournament...`);
         await this.startTournament();
+        break;
+      case 'tournament_disconnect':
+        (this.fastify as any).log.info(`[Session ${this.tournamentId}] Tournament disconnect request from user ${playerId}`);
+        this.handleTournamentDisconnect(playerId);
         break;
       case 'match_result':
         // match_result 데이터 검증
@@ -521,6 +566,19 @@ export class TournamentSession {
    */
   private async startNextMatch() {
     (this.fastify as any).log.info(`[startNextMatch] Starting search for next match...`);
+    
+    // 토너먼트가 종료된 상태라면 새로운 매치를 시작하지 않음
+    if (this.status === 'finished') {
+      (this.fastify as any).log.info(`[Session ${this.tournamentId}] Tournament is finished, not starting new match.`);
+      return;
+    }
+    
+    // 클라이언트 소켓이 연결되지 않은 상태라면 새로운 매치를 시작하지 않음
+    if (!this.socket) {
+      (this.fastify as any).log.info(`[Session ${this.tournamentId}] No client socket connected, not starting new match.`);
+      return;
+    }
+    
     (this.fastify as any).log.info(`[startNextMatch] Current matches:`, this.matches?.map(m => ({ 
       id: m.id, 
       round: m.round_number, 
@@ -569,6 +627,12 @@ export class TournamentSession {
     this.sendToClient(bracketUpdateMessage);
     (this.fastify as any).log.info(`[Session ${this.tournamentId}] Starting match ${nextMatch.id}`);
     
+    // 매치 시작 전 최종 상태 확인
+    if (this.status === 'finished' || !this.socket) {
+      (this.fastify as any).log.info(`[Session ${this.tournamentId}] Tournament state changed, cancelling match ${nextMatch.id}`);
+      return;
+    }
+    
     // Send match_starting message to client BEFORE creating the game
     const matchStartingMessage = {
       type: 'match_starting',
@@ -581,6 +645,13 @@ export class TournamentSession {
     };
     
     (this.fastify as any).log.info(`[Session ${this.tournamentId}] Sending match_starting message:`, matchStartingMessage);
+    
+    // 클라이언트 소켓 연결 상태 재확인
+    if (!this.socket) {
+      (this.fastify as any).log.error(`[Session ${this.tournamentId}] No client socket connected for match ${nextMatch.id}.`);
+      return;
+    }
+    
     this.sendToClient(matchStartingMessage);
     
     try {
@@ -718,6 +789,38 @@ export class TournamentSession {
   sendToClient(message: object) {
     if (this.socket && this.socket.readyState === WebSocket.OPEN) {
       this.socket.send(JSON.stringify(message));
+    }
+  }
+
+  /**
+   * 토너먼트 연결 해제 요청을 처리합니다.
+   */
+  private handleTournamentDisconnect(playerId: number) {
+    (this.fastify as any).log.info(`[Session ${this.tournamentId}] Processing tournament disconnect for player ${playerId}`);
+    
+    // 플레이어 제거 - 기존 removePlayer 메서드 재사용
+    this.removePlayer(playerId);
+  }
+
+  /**
+   * 토너먼트의 모든 대기/진행 중인 매치를 취소합니다.
+   */
+  private async cancelAllRemainingMatches() {
+    try {
+      const tournamentIdNum = Number(this.tournamentId);
+      
+      // DB에서 모든 진행되지 않은 매치들을 'canceled' 상태로 업데이트
+      await (this.fastify as any).knex('games')
+        .where('tournament_id', tournamentIdNum)
+        .whereIn('status', ['waiting', 'playing', 'countdown'])
+        .update({
+          status: 'canceled',
+          ended_at: new Date().toISOString()
+        });
+      
+      (this.fastify as any).log.info(`[Session ${this.tournamentId}] All remaining matches cancelled in database.`);
+    } catch (error) {
+      (this.fastify as any).log.error(`[Session ${this.tournamentId}] Error cancelling remaining matches:`, error);
     }
   }
 }

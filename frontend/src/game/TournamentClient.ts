@@ -211,6 +211,9 @@ export class TournamentClient {
   
   // 토너먼트 종료 상태 추가
   private tournamentEnded: boolean = false;
+  
+  // 사용자가 의도적으로 종료했는지 추적 (오류 메시지 표시 방지용)
+  private isManualExit: boolean = false;
 
   constructor(
     container: HTMLElement,
@@ -228,6 +231,9 @@ export class TournamentClient {
   }
 
   public destroy(): void {
+    // 사용자가 의도적으로 종료함을 표시 (오류 메시지 방지)
+    this.isManualExit = true;
+    
     // 타이머 정리
     if (this.currentTimeout) {
       clearTimeout(this.currentTimeout);
@@ -241,8 +247,9 @@ export class TournamentClient {
       this.currentGameClient = null;
     }
     
-    // WebSocket 연결 정리
+    // WebSocket 연결 정리 (연결이 끊어지면 백엔드에서 자동으로 removePlayer 호출됨)
     this.webSocketService?.disconnect();
+    
     this.container.innerHTML = '';
     this.isProcessingMatch = false;
   }
@@ -342,8 +349,8 @@ export class TournamentClient {
     });
     this.webSocketService.on('close', () => {
       console.log('WebSocket connection closed');
-      // 토너먼트가 정상 종료된 경우나 매치 처리 중이 아닌 경우에만 오류 표시
-      if (!this.tournamentEnded && !this.isProcessingMatch) {
+      // 토너먼트가 정상 종료된 경우나 매치 처리 중이 아닌 경우, 그리고 사용자가 의도적으로 종료하지 않은 경우에만 오류 표시
+      if (!this.tournamentEnded && !this.isProcessingMatch && !this.isManualExit) {
         this.showErrorMessage('토너먼트 연결이 끊어졌습니다.');
       }
       // 연결이 끊어지면 현재 게임도 함께 정리
@@ -953,6 +960,23 @@ export class TournamentClient {
     }
   }
 
+  /**
+   * 토너먼트를 강제로 중단합니다 (예상치 못한 종료 상황에서 호출)
+   */
+  public forceStop(): void {
+    console.log('Force stopping tournament client');
+    
+    // 사용자가 의도적으로 종료함을 표시 (오류 메시지 방지)
+    this.isManualExit = true;
+    
+    // 토너먼트 종료 플래그 설정
+    this.tournamentEnded = true;
+    this.isProcessingMatch = false;
+    
+    // 정리 작업 수행
+    this.destroy();
+  }
+
   // Input validation and sanitization methods
   private validateUserId(userId: any): boolean {
     return typeof userId === 'number' && userId > 0 && Number.isInteger(userId);
@@ -1071,6 +1095,12 @@ export class TournamentClient {
 
   private showErrorMessage(message: string): void {
     console.error('Tournament error:', message);
+    
+    // 사용자가 의도적으로 종료한 경우 오류 메시지를 표시하지 않음
+    if (this.isManualExit) {
+      console.log('Skipping error message due to manual exit');
+      return;
+    }
     
     // Show user-friendly error message
     const errorModal: ModalContent = {

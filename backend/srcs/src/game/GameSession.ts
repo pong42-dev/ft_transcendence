@@ -136,6 +136,8 @@ export class GameSession {
     this.status = 'countdown';
     
     const countdown = () => {
+      if (!this.isActive()) return;
+      
       this.onGameEvent({ event: 'countdown', data: { remainingTime } });
       remainingTime--;
       
@@ -158,6 +160,8 @@ export class GameSession {
 
   private async _startGameLoop() {
     console.log(`[GameSession] _startGameLoop called, current status: ${this.status}`);
+    if (!this.isActive()) return;
+    
     this.status = 'playing';
     // this._startTime = Date.now(); // 나중에 필요시 사용
     // DB에 게임 시작 상태 업데이트
@@ -172,6 +176,8 @@ export class GameSession {
    * [신규] 실제 게임 물리 로직(공 움직임)을 실행하는 루프입니다.
    */
   private _startGamePhysicsLoop() {
+    if (!this.isActive()) return;
+    
     // 이전 루프가 있다면 정리
     if (this.loop) {
       clearInterval(this.loop);
@@ -185,6 +191,8 @@ export class GameSession {
   }
 
   private _updateGame() {
+    if (!this.isActive()) return;
+    
     const players = Array.from(this.players.values());
     // players 배열이 비어있거나 1명일 경우의 엣지 케이스 처리
     if (players.length < 2) {
@@ -357,6 +365,10 @@ export class GameSession {
   // =================================================================
   // Getters
   // =================================================================
+
+  public isActive(): boolean {
+    return this.status !== 'canceled' && this.status !== 'finished';
+  }
 
   public getStatus(): GameStatus {
     return this.status;

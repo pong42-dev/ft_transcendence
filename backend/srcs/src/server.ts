@@ -2,6 +2,10 @@ import Fastify from 'fastify'
 import fp from 'fastify-plugin'
 
 import closeWithGrace from 'close-with-grace'
+import { 
+  gracefulTournamentCleanup as gracefulCleanup, 
+  emergencyTournamentCleanup as emergencyCleanup 
+} from './utils/tournament-cleanup';
 
 import serviceApp from './app.js'
 
@@ -33,8 +37,21 @@ const app = Fastify({
   bodyLimit: 20 * 1024 * 1024
 })
 
+/**
+ * 프로세스 신호 핸들러를 설정하는 함수
+ */
+function setupProcessSignalHandlers() {
+  // 프로세스 종료 신호 처리
+  process.on('SIGTERM', () => emergencyCleanup(app as any, 'SIGTERM'));
+  process.on('SIGINT', () => emergencyCleanup(app as any, 'SIGINT'));
+  process.on('SIGQUIT', () => emergencyCleanup(app as any, 'SIGQUIT'));
+}
+
 async function init () {
   app.register(fp(serviceApp))
+
+  // 프로세스 신호 핸들러 설정
+  setupProcessSignalHandlers();
 
   closeWithGrace(
 	{ delay: Number(process.env.FASTIFY_CLOSE_GRACE_DELAY ?? 500) },
@@ -42,6 +59,9 @@ async function init () {
 	  if (err != null) {
 		app.log.error(err)
 	  }
+
+	  // 서버 종료 시 토너먼트 정리
+	  await gracefulCleanup(app as any);
   
 	  await app.close()
 	}
