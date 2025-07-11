@@ -364,24 +364,50 @@ export class TournamentClient {
     const matchId = match.matchId || match.id || '';
     const winner = match.winnerId || match.winner_id;
     
+    // 매치 상태 확인 및 스타일 결정
+    const isCompleted = match.status === 'completed' || winner;
+    const isPlaying = match.status === 'playing' || match.status === 'in_progress' || match.status === 'active';
+    
+    // 스타일 클래스 결정
+    let containerClass = 'p-3 border-2 rounded-lg w-full max-w-48 text-center';
+    let borderClass = '';
+    let bgClass = '';
+    let pulseClass = '';
+    
+    if (isPlaying) {
+      // 현재 진행 중인 경기 - 밝은 파란색으로 강조
+      borderClass = 'border-blue-400 border-4';
+      bgClass = 'bg-blue-900 bg-opacity-70';
+      pulseClass = 'animate-pulse';
+    } else if (isCompleted) {
+      // 완료된 경기 - 녹색 테두리
+      borderClass = 'border-green-400';
+      bgClass = 'bg-terminal-black bg-opacity-50';
+    } else {
+      // 기본 스타일
+      borderClass = label === '결승' ? 'border-terminal-yellow' : 'border-terminal-green';
+      bgClass = 'bg-terminal-black bg-opacity-50';
+    }
+    
     return `
-      <div class="p-3 border-2 rounded-lg bg-terminal-black bg-opacity-50 w-full max-w-48 text-center ${label === '결승' ? 'border-terminal-yellow' : 'border-terminal-green'}">
-        <div class="text-sm font-bold mb-2">${label}</div>
+      <div class="${containerClass} ${borderClass} ${bgClass} ${pulseClass}">
+        <div class="text-sm font-bold mb-2 ${isPlaying ? 'text-blue-300' : ''}">${label}</div>
+        ${isPlaying ? '<div class="text-xs text-blue-400 mb-1">⚡ Playing</div>' : ''}
         <div class="flex flex-col gap-1 text-xs">
-          <div class="flex justify-between items-center ${winner === player1Id ? 'text-terminal-yellow font-bold' : ''}">
+          <div class="flex justify-between items-center ${winner === player1Id ? 'text-yellow-300 font-bold bg-green-800 bg-opacity-50 px-2 py-1 rounded' : ''}">
             <span class="truncate flex-1 text-left">${player1Name}</span>
             <span class="ml-2 text-sm font-mono">${player1Score}</span>
-            ${winner === player1Id ? '<span class="ml-1 text-xs">🏆</span>' : ''}
+            ${winner === player1Id ? '<span class="ml-1 text-lg">🏆</span>' : ''}
           </div>
           <div class="text-terminal-green text-xs">vs</div>
-          <div class="flex justify-between items-center ${winner === player2Id ? 'text-terminal-yellow font-bold' : ''}">
+          <div class="flex justify-between items-center ${winner === player2Id ? 'text-yellow-300 font-bold bg-green-800 bg-opacity-50 px-2 py-1 rounded' : ''}">
             <span class="truncate flex-1 text-left">${player2Name}</span>
             <span class="ml-2 text-sm font-mono">${player2Score}</span>
-            ${winner === player2Id ? '<span class="ml-1 text-xs">🏆</span>' : ''}
+            ${winner === player2Id ? '<span class="ml-1 text-lg">🏆</span>' : ''}
           </div>
         </div>
         <div class="text-xs text-terminal-gray mt-1">ID: ${matchId}</div>
-        ${match.status ? `<div class="text-xs text-terminal-cyan mt-1">${match.status}</div>` : ''}
+        ${match.status ? `<div class="text-xs ${isPlaying ? 'text-blue-400' : 'text-terminal-cyan'} mt-1">${match.status}</div>` : ''}
       </div>
     `;
   }

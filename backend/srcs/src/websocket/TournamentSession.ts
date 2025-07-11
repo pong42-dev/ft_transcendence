@@ -400,7 +400,7 @@ export class TournamentSession {
             (this.fastify as any).log?.error?.(`[Session ${this.tournamentId}] Error in onStateUpdate callback:`, err);
           }
         },
-        onEvent: (gameEvent: GameEventDto) => {
+        onEvent: async (gameEvent: GameEventDto) => {
           try {
             const message: WSGameInTournamentEventMessage = { type: 'game_event', data: gameEvent };
             this.sendToClient(message);
@@ -408,6 +408,11 @@ export class TournamentSession {
               // game_end 이벤트에서 winnerId를 추출해서 전달
               const winnerId = gameEvent.data?.winnerId;
               (this.fastify as any).log?.info?.(`[game_end] 이벤트에서 받은 winnerId: ${winnerId}`);
+              
+              // DB에 매치 상태 업데이트 추가
+              const matchesRepository = (this.fastify as any).matchesRepository;
+              await matchesRepository.updateMatchStatus(nextMatch.id, 'finished', winnerId);
+              
               this.handleMatchEnded(nextMatch.id, winnerId);
             }
           } catch (err) {

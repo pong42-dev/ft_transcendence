@@ -886,24 +886,24 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 						};
 					});
 
-					// final_rank 계산 (결승(round_number=2) 승리시 1, 결승 진출 후 패배시 2, 아니면 3)
-					let final_rank = 3;
-					const finalGame = rounds.find(r => r.round_number === 2);
-					if (finalGame) {
-						final_rank = finalGame.winnerId === finalGame.my_player_id ? 1 : 2;
-					}
+			// final_rank 계산 (결승(round_number=2) 승리시 1, 결승 진출 후 패배시 2, 아니면 3)
+			let final_rank = 3;
+			const finalGame = rounds.find(r => r.round_number === 2);
+			if (finalGame) {
+				final_rank = finalGame.winnerId === finalGame.my_player_id ? 1 : 2;
+			}
 
 					// my_player_id는 반환할 필요 없으니 rounds에서 삭제
 					const cleanRounds = rounds.map(({ my_player_id, ...rest }) => rest);
 
-					tournHistories.push({
-						tournament_id: tournamentInfo.id,
-						tournament_date: tournamentInfo.created_at,
-						participants: participants,
-						rounds: cleanRounds,
-						final_rank: final_rank,
-					});
-				}
+			tournHistories.push({
+				tournament_id: tournamentInfo.id,
+				tournament_date: tournamentInfo.created_at,
+				participants: participants,
+				rounds: cleanRounds,
+				final_rank: final_rank,
+			});
+			}
 
 				return tournHistories;
 			} catch (err: any) {

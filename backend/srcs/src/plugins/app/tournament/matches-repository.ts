@@ -173,12 +173,18 @@ export function createMatchesRepository(fastify: FastifyInstance) {
 				} else if (status === 'finished' && winnerId) {
 					updateData.winner_id = winnerId;
 					updateData.ended_at = new Date().toISOString();
+					console.log(`[DEBUG updateMatchStatus] Adding winner_id to updateData: ${winnerId}`);
+				} else if (status === 'finished' && !winnerId) {
+					console.log(`[DEBUG updateMatchStatus] WARNING: status is finished but winnerId is null/undefined`);
 				}
 
-				await knex('games')
+				console.log(`[DEBUG updateMatchStatus] Final updateData:`, JSON.stringify(updateData));
+
+				const result = await knex('games')
 					.where('id', matchId)
 					.update(updateData);
 
+				console.log(`[DEBUG updateMatchStatus] Update result: ${result} rows affected`);
 				console.log(`Match ${matchId} status updated to: ${status}`);
 			} catch (err: any) {
 				console.error('Error updating match status:', err.message);
