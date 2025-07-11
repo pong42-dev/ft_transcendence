@@ -299,7 +299,6 @@ export class GameSetupModal {
       <div class="space-y-4">
         <!-- Difficulty Selection -->
         <div>
-          <h4 class="text-terminal-gray text-lg font-medium mb-3">${i18n.t('gameSetupModal.choose_challenge_level')}</h4>
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <label class="difficulty-label p-4 rounded-lg border border-terminal-gray cursor-pointer hover:bg-terminal-gray hover:bg-opacity-10 transition-all text-center">
               <input type="radio" name="difficulty" value="easy" class="sr-only">
