@@ -69,9 +69,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 			console.log("userByEmail: ", userByEmail);
 			const userByName = await userProfilesRepository.getRowByColumnValue('name', name);
 			console.log("userByName: ", userByName);
-			console.log("here1");
 			if (!userByEmail) {
-				console.log("here2");
 				const uniqueName = userByName? await userProfilesRepository.generateUniqueUsername(name) : name;
 				console.log("name", name);
 				console.log("userName", userByName);
