@@ -196,12 +196,6 @@ export class GameEndModal {
       >
         ${i18n.t('gameEndModal.view_profile')}
       </button>
-      <button 
-        id="close-btn"
-        class="w-full border border-terminal-gray text-terminal-gray py-3 rounded-lg font-medium hover:bg-terminal-gray hover:bg-opacity-10 transition-all"
-      >
-        ${i18n.t('common.close')}
-      </button>
     `;
 
     return buttons;
@@ -213,7 +207,6 @@ export class GameEndModal {
     const nextMatchBtn = this.contentElement.querySelector('#next-match-btn') as HTMLButtonElement;
     const tournamentResultsBtn = this.contentElement.querySelector('#tournament-results-btn') as HTMLButtonElement;
     const profileBtn = this.contentElement.querySelector('#profile-btn') as HTMLButtonElement;
-    const closeBtn = this.contentElement.querySelector('#close-btn') as HTMLButtonElement;
 
     // Next match button
     nextMatchBtn?.addEventListener('click', () => {
@@ -233,11 +226,6 @@ export class GameEndModal {
     profileBtn?.addEventListener('click', () => {
       this.close();
       this.onProfileClick();
-    });
-
-    // Close button
-    closeBtn?.addEventListener('click', () => {
-      this.close();
       if (this.onGameFinish) {
         this.onGameFinish();
       }
