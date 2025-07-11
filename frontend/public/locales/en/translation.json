@@ -377,6 +377,7 @@
     "googleLoginError": "An error occurred during Google login.",
     "googleLoginConflict": "This account may already be registered. Try a regular login.",
     "tryAgainLater": "Please try again later.",
+    "accountInUse": "This account is already in use. Please log out and try again.",
     "twoFARequired": "Two-factor authentication required. Please enter your verification code.",
     "twoFACancelled": "2FA verification cancelled.",
     "twoFAVerifying": "Verifying 2FA code...",

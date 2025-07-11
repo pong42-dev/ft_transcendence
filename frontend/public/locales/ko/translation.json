@@ -372,6 +372,7 @@
     "googleLoginError": "Google 로그인 중 오류가 발생했습니다.",
     "googleLoginConflict": "이미 등록된 계정일 수 있습니다. 일반 로그인을 시도해 보세요.",
     "tryAgainLater": "나중에 다시 시도해 주세요.",
+    "accountInUse": "이 계정은 이미 사용 중입니다. 로그아웃 후 다시 시도해주세요.",
     "twoFARequired": "2단계 인증이 필요합니다. 인증 코드를 입력하세요.",
     "twoFACancelled": "2단계 인증이 취소되었습니다.",
     "twoFAVerifying": "2단계 인증 코드를 확인하는 중...",

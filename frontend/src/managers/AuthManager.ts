@@ -494,6 +494,82 @@ export class AuthManager {
     const isOAuthRedirect = document.referrer.includes('accounts.google.com') || 
                             sessionStorage.getItem('oauth_login_attempt') === 'true';
     
+    // Check for error parameters first
+    const errorType = url.searchParams.get('error');
+    const errorMessage = url.searchParams.get('message');
+    
+    if (errorType) {
+      // Clean up URL
+      window.history.replaceState({}, document.title, '/');
+      
+      // Check which modal started the OAuth process
+      const sourceModal = sessionStorage.getItem('oauth_source_modal') || 'login';
+      
+      // Import ModalManager dynamically to avoid circular dependencies
+      import('../managers/ModalManager.js').then(({ ModalManager }) => {
+        const modalManager = ModalManager.getInstance();
+        
+        // Show appropriate modal based on source
+        const showModalPromise = sourceModal === 'register' 
+          ? modalManager.showRegisterModal({
+              onRegisterSuccess: async (user) => {
+                // Handle successful registration
+                const { authStore } = await import('../store/authStore.js');
+                authStore.login(user);
+                this.terminal.reset();
+                this.terminal.appendOutput(i18next.t('auth.welcomeBack', { username: user.username }));
+                this.terminal.appendOutput(i18next.t('auth.typeHelp'));
+                
+                setTimeout(() => {
+                  this.router.navigate('/profile');
+                  this.terminal.focus();
+                }, 100);
+              },
+              onSwitchToLogin: async () => {
+                await modalManager.showLoginModal();
+              }
+            })
+          : modalManager.showLoginModal({
+              onLoginSuccess: async (user) => {
+                // Handle successful login
+                const { authStore } = await import('../store/authStore.js');
+                authStore.login(user);
+                this.terminal.reset();
+                this.terminal.appendOutput(i18next.t('auth.welcomeBack', { username: user.username }));
+                this.terminal.appendOutput(i18next.t('auth.typeHelp'));
+                
+                setTimeout(() => {
+                  this.router.navigate('/profile');
+                  this.terminal.focus();
+                }, 100);
+              },
+              onSwitchToRegister: async () => {
+                await modalManager.showRegisterModal();
+              },
+              on2FARequired: async (tmpToken) => {
+                await modalManager.show2FAModal(tmpToken);
+              }
+            });
+        
+        showModalPromise.then(() => {
+          // After modal is shown, dispatch the error event
+          setTimeout(() => {
+            const googleOAuthErrorEvent = new CustomEvent('googleOAuthError', {
+              detail: {
+                error: errorType,
+                message: errorMessage
+              }
+            });
+            window.dispatchEvent(googleOAuthErrorEvent);
+          }, 200);
+        });
+      });
+      
+      sessionStorage.removeItem('oauth_login_attempt');
+      sessionStorage.removeItem('oauth_source_modal');
+      return null;
+    }
+    
     if (!hasOAuthParams && !isOAuthRedirect) {
       return null;
     }

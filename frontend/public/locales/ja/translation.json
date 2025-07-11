@@ -377,6 +377,7 @@
     "googleLoginError": "Googleログイン中にエラーが発生しました。",
     "googleLoginConflict": "このアカウントはすでに登録されている可能性があります。通常のログインをお試しください。",
     "tryAgainLater": "後でもう一度お試しください。",
+    "accountInUse": "このアカウントは既に使用中です。ログアウトしてから再度お試しください。",
     "twoFARequired": "二要素認証が必要です。確認コードを入力してください。",
     "twoFACancelled": "二要素認証がキャンセルされました。",
     "twoFAVerifying": "2FAコードを確認しています...",

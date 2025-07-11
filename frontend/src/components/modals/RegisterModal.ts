@@ -295,6 +295,9 @@ export class RegisterModal {
    */
   private onShow(): void {
     this.modalManager.focusElement('#email-input');
+    
+    // Google OAuth 에러 이벤트 리스너 추가
+    window.addEventListener('googleOAuthError', this.handleGoogleOAuthError);
   }
 
   /**
@@ -302,6 +305,9 @@ export class RegisterModal {
    */
   private onClose(): void {
     this.resetForm();
+    
+    // Google OAuth 에러 이벤트 리스너 제거
+    window.removeEventListener('googleOAuthError', this.handleGoogleOAuthError);
   }
 
   /**
@@ -352,12 +358,32 @@ export class RegisterModal {
    */
   private handleGoogleRegister(): void {
     try {
+      // OAuth 시작 모달 추적
+      sessionStorage.setItem('oauth_source_modal', 'register');
+      
       // AuthApiService의 loginWithGoogle 메서드 사용 (회원가입도 같은 엔드포인트)
       this.apiClient.auth.loginWithGoogle();
     } catch (error) {
       console.error('Google registration initiation failed:', error);
       this.showGeneralError(i18n.t('registerModal.failed_initiate_google_registration'));
     }
+  }
+
+  /**
+   * Google OAuth 에러 처리
+   */
+  private handleGoogleOAuthError = (event: Event): void => {
+    const customEvent = event as CustomEvent;
+    const { error, message } = customEvent.detail;
+    
+    let errorMessage: string;
+    if (error === 'account_in_use') {
+      errorMessage = message || i18n.t('auth.accountInUse');
+    } else {
+      errorMessage = message || i18n.t('auth.googleLoginError');
+    }
+    
+    this.showGeneralError(errorMessage);
   }
 
   /**
