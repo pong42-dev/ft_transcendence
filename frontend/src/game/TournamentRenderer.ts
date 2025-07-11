@@ -1,5 +1,6 @@
 import { TournamentMatchResult } from './TournamentClient';
 import { UIUtils } from '../utils/UIUtils';
+import i18next from '../services/i18n';
 
 /**
  * TournamentRenderer - 토너먼트 UI 렌더링 전담 클래스
@@ -62,7 +63,7 @@ export class TournamentRenderer {
               isEmpty ? emptyText : UIUtils.sanitizePlayerName(participant.display_name || participant.name || 'Unknown')
             }</span>
             <div class="h-6 mt-2 flex items-center gap-2">
-              ${!isEmpty && isCurrentUser ? '<span class="inline-block px-2 py-1 text-xs font-bold text-terminal-black bg-terminal-green opacity-65 rounded-full">You</span>' : ''}
+              ${!isEmpty && isCurrentUser ? `<span class="inline-block px-2 py-1 text-xs font-bold text-terminal-black bg-terminal-green opacity-65 rounded-full">${i18next.t('tournament.client.renderer.you')}</span>` : ''}
               ${!isEmpty && isWinner && (matchStatus === 'completed' || matchStatus === 'finished') ? '<span class="text-lg">🏆</span>' : ''}
             </div>
           </div>
@@ -92,20 +93,20 @@ export class TournamentRenderer {
     return `
       <div class="h-full flex flex-col">
         <div class="text-center text-sm font-bold mb-2 ${isPlaying ? 'text-blue-400' : hasValidMatch ? 'text-terminal-green' : 'text-terminal-gray'}">
-          준결승 ${matchNumber}
+          ${i18next.t('tournament.client.renderer.semifinal', { number: matchNumber })}
         </div>
         <div class="flex-1 flex flex-col justify-center space-y-2">
           ${hasValidMatch 
             ? this.renderPlayerCard(player1, winner === player1.id, !!(this.currentUserId && player1.user_id === this.currentUserId), player1Score, match.status)
-            : this.renderPlayerCard(null, false, false, '-', 'waiting', 'TBD')
+            : this.renderPlayerCard(null, false, false, '-', 'waiting', i18next.t('tournament.client.renderer.tbd'))
           }
-          <div class="text-center text-xs text-terminal-green opacity-50">vs</div>
+          <div class="text-center text-xs text-terminal-green opacity-50">${i18next.t('tournament.client.renderer.vs')}</div>
           ${hasValidMatch 
             ? this.renderPlayerCard(player2, winner === player2.id, !!(this.currentUserId && player2.user_id === this.currentUserId), player2Score, match.status)
-            : this.renderPlayerCard(null, false, false, '-', 'waiting', 'TBD')
+            : this.renderPlayerCard(null, false, false, '-', 'waiting', i18next.t('tournament.client.renderer.tbd'))
           }
         </div>
-        ${hasValidMatch ? `<div class="text-center text-xs text-terminal-gray mt-2">Match #${match.id}</div>` : ''}
+        ${hasValidMatch ? `<div class="text-center text-xs text-terminal-gray mt-2">${i18next.t('tournament.client.renderer.match_number', { matchId: match.id })}</div>` : ''}
       </div>
     `;
   }
@@ -133,13 +134,13 @@ export class TournamentRenderer {
             ? this.renderPlayerCard(player1, winner === player1.id, !!(this.currentUserId && player1.user_id === this.currentUserId), player1Score, match.status)
             : this.renderPlayerCard(null, false, false, '-', 'waiting', '?')
           }
-          <div class="text-xs text-terminal-green opacity-50 px-2">vs</div>
+          <div class="text-xs text-terminal-green opacity-50 px-2">${i18next.t('tournament.client.renderer.vs')}</div>
           ${hasValidMatch 
             ? this.renderPlayerCard(player2, winner === player2.id, !!(this.currentUserId && player2.user_id === this.currentUserId), player2Score, match.status)
             : this.renderPlayerCard(null, false, false, '-', 'waiting', '?')
           }
         </div>
-        ${hasValidMatch ? `<div class="text-center text-xs text-terminal-gray mt-2">Match #${match.id}</div>` : ''}
+        ${hasValidMatch ? `<div class="text-center text-xs text-terminal-gray mt-2">${i18next.t('tournament.client.renderer.match_number', { matchId: match.id })}</div>` : ''}
       </div>
     `;
   }
@@ -226,12 +227,12 @@ export class TournamentRenderer {
     const buttons = {
       cancel: {
         id: 'cancel-tournament-btn',
-        text: '토너먼트 나가기',
+        text: i18next.t('tournament.client.renderer.cancel_tournament'),
         class: 'px-6 py-3 border border-terminal-red text-terminal-red rounded-lg hover:bg-terminal-red hover:bg-opacity-10 transition-all'
       },
       home: {
         id: 'home-btn',
-        text: '🏠 홈으로 돌아가기',
+        text: i18next.t('tournament.client.renderer.home_button'),
         class: 'px-6 py-3 bg-terminal-green text-terminal-black font-bold rounded-lg hover:bg-opacity-80 transition-all text-lg'
       }
     };
@@ -278,10 +279,10 @@ export class TournamentRenderer {
   renderGameCountdownContainer(time: number): string {
     return this.createTournamentContainer(`
       <div id="waiting-screen" class="flex-1 flex flex-col items-center justify-center">
-        <h2 class="text-3xl font-bold mb-4">토너먼트 매치 시작</h2>
-        <p class="text-xl mb-8">게임이 곧 시작됩니다...</p>
+        <h2 class="text-3xl font-bold mb-4">${i18next.t('tournament.client.renderer.tournament_match_starting')}</h2>
+        <p class="text-xl mb-8">${i18next.t('tournament.client.renderer.game_starting_soon')}</p>
         <div id="countdown-display" class="text-7xl font-mono font-bold mb-8">${time}</div>
-        <div class="text-sm text-terminal-cyan">준비하세요!</div>
+        <div class="text-sm text-terminal-cyan">${i18next.t('tournament.client.renderer.get_ready')}</div>
       </div>
     `);
   }

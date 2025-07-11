@@ -573,6 +573,53 @@
       "countdown": {
         "startingIn": "{{countdown}}초 후 시작...",
         "finished": "카운트다운 종료, 토너먼트 시작 중..."
+      },
+      "renderer": {
+        "vs": "vs",
+        "semifinal": "준결승 {{number}}",
+        "loading_bracket": "브라켓 정보를 불러오는 중...",
+        "match_number": "매치 #{{matchId}}",
+        "you": "당신",
+        "tournament_progress": "🏆 토너먼트 진행 중 🏆",
+        "match_result": "🏆 매치 결과 🏆",
+        "winner": "승자: {{winnerName}}",
+        "tournament_complete": "🏆 토너먼트 완료! 🏆",
+        "champion": "우승자: {{winnerName}} - 축하합니다!",
+        "next_match_in": "다음 매치까지",
+        "game_starts_in": "게임 시작까지",
+        "home_button": "🏠 홈으로 돌아가기",
+        "cancel_tournament": "토너먼트 나가기",
+        "tournament_match_starting": "토너먼트 매치 시작",
+        "game_starting_soon": "게임이 곧 시작됩니다...",
+        "get_ready": "준비하세요!",
+        "tbd": "TBD"
+      },
+      "errorHandler": {
+        "error_title": "⚠️ 오류",
+        "confirm": "확인",
+        "validation_errors": {
+          "invalid_user_id": "유효하지 않은 사용자 ID입니다.",
+          "invalid_tournament_id": "유효하지 않은 토너먼트 ID입니다.",
+          "invalid_match_data": "유효하지 않은 매치 데이터입니다.",
+          "invalid_game_result": "유효하지 않은 게임 결과 데이터입니다.",
+          "invalid_player_name": "유효하지 않은 플레이어 이름입니다.",
+          "invalid_game_score": "유효하지 않은 게임 점수입니다.",
+          "invalid_websocket_message": "유효하지 않은 메시지 형식입니다.",
+          "invalid_data": "유효하지 않은 데이터입니다."
+        },
+        "websocket_errors": {
+          "connection_error": "토너먼트 연결 중 오류가 발생했습니다. 다시 시도해주세요.",
+          "connection_closed": "토너먼트 연결이 끊어졌습니다.",
+          "timeout": "토너먼트 서버 연결이 시간 초과되었습니다. 다시 시도해주세요.",
+          "authorization_error": "토너먼트 참가 권한이 없습니다.",
+          "tournament_state_error": "토너먼트가 이미 종료되었거나 참가할 수 없는 상태입니다."
+        },
+        "tournament_errors": {
+          "bracket_processing_error": "브라켓 정보 처리 중 오류가 발생했습니다.",
+          "bracket_update_error": "브라켓 업데이트 중 오류가 발생했습니다.",
+          "match_starting_error": "매치 시작 중 오류가 발생했습니다.",
+          "tournament_end_error": "토너먼트 종료 처리 중 오류가 발생했습니다."
+        }
       }
     }
   },

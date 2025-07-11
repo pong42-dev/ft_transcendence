@@ -1,5 +1,6 @@
 import { ModalManager, ModalContent } from '../managers/ModalManager';
 import { UIUtils } from '../utils/UIUtils';
+import i18next from '../services/i18n';
 
 /**
  * TournamentErrorHandler - 토너먼트 관련 오류 및 비정상 종료 처리 전담 클래스
@@ -53,7 +54,7 @@ export class TournamentErrorHandler {
    */
   handleWebSocketError(error: any): void {
     console.error('WebSocket error:', error);
-    this.showErrorMessage('토너먼트 연결 중 오류가 발생했습니다. 다시 시도해주세요.');
+    this.showErrorMessage(i18next.t('tournament.client.errorHandler.websocket_errors.connection_error'));
   }
 
   /**
@@ -82,7 +83,7 @@ export class TournamentErrorHandler {
     
     // 토너먼트가 정상 종료되지 않고 매치 처리 중이 아닌 경우에만 오류 표시
     if (!isProcessingMatch) {
-      this.showErrorMessage('토너먼트 연결이 끊어졌습니다.');
+      this.showErrorMessage(i18next.t('tournament.client.errorHandler.websocket_errors.connection_closed'));
       return true; // 추가 정리 작업 필요
     }
     
@@ -94,7 +95,7 @@ export class TournamentErrorHandler {
    */
   handleMatchStartingError(error: any): void {
     console.error('Error handling match starting:', error);
-    this.showErrorMessage('매치 시작 중 오류가 발생했습니다.');
+    this.showErrorMessage(i18next.t('tournament.client.errorHandler.tournament_errors.match_starting_error'));
   }
 
   /**
@@ -102,7 +103,7 @@ export class TournamentErrorHandler {
    */
   handleBracketUpdateError(error: any): void {
     console.error('Error handling bracket update:', error);
-    this.showErrorMessage('브라켓 업데이트 중 오류가 발생했습니다.');
+    this.showErrorMessage(i18next.t('tournament.client.errorHandler.tournament_errors.bracket_update_error'));
   }
 
   /**
@@ -110,7 +111,7 @@ export class TournamentErrorHandler {
    */
   handleTournamentBracketError(error: any): void {
     console.error('Error handling tournament bracket:', error);
-    this.showErrorMessage('브라켓 정보 처리 중 오류가 발생했습니다.');
+    this.showErrorMessage(i18next.t('tournament.client.errorHandler.tournament_errors.bracket_processing_error'));
   }
 
   /**
@@ -118,7 +119,7 @@ export class TournamentErrorHandler {
    */
   handleTournamentEndError(error: any): void {
     console.error('Error handling tournament end:', error);
-    this.showErrorMessage('토너먼트 종료 처리 중 오류가 발생했습니다.');
+    this.showErrorMessage(i18next.t('tournament.client.errorHandler.tournament_errors.tournament_end_error'));
   }
 
   /**
@@ -126,37 +127,37 @@ export class TournamentErrorHandler {
    */
   handleValidationError(field: string): void {
     const messages: Record<string, string> = {
-      'userId': '유효하지 않은 사용자 ID입니다.',
-      'tournamentId': '유효하지 않은 토너먼트 ID입니다.',
-      'matchData': '유효하지 않은 매치 데이터입니다.',
-      'gameResult': '유효하지 않은 게임 결과 데이터입니다.',
-      'playerName': '유효하지 않은 플레이어 이름입니다.',
-      'gameScore': '유효하지 않은 게임 점수입니다.',
-      'webSocketMessage': '유효하지 않은 메시지 형식입니다.'
+      'userId': i18next.t('tournament.client.errorHandler.validation_errors.invalid_user_id'),
+      'tournamentId': i18next.t('tournament.client.errorHandler.validation_errors.invalid_tournament_id'),
+      'matchData': i18next.t('tournament.client.errorHandler.validation_errors.invalid_match_data'),
+      'gameResult': i18next.t('tournament.client.errorHandler.validation_errors.invalid_game_result'),
+      'playerName': i18next.t('tournament.client.errorHandler.validation_errors.invalid_player_name'),
+      'gameScore': i18next.t('tournament.client.errorHandler.validation_errors.invalid_game_score'),
+      'webSocketMessage': i18next.t('tournament.client.errorHandler.validation_errors.invalid_websocket_message')
     };
     
-    this.showErrorMessage(messages[field] || '유효하지 않은 데이터입니다.');
+    this.showErrorMessage(messages[field] || i18next.t('tournament.client.errorHandler.validation_errors.invalid_data'));
   }
 
   /**
    * 연결 타임아웃 오류 처리
    */
   handleConnectionTimeout(): void {
-    this.showErrorMessage('토너먼트 서버 연결이 시간 초과되었습니다. 다시 시도해주세요.');
+    this.showErrorMessage(i18next.t('tournament.client.errorHandler.websocket_errors.timeout'));
   }
 
   /**
    * 권한 오류 처리
    */
   handleAuthorizationError(): void {
-    this.showErrorMessage('토너먼트 참가 권한이 없습니다.');
+    this.showErrorMessage(i18next.t('tournament.client.errorHandler.websocket_errors.authorization_error'));
   }
 
   /**
    * 토너먼트 상태 오류 처리
    */
   handleTournamentStateError(): void {
-    this.showErrorMessage('토너먼트가 이미 종료되었거나 참가할 수 없는 상태입니다.');
+    this.showErrorMessage(i18next.t('tournament.client.errorHandler.websocket_errors.tournament_state_error'));
   }
 
   /**
@@ -195,14 +196,14 @@ export class TournamentErrorHandler {
 
     // Show user-friendly error message
     const errorModal: ModalContent = {
-      title: '⚠️ 오류',
+      title: i18next.t('tournament.client.errorHandler.error_title'),
       content: () => {
         const el = document.createElement('div');
         el.className = 'text-center p-4';
         el.innerHTML = `
           <div class="text-terminal-red mb-4">${UIUtils.sanitizeErrorMessage(message)}</div>
           <button class="px-4 py-2 bg-terminal-green text-terminal-black rounded hover:bg-terminal-yellow transition-colors">
-            확인
+            ${i18next.t('tournament.client.errorHandler.confirm')}
           </button>
         `;
         

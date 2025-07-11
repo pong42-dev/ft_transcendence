@@ -6,6 +6,7 @@ import { ModalManager } from '../managers/ModalManager';
 import { TournamentRenderer } from './TournamentRenderer';
 import { TournamentErrorHandler } from './TournamentErrorHandler';
 import { UIUtils } from '../utils/UIUtils';
+import i18next from '../services/i18n';
 
 
 
@@ -395,15 +396,15 @@ export class TournamentClient {
       const finals = this.bracketMatches.filter(m => m.round_number === 2);
       bracketHTML = this.renderer.renderBracketLayoutContainer(semiFinals, finals);
     } else {
-      bracketHTML = '<div class="text-center text-terminal-gray">브라켓 정보를 불러오는 중...</div>';
+      bracketHTML = `<div class="text-center text-terminal-gray">${i18next.t('tournament.client.renderer.loading_bracket')}</div>`;
     }
     
     // 새로운 컴포넌트 시스템 사용
     this.container.innerHTML = this.renderer.renderTournamentWindow(
-      '🏆 토너먼트 진행 중 🏆',
+      i18next.t('tournament.client.renderer.tournament_progress'),
       message,
       bracketHTML,
-      { seconds, message: '게임 시작까지' },
+      { seconds, message: i18next.t('tournament.client.renderer.game_starts_in') },
       'cancel',
       matchId
     );
@@ -471,15 +472,15 @@ export class TournamentClient {
       const finals = this.bracketMatches.filter(m => m.round_number === 2);
       bracketHTML = this.renderer.renderBracketLayoutContainer(semiFinals, finals);
     } else {
-      bracketHTML = '<div class="text-center text-terminal-gray">브라켓 정보를 불러오는 중...</div>';
+      bracketHTML = `<div class="text-center text-terminal-gray">${i18next.t('tournament.client.renderer.loading_bracket')}</div>`;
     }
     
     // 새로운 컴포넌트 시스템 사용
     this.container.innerHTML = this.renderer.renderTournamentWindow(
-      '🏆 매치 결과 🏆',
-      `승자: ${winnerName}`,
+      i18next.t('tournament.client.renderer.match_result'),
+      i18next.t('tournament.client.renderer.winner', { winnerName }),
       bracketHTML,
-      { seconds: 5, message: '다음 매치까지' },
+      { seconds: 5, message: i18next.t('tournament.client.renderer.next_match_in') },
       'cancel',
       result.matchId
     );
@@ -616,13 +617,13 @@ export class TournamentClient {
       const finals = this.bracketMatches.filter(m => m.round_number === 2);
       bracketHTML = this.renderer.renderBracketLayoutContainer(semiFinals, finals);
     } else {
-      bracketHTML = '<div class="text-center text-terminal-red">브라켓 정보를 불러올 수 없습니다.</div>';
+      bracketHTML = `<div class="text-center text-terminal-red">${i18next.t('tournament.client.errorHandler.websocket_errors.connection_error')}</div>`;
     }
     
     // 새로운 컴포넌트 시스템 사용 (카운트다운 없음)
     this.container.innerHTML = this.renderer.renderTournamentWindow(
-      '🏆 토너먼트 완료! 🏆',
-      `우승자: ${winnerName} - 축하합니다!`,
+      i18next.t('tournament.client.renderer.tournament_complete'),
+      i18next.t('tournament.client.renderer.champion', { winnerName }),
       bracketHTML,
       undefined, // 카운트다운 없음
       'home' // 홈 버튼

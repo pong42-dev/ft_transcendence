@@ -578,6 +578,53 @@
       "countdown": {
         "startingIn": "Starting in {{countdown}}...",
         "finished": "Countdown finished, starting tournament..."
+      },
+      "renderer": {
+        "vs": "vs",
+        "semifinal": "Semi-Final {{number}}",
+        "loading_bracket": "Loading bracket information...",
+        "match_number": "Match #{{matchId}}",
+        "you": "You",
+        "tournament_progress": "🏆 Tournament in Progress 🏆",
+        "match_result": "🏆 Match Result 🏆",
+        "winner": "Winner: {{winnerName}}",
+        "tournament_complete": "🏆 Tournament Complete! 🏆",
+        "champion": "Champion: {{winnerName}} - Congratulations!",
+        "next_match_in": "Next match in",
+        "game_starts_in": "Game starts in",
+        "home_button": "🏠 Return Home",
+        "cancel_tournament": "Leave Tournament",
+        "tournament_match_starting": "Tournament Match Starting",
+        "game_starting_soon": "Game starting soon...",
+        "get_ready": "Get ready!",
+        "tbd": "TBD"
+      },
+      "errorHandler": {
+        "error_title": "⚠️ Error",
+        "confirm": "Confirm",
+        "validation_errors": {
+          "invalid_user_id": "Invalid user ID.",
+          "invalid_tournament_id": "Invalid tournament ID.",
+          "invalid_match_data": "Invalid match data.",
+          "invalid_game_result": "Invalid game result data.",
+          "invalid_player_name": "Invalid player name.",
+          "invalid_game_score": "Invalid game score.",
+          "invalid_websocket_message": "Invalid message format.",
+          "invalid_data": "Invalid data."
+        },
+        "websocket_errors": {
+          "connection_error": "An error occurred during tournament connection. Please try again.",
+          "connection_closed": "Tournament connection has been lost.",
+          "timeout": "Tournament server connection timed out. Please try again.",
+          "authorization_error": "You do not have permission to join this tournament.",
+          "tournament_state_error": "Tournament has already ended or is not available to join."
+        },
+        "tournament_errors": {
+          "bracket_processing_error": "An error occurred while processing bracket information.",
+          "bracket_update_error": "An error occurred during bracket update.",
+          "match_starting_error": "An error occurred while starting the match.",
+          "tournament_end_error": "An error occurred while processing tournament end."
+        }
       }
     }
   },

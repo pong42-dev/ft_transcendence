@@ -578,6 +578,53 @@
       "countdown": {
         "startingIn": "{{countdown}}秒で開始...",
         "finished": "カウントダウン終了、トーナメントを開始中..."
+      },
+      "renderer": {
+        "vs": "vs",
+        "semifinal": "準決勝 {{number}}",
+        "loading_bracket": "ブラケット情報を読み込み中...",
+        "match_number": "試合 #{{matchId}}",
+        "you": "あなた",
+        "tournament_progress": "🏆 トーナメント進行中 🏆",
+        "match_result": "🏆 試合結果 🏆",
+        "winner": "勝者: {{winnerName}}",
+        "tournament_complete": "🏆 トーナメント完了！ 🏆",
+        "champion": "優勝者: {{winnerName}} - おめでとうございます！",
+        "next_match_in": "次の試合まで",
+        "game_starts_in": "ゲーム開始まで",
+        "home_button": "🏠 ホームに戻る",
+        "cancel_tournament": "トーナメントを退出",
+        "tournament_match_starting": "トーナメント試合開始",
+        "game_starting_soon": "ゲームが間もなく開始されます...",
+        "get_ready": "準備してください！",
+        "tbd": "未定"
+      },
+      "errorHandler": {
+        "error_title": "⚠️ エラー",
+        "confirm": "確認",
+        "validation_errors": {
+          "invalid_user_id": "無効なユーザーIDです。",
+          "invalid_tournament_id": "無効なトーナメントIDです。",
+          "invalid_match_data": "無効な試合データです。",
+          "invalid_game_result": "無効なゲーム結果データです。",
+          "invalid_player_name": "無効なプレイヤー名です。",
+          "invalid_game_score": "無効なゲームスコアです。",
+          "invalid_websocket_message": "無効なメッセージ形式です。",
+          "invalid_data": "無効なデータです。"
+        },
+        "websocket_errors": {
+          "connection_error": "トーナメント接続中にエラーが発生しました。もう一度お試しください。",
+          "connection_closed": "トーナメント接続が切断されました。",
+          "timeout": "トーナメントサーバーへの接続がタイムアウトしました。もう一度お試しください。",
+          "authorization_error": "このトーナメントへの参加権限がありません。",
+          "tournament_state_error": "トーナメントは既に終了しているか、参加できない状態です。"
+        },
+        "tournament_errors": {
+          "bracket_processing_error": "ブラケット情報の処理中にエラーが発生しました。",
+          "bracket_update_error": "ブラケット更新中にエラーが発生しました。",
+          "match_starting_error": "試合開始中にエラーが発生しました。",
+          "tournament_end_error": "トーナメント終了処理中にエラーが発生しました。"
+        }
       }
     }
   },
