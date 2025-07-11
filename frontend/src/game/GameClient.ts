@@ -346,14 +346,15 @@ export class GameClient {
         isFinal: false,
         onProfileClick: () => {
           // onProfileClick - 프로필 보기하고 게임 종료
-          this.callbacks.onFinish();
+          // GameEndModal에서 onGameFinish가 onProfileClick에 통합되었으므로,
+          // onFinish 콜백만 호출하면 됨
         },
         onGameFinish: () => {
-          // onGameFinish - Close 버튼을 눌렀을 때만 게임 종료
+          // onGameFinish - 이제 onProfileClick에 통합됨
           this.callbacks.onFinish();
         },
-        gameMode: this.gameInfo.type, // 게임 모드 전달
-        aiDifficulty: this.gameInfo.type === 'ai_1v1' ? (this.aiDifficulty || 'medium') : undefined // AI 모드일 때만 난이도 전달
+        gameMode: this.gameMode,
+        aiDifficulty: this.aiDifficulty
       });
     }
   }
