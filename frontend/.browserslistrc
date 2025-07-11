@@ -1,6 +1,6 @@
 # Browsers that we support
 
-last 1 chrome version
-last 1 edge version
+last 2 chrome version
+last 2 firefox version
 
 # Our compatibility tooling is configured via the `.browserslistrc` file in the `frontend` directory, which provides a concrete set of browser versions to target. This ensures that our automated tools (like Autoprefixer) apply the necessary CSS vendor prefixes for these browsers.

@@ -1,77 +1,190 @@
-# Browser Support and Compatibility Plan
+# 브라우저 지원 및 호환성 계획
 
-## 1. Objective
+## 1. 목표
 
-This document outlines the strategy to ensure that our web application provides a consistent, high-quality, and error-free user experience on the latest versions of **Google Chrome** and **Microsoft Edge**. This plan aligns with the `WEB-BROWSER-COMPAT` requirement specified in the `PRD-master.md`.
+본 문서는 웹 애플리케이션이 최신 버전의 **Google Chrome** 및 **Mozilla Firefox**에서 일관되고 고품질이며 오류 없는 사용자 경험을 제공하도록 보장하기 위한 전략을 설명합니다. 이 계획은 `PRD-master.md`에 명시된 `WEB-BROWSER-COMPAT` 요구 사항과 일치합니다.
 
-## 2. Supported Browsers
+## 2. 지원 브라우저
 
-We officially support the following browsers:
+저희는 다음 브라우저를 공식적으로 지원합니다:
 
--   **Google Chrome**: The latest stable version.
--   **Microsoft Edge**: The latest stable version (Chromium-based).
+-   **Google Chrome**: 최신 안정 버전.
+-   **Mozilla Firefox**: 최신 안정 버전.
 
-Our compatibility tooling is configured via the `.browserslistrc` file in the `frontend` directory, which provides a concrete set of browser versions to target. This ensures that our automated tools (like Autoprefixer) apply the necessary CSS vendor prefixes for these browsers.
+저희의 호환성 도구는 `frontend` 디렉토리의 `.browserslistrc` 파일을 통해 구성되며, 이는 구체적인 대상 브라우저 버전 세트를 제공합니다. 이를 통해 자동화된 도구(예: Autoprefixer)가 이들 브라우저에 필요한 CSS 벤더 접두사를 적용하도록 보장합니다.
 
-## 3. Core Principles
+## 3. 핵심 원칙
 
--   **Consistency**: The application's look, feel, and functionality should be nearly identical across both supported browsers.
--   **Performance**: The application must remain responsive and performant on both browsers, with no noticeable degradation on either platform.
--   **Graceful Degradation**: While we target modern browsers, we will avoid using experimental features that are not yet stable in our supported browsers.
+-   **일관성**: 애플리케이션의 모양, 느낌 및 기능은 지원되는 두 브라우저에서 거의 동일해야 합니다.
+-   **성능**: 애플리케이션은 두 브라우저 모두에서 반응적이고 성능이 뛰어나야 하며, 어느 플랫폼에서도 눈에 띄는 성능 저하가 없어야 합니다.
+-   **점진적 저하**: 최신 브라우저를 대상으로 하지만, 지원되는 브라우저에서 아직 안정적이지 않은 실험적 기능 사용은 피할 것입니다.
 
-## 4. Development & Tooling Strategy
+## 4. 주요 브라우저 차이점 및 위험 영역
 
-Our modern frontend stack (Vite, TypeScript, Tailwind CSS) inherently provides a strong foundation for cross-browser compatibility.
+Chrome과 Firefox 간의 근본적인 차이점을 이해하는 것은 효과적인 테스트 및 버그 방지에 중요합니다.
 
--   **Vite**: Transpiles modern JavaScript and CSS to be compatible with a wide range of browsers.
--   **TypeScript**: Our `tsconfig.json` is configured to target `ES2020`, which is fully supported by modern Chrome and Edge, minimizing JavaScript syntax inconsistencies.
--   **Tailwind CSS & Autoprefixer**: By using the `.browserslistrc` file, `autoprefixer` automatically adds vendor prefixes to our CSS during the build process, ensuring styles work correctly across different rendering engines.
+### 4.1. 렌더링 엔진 및 JavaScript 엔진
+- **Chrome**: Blink (렌더링) + V8 (JavaScript) 사용
+- **Firefox**: Gecko (렌더링) + SpiderMonkey (JavaScript) 사용
 
-## 5. Testing Strategy
+이러한 다른 엔진은 CSS 렌더링, JavaScript API 동작 및 성능 특성에서 미묘한 차이를 유발할 수 있습니다.
 
-Thorough and systematic testing is the cornerstone of our compatibility plan. All new features must be tested on both Chrome and Edge before being merged into the `develop` branch.
+### 4.2. 개인 정보 보호 및 쿠키 처리
+**Firefox의 강화된 추적 보호(ETP)**는 Chrome의 현재 기본 설정보다 훨씬 더 공격적입니다:
+- Firefox는 알려진 추적기 목록에 있는 도메인의 쿠키를 기본적으로 차단합니다.
+- 이는 타사 서비스, 특히 인증 제공업체에 영향을 미칠 수 있습니다.
+- **치명적인 영향**: Google OAuth 흐름은 저희 애플리케이션에서 가장 위험한 영역입니다.
 
-### 5.1. Manual Testing Checklist
+**저희의 쿠키 구성 분석:**
+저희의 인증 쿠키는 적절한 `sameSite: 'lax'`, `httpOnly: true`, `secure` 설정으로 잘 구성되어 두 브라우저 모두에서 일관된 동작을 보장합니다.
 
-Developers should perform manual testing in both browsers for all changes. The following checklist covers critical user flows:
+### 4.3. 교차 브라우저 버그에 대한 고위험 영역
 
--   **[ ] Core UI & Layout:**
-    -   Verify the main layout (`App.ts`), terminal (`Terminal.ts`), and user profile (`UserProfile.ts`) render correctly.
-    -   Check for any CSS alignment, stacking, or font rendering issues.
+코드베이스 분석에 따르면 다음 영역은 집중적인 테스트가 필요합니다:
 
--   **[ ] Authentication (`AuthManager.ts`):**
-    -   Test local login (`LoginModal.ts`).
-    -   Test local registration (`RegisterModal.ts`).
-    -   Test the full Google OAuth flow.
-    -   Test the full 2FA flow (enable, disable, and verify at login).
-    -   Verify cross-tab authentication sync using `BroadcastChannel`.
+#### **A. Google OAuth 인증 흐름**
+- **위험 수준**: 높음
+- **파일**: `frontend/src/managers/AuthManager.ts`, `frontend/src/components/modals/LoginModal.ts`
+- **이유**: Firefox의 ETP가 Google의 인증 쿠키 또는 요청을 차단할 수 있습니다.
+- **테스트 중점**: 로그인 버튼 클릭부터 성공적인 인증까지의 전체 OAuth 흐름
 
--   **[ ] Game Functionality (`GamePage.ts`, `GameClient.ts`):**
-    -   Configure and start all game modes (`vs AI`, `local`, `tournament`).
-    -   Ensure `GameRenderer.ts` displays all game elements correctly with no visual artifacts.
-    -   Confirm `InputHandler.ts` captures keyboard inputs correctly.
-    -   Verify real-time WebSocket events for game state and tournaments are handled correctly.
+#### **B. Canvas API (게임 렌더링)**
+- **위험 수준**: 높음
+- **파일**: `frontend/src/game/GameRenderer.ts`
+- **이유**: Canvas 렌더링은 브라우저마다 다를 수 있으며, 특히 텍스트 렌더링 및 안티앨리어싱에서 차이가 날 수 있습니다.
+- **테스트 중점**: 게임 요소, 텍스트 위치 및 성능의 시각적 일관성
 
--   **[ ] User & Profile Management:**
-    -   Test all `friend` commands.
-    -   Test `set name` and `set avatar` commands, including file upload functionality.
-    -   Check the `NotificationCenter.ts` for real-time notifications.
+#### **C. 클라이언트 측 라우팅**
+- **위험 수준**: 중간
+- **파일**: `frontend/src/utils/Router.ts`
+- **이유**: History API (`pushState`, `popstate`)의 엣지 케이스가 다를 수 있습니다.
+- **테스트 중점**: 브라우저 뒤로/앞으로 버튼, 직접 URL 탐색, 프로그래밍 방식 탐색
 
--   **[ ] Console Checks:**
-    -   During all tests, keep the browser's developer console open to monitor for any errors or warnings. The application should be free of console errors.
+#### **D. WebSocket 오류 처리**
+- **위험 수준**: 중간
+- **파일**: `frontend/src/services/websocket/WebSocketService.ts`
+- **이유**: 연결 오류 감지 및 보고 타이밍이 다를 수 있습니다.
+- **테스트 중점**: 네트워크 중단 처리, 서버 측 연결 해제 동작
 
-## 6. Issue Resolution Process
+#### **E. 국제화 (i18n)**
+- **위험 수준**: 낮음-중간
+- **파일**: `frontend/src/services/i18n.ts`
+- **이유**: `Intl` API 구현에 사소한 차이가 있을 수 있습니다.
+- **테스트 중점**: 날짜/시간 형식, 문자 인코딩
 
-If a bug is discovered in one browser but not the other:
+## 5. 개발 및 도구 전략
 
-1.  **Isolate the Issue**: Create a minimal reproducible example of the bug. This helps determine if the issue is with our code, a library, or the browser itself.
-2.  **Consult Compatibility Tables**: Use resources like [MDN Web Docs](https://developer.mozilla.org/en-US/docs/Web/API) and [Can I use...](https://caniuse.com/) to check for known compatibility differences in the specific CSS or Web API being used.
-3.  **Implement a Fix**:
-    -   Prioritize solutions that use standard, cross-browser-compatible features.
-    -   If a feature is truly unsupported, implement a polyfill or a feature-detection-based fallback.
-4.  **Verify the Fix**: Test the fix on **both** browsers to ensure it has not introduced a regression in the other.
+저희의 현대적인 프론트엔드 스택(Vite, TypeScript, Tailwind CSS)은 교차 브라우저 호환성을 위한 강력한 기반을 제공합니다.
 
-## 7. Maintenance
+-   **Vite**: 최신 JavaScript 및 CSS를 광범위한 브라우저와 호환되도록 트랜스파일합니다.
+-   **TypeScript**: 저희의 `tsconfig.json`은 `ES2020`을 대상으로 구성되어 있으며, 이는 최신 Chrome 및 Firefox에서 완벽하게 지원되어 JavaScript 구문 불일치를 최소화합니다.
+-   **Tailwind CSS & Autoprefixer**: `.browserslistrc` 파일을 사용하여 `autoprefixer`는 빌드 프로세스 중에 CSS에 벤더 접두사를 자동으로 추가하여 다양한 렌더링 엔진에서 스타일이 올바르게 작동하도록 보장합니다.
 
--   **Dependency Updates**: Regularly update frontend dependencies (`npm update`) to incorporate the latest bug fixes and compatibility improvements.
--   **Stay Informed**: Team members are encouraged to stay aware of major changes or new features in upcoming Chrome and Edge releases.
+## 6. 향상된 테스트 전략
+
+철저하고 체계적인 테스트는 저희 호환성 계획의 초석입니다. 모든 새로운 기능은 `develop` 브랜치에 병합되기 전에 Chrome과 Firefox 모두에서 테스트되어야 합니다.
+
+### 6.1. 우선 순위 테스트 체크리스트
+
+고위험 구성 요소에 특히 주의를 기울여 다음 영역을 우선 순위 순서로 테스트하십시오:
+
+#### **우선 순위 1: 인증 및 OAuth (고위험)**
+-   **[ ] Google OAuth 흐름:**
+    -   버튼 클릭부터 성공적인 인증까지의 전체 로그인 흐름 테스트
+    -   리디렉션 처리 및 토큰 수신 확인
+    -   **Firefox 전용**: ETP 차단 확인 (주소 표시줄의 방패 아이콘)
+    -   차단된 리소스 경고에 대해 개발자 콘솔 모니터링
+-   **[ ] 로컬 인증:**
+    -   로컬 자격 증명으로 로그인/로그아웃 테스트
+    -   쿠키 기반 세션 관리 확인
+-   **[ ] 2단계 인증 흐름:**
+    -   QR 코드 생성 및 스캔 테스트
+    -   TOTP 코드 유효성 검사 확인
+-   **[ ] 탭 간 동기화:**
+    -   `BroadcastChannel` 인증 상태 동기화 테스트
+
+#### **우선 순위 2: 게임 기능 (고위험)**
+-   **[ ] Canvas 렌더링 (`GameRenderer.ts`):**
+    -   **텍스트 렌더링**: 점수, 이름 및 UI 텍스트가 위치와 선명도에서 동일한지 확인
+    -   **도형 렌더링**: 공 및 패들 가장자리에 아티팩트 또는 간격이 없는지 확인
+    -   **애니메이션 부드러움**: 게임 플레이 중 일관된 프레임 속도 보장
+-   **[ ] 입력 처리 (`InputHandler.ts`):**
+    -   키보드 응답성 및 정확도 테스트
+    -   브라우저 간 입력 지연 차이가 없는지 확인
+-   **[ ] WebSocket 통신:**
+    -   실시간 게임 상태 동기화 테스트
+    -   재연결 로직 테스트를 위해 네트워크 중단 시뮬레이션
+    -   토너먼트 이벤트 처리 확인
+
+#### **우선 순위 3: 핵심 UI 및 탐색 (중간 위험)**
+-   **[ ] 클라이언트 측 라우팅:**
+    -   브라우저 뒤로/앞으로 버튼 동작 테스트
+    -   직접 URL 탐색 확인 (주소 표시줄에 URL 붙여넣기)
+    -   로그인/로그아웃 후 프로그래밍 방식 탐색 테스트
+-   **[ ] 레이아웃 및 스타일링:**
+    -   주요 레이아웃 (`App.ts`), 터미널 (`Terminal.ts`), 사용자 프로필 (`UserProfile.ts`)이 올바르게 렌더링되는지 확인
+    -   CSS 정렬, 스태킹 또는 글꼴 렌더링 차이 확인
+
+#### **우선 순위 4: 사용자 관리 및 기능 (낮음-중간 위험)**
+-   **[ ] 프로필 관리:**
+    -   아바타 업로드 기능 (`FormData` API) 테스트
+    -   이름 변경 및 프로필 업데이트 확인
+-   **[ ] 친구 시스템:**
+    -   친구 요청/수락/거절 흐름 테스트
+    -   알림 처리 (`NotificationCenter.ts`) 확인
+-   **[ ] 국제화:**
+    -   en/ja/ko 간 언어 전환 테스트
+    -   날짜/시간 형식 일관성 확인
+
+### 6.2. 브라우저별 테스트 참고 사항
+
+#### **Firefox 전용 확인 사항:**
+-   **강화된 추적 보호**: OAuth 흐름 중 주소 표시줄의 방패 아이콘 모니터링
+-   **콘솔 모니터링**: "차단된 리소스" 경고에 특별한 주의
+-   **개인 정보 보호 설정**: 기본 개인 정보 보호 설정으로 테스트 (테스트를 위해 ETP 비활성화 금지)
+
+#### **Chrome 전용 확인 사항:**
+-   **타사 쿠키 경고**: 향후 쿠키 사용 중단 경고 주시
+-   **성능**: Chrome의 V8 엔진은 Firefox의 SpiderMonkey와 다르게 작동할 수 있습니다.
+
+### 6.3. 콘솔 오류 모니터링
+
+모든 테스트 단계에서:
+-   브라우저 개발자 콘솔을 항상 열어 둡니다.
+-   **무관용 정책**: 애플리케이션은 콘솔 오류 및 경고가 완전히 없어야 합니다.
+-   향후 참조를 위해 브라우저별 경고를 문서화합니다.
+
+## 7. 문제 해결 프로세스
+
+한 브라우저에서 버그가 발견되고 다른 브라우저에서는 발견되지 않은 경우:
+
+1.  **문제 격리**: 버그의 최소 재현 가능 예시를 만듭니다. 이는 문제가 저희 코드, 라이브러리 또는 브라우저 자체에 있는지 판단하는 데 도움이 됩니다.
+2.  **근본 원인 식별**:
+    -   OAuth 문제의 경우: Firefox의 ETP가 요청을 차단하는지 확인
+    -   Canvas 문제의 경우: 렌더링 API 및 텍스트 측정 비교
+    -   라우팅 문제의 경우: History API 사용 패턴 확인
+3.  **호환성 리소스 참조**: 알려진 호환성 차이를 확인하려면 [MDN Web Docs](https://developer.mozilla.org/en-US/docs/Web/API) 및 [Can I use...](https://caniuse.com/)를 사용하십시오.
+4.  **수정 사항 구현**:
+    -   표준, 교차 브라우저 호환 기능을 사용하는 솔루션을 우선시합니다.
+    -   OAuth 문제의 경우: 대체 인증 방법을 고려합니다.
+    -   Canvas 문제의 경우: 기능 감지 및 폴백을 구현합니다.
+    -   기능이 실제로 지원되지 않는 경우, 폴리필 또는 점진적 저하를 구현합니다.
+5.  **수정 사항 확인**: 회귀를 유발하지 않았는지 확인하기 위해 **두** 브라우저 모두에서 수정 사항을 테스트합니다.
+
+## 8. 유지 보수 및 모니터링
+
+-   **종속성 업데이트**: 최신 버그 수정 및 호환성 개선 사항을 통합하기 위해 프론트엔드 종속성(`npm update`)을 정기적으로 업데이트합니다.
+-   **브라우저 릴리스 모니터링**: Chrome 및 Firefox 릴리스의 주요 변경 사항, 특히 개인 정보 보호 관련 업데이트에 대한 정보를 얻습니다.
+-   **인증 제공업체 변경**: 교차 브라우저 호환성에 영향을 미칠 수 있는 Google OAuth API 변경 사항을 모니터링합니다.
+-   **성능 모니터링**: 게임 복잡도가 증가함에 따라 브라우저 간 Canvas 렌더링 성능을 추적합니다.
+
+## 9. 비상 대응 계획
+
+운영 환경에서 치명적인 교차 브라우저 문제가 발견된 경우:
+
+1.  **즉각적인 평가**: 문제가 핵심 기능(인증, 게임 플레이)에 영향을 미치는지 판단합니다.
+2.  **빠른 수정**: 필요한 경우 브라우저 감지 및 임시 해결 방법을 구현합니다.
+3.  **적절한 해결**: 영구적인 수정에 대한 표준 문제 해결 프로세스를 따릅니다.
+4.  **사후 검토**: 유사한 문제를 방지하기 위해 이 테스트 계획을 업데이트합니다.
+
+이 포괄적인 접근 방식은 개발 속도와 사용자 경험 품질을 유지하면서 강력한 교차 브라우저 호환성을 보장합니다.
