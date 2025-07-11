@@ -775,12 +775,12 @@ export class TournamentSession {
     const tournamentsRepository = (this.fastify as any).tournamentsRepository;
     await tournamentsRepository.updateTournamentStatus(Number(this.tournamentId), 'ended', finalWinner);
 
-    // 5초 후 모든 소켓 닫기 (결과 화면을 보여준 뒤)
-    setTimeout(() => {
-      if (this.socket && this.socket.readyState === WebSocket.OPEN) {
-        this.socket.close();
-      }
-    }, 5000);
+    // 결과 전송 후 즉시 소켓 닫기 - 프론트엔드에서 결과 화면을 계속 표시
+    (this.fastify as any).log?.info?.(`[Session ${this.tournamentId}] Tournament results sent, closing connection`);
+    if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+      this.socket.close();
+    }
+    this.socket = null;
   }
 
   /**

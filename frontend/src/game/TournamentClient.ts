@@ -349,12 +349,18 @@ export class TournamentClient {
     });
     this.webSocketService.on('close', () => {
       console.log('WebSocket connection closed');
-      // 토너먼트가 정상 종료된 경우나 매치 처리 중이 아닌 경우, 그리고 사용자가 의도적으로 종료하지 않은 경우에만 오류 표시
-      if (!this.tournamentEnded && !this.isProcessingMatch && !this.isManualExit) {
-        this.showErrorMessage('토너먼트 연결이 끊어졌습니다.');
+      // 토너먼트가 정상 종료된 경우에는 연결이 끊어져도 결과 화면 유지
+      if (this.tournamentEnded) {
+        console.log('Tournament ended normally, keeping result screen');
+        return;
       }
-      // 연결이 끊어지면 현재 게임도 함께 정리
-      this.destroy();
+      
+      // 토너먼트가 정상 종료되지 않고 매치 처리 중이 아닌 경우, 그리고 사용자가 의도적으로 종료하지 않은 경우에만 오류 표시
+      if (!this.isProcessingMatch && !this.isManualExit) {
+        this.showErrorMessage('토너먼트 연결이 끊어졌습니다.');
+        // 현재 게임도 함께 정리
+        this.destroy();
+      }
     });
   }
 
