@@ -71,7 +71,7 @@ export class CommandHandler {
         this.handleManCommand(args);
         break;
       default:
-        this.deps.terminal.appendOutput(`Unknown command: ${commandName}. Type "help" for available commands.`);
+        this.deps.terminal.appendOutput(i18next.t('commandHandler.unknown_command', { commandName: commandName }));
     }
   }
 
@@ -239,7 +239,7 @@ export class CommandHandler {
         this.deps.terminal.appendOutput(`  ${index + 1}. ${statusIcon} ${friend.nickname}${blockedStatus}`);
       });
     } catch (error) {
-      this.deps.terminal.appendOutput('❌ Failed to load friends list. Please try again.');
+      this.deps.terminal.appendOutput(i18next.t('friendCommand.failed_load_friends'));
       console.error('Friend list error:', error);
     }
   }

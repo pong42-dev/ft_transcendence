@@ -606,5 +606,8 @@
     "mock_response_placeholder": "알림: {{id}}에 대한 모의 {{action}}",
     "real_api_response_placeholder": "알림: {{id}}에 대한 실제 API {{action}} 응답이 전송됩니다.",
     "response_error": "알림 {{action}} 실패:"
+  },
+  "commandHandler": {
+    "unknown_command": "알 수 없는 명령: {{commandName}}. 명령어 목록을 보려면 'help'를 입력하세요."
   }
 } 

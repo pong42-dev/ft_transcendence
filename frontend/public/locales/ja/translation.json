@@ -611,5 +611,8 @@
     "mock_response_placeholder": "通知: {{id}}に対するモック{{action}}",
     "real_api_response_placeholder": "通知: {{id}}に対する実際のAPI{{action}}応答が送信されます",
     "response_error": "通知{{action}}失敗:"
+  },
+  "commandHandler": {
+    "unknown_command": "不明なコマンド: {{commandName}}。「help」と入力してコマンド一覧を表示してください。"
   }
 } 

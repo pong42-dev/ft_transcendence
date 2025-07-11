@@ -611,5 +611,8 @@
     "mock_response_placeholder": "Mock {{action}} for notification: {{id}}",
     "real_api_response_placeholder": "Real API {{action}} response would be sent for notification: {{id}}",
     "response_error": "Failed to {{action}} notification:"
+  },
+  "commandHandler": {
+    "unknown_command": "Unknown command: {{commandName}}. Type 'help' for a list of commands."
   }
 } 
