@@ -274,8 +274,33 @@
   "helpCommand": {
     "api_status": "API Status",
     "full_help_text": {
-      "true": "Available commands:\n  help       - Display this help message\n  profile    - View user profile (profile <username>)\n  play       - Start a game of Pong\n  logout     - Log out of current session\n  friend     - Manage friends (friend follow|unfollow|list)\n  2fa        - Manage two-factor authentication (2fa enable|disable|status)\n  set        - Update profile settings (set avatar|name)\n  lang       - Change language (lang en|ko|ja)\n  clear      - Clear the terminal screen",
-      "false": "Available commands:\n  help       - Display this help message\n  login      - Log into your account\n  register   - Create a new account\n  lang       - Change language (lang en|ko|ja)\n  clear      - Clear the terminal screen"
+      "true": "Available commands:\n  help       - Display this help message\n  profile    - View user profile (profile <username>)\n  play       - Start a game of Pong\n  logout     - Log out of current session\n  friend     - Manage friends (friend follow|unfollow|list)\n  2fa        - Manage two-factor authentication (2fa enable|disable|status)\n  set        - Update profile settings (set avatar|name)\n  lang       - Change language (lang en|ko|ja)\n  man        - Game manual (man controls|rules|ai|tournament|commands)\n  clear      - Clear the terminal screen",
+      "false": "Available commands:\n  help       - Display this help message\n  login      - Log into your account\n  register   - Create a new account\n  lang       - Change language (lang en|ko|ja)\n  man        - Game manual (man controls|rules|ai|tournament|commands)\n  clear      - Clear the terminal screen"
+    }
+  },
+  "manCommand": {
+    "usage": "Usage: man <section>",
+    "available_sections": "Available sections:\n  controls   - Game controls and shortcuts\n  rules      - Game rules and scoring\n  ai         - AI difficulty levels\n  tournament - Tournament mode guide\n  commands   - Terminal commands reference",
+    "unknown_section": "Unknown manual section: {{section}}",
+    "controls": {
+      "title": "🎮 GAME CONTROLS",
+      "content": "═══════════════════════════════════════════════════════════\n\n🕹️  PLAYER CONTROLS:\n   Player 1: W (up) / S (down)\n   Player 2: ↑ (up) / ↓ (down)\n\n⌨️  GAME SHORTCUTS:\n   ESC       - Pause/Resume game\n   SPACE     - Quick restart (when game ends)\n   TAB       - Show/Hide game stats\n\n💡 TIP: Hold keys for smooth movement, tap for precise control"
+    },
+    "rules": {
+      "title": "📖 GAME RULES",
+      "content": "═══════════════════════════════════════════════════════════\n\n🏓 PONG GAMEPLAY:\n   • Hit the ball with your paddle to score\n   • Ball speed increases with each hit\n   • Prevent the ball from reaching your side\n\n🎯 SCORING SYSTEM:\n   • First to 3 points wins the round\n   • First to 3 rounds wins the match\n   • Points are scored when opponent misses\n\n🏆 MATCH TYPES:\n   • VS AI: Challenge computer opponents\n   • Local: Play with a guest on same device\n   • Tournament: 4-player bracket competition"
+    },
+    "ai": {
+      "title": "🤖 AI DIFFICULTY LEVELS",
+      "content": "═══════════════════════════════════════════════════════════\n\n🟢 EASY:\n   • Slow reaction time\n   • Makes occasional mistakes\n   • Good for beginners\n\n🟡 MEDIUM:\n   • Balanced gameplay\n   • Moderate challenge\n   • Recommended for most players\n\n🔴 HARD:\n   • Lightning-fast reflexes\n   • Nearly perfect accuracy\n   • For experienced players only\n\n💡 TIP: Start with Easy and work your way up!"
+    },
+    "tournament": {
+      "title": "🏆 TOURNAMENT MODE",
+      "content": "═══════════════════════════════════════════════════════════\n\n👥 TOURNAMENT SETUP:\n   • 4 players total (you + 3 guests)\n   • Single elimination bracket\n   • Semi-finals → Finals structure\n\n🎮 HOW IT WORKS:\n   1. Enter 3 guest player names\n   2. Tournament bracket is generated\n   3. Play your matches in order\n   4. Winner advances to next round\n\n🥇 TOURNAMENT REWARDS:\n   • Champion: Gold medal 🏆\n   • Runner-up: Silver medal 🥈\n   • Semi-finalist: Bronze medal 🥉\n\n💡 TIP: Tournament results are saved to your match history!"
+    },
+    "commands": {
+      "title": "💻 TERMINAL COMMANDS",
+      "content": "═══════════════════════════════════════════════════════════\n\n🔐 ACCOUNT COMMANDS:\n   login      - Sign into your account\n   register   - Create new account\n   logout     - Sign out\n   profile    - View user profiles\n\n🎮 GAME COMMANDS:\n   play       - Start a game of Pong\n   man        - Show game manual\n\n👥 SOCIAL COMMANDS:\n   friend     - Manage friends (follow/unfollow/list)\n\n⚙️  SETTINGS:\n   2fa        - Two-factor authentication\n   set        - Update profile (avatar/name)\n   lang       - Change language (en/ko/ja)\n   clear      - Clear terminal screen\n\n💡 TIP: Type any command without arguments to see usage help!"
     }
   },
   "loginCommand": {

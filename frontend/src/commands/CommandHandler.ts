@@ -67,6 +67,9 @@ export class CommandHandler {
       case 'lang':
         await this.handleLangCommand(args);
         break;
+      case 'man':
+        this.handleManCommand(args);
+        break;
       default:
         this.deps.terminal.appendOutput(`Unknown command: ${commandName}. Type "help" for available commands.`);
     }
@@ -500,6 +503,43 @@ export class CommandHandler {
         i18next.t('langCommand.change_failed', { lang: lang }),
       );
       this.deps.errorHandler.handleError(error as Error, 'handleLangCommand');
+    }
+  }
+
+  private handleManCommand(args: string[]): void {
+    // If no arguments provided, show available manual sections
+    if (!args || args.length === 0) {
+      this.deps.terminal.appendOutput(i18next.t('manCommand.usage'));
+      this.deps.terminal.appendOutput(i18next.t('manCommand.available_sections'));
+      return;
+    }
+
+    const section = args[0].toLowerCase();
+
+    switch (section) {
+      case 'controls':
+        this.deps.terminal.appendOutput(i18next.t('manCommand.controls.title'));
+        this.deps.terminal.appendOutput(i18next.t('manCommand.controls.content'));
+        break;
+      case 'rules':
+        this.deps.terminal.appendOutput(i18next.t('manCommand.rules.title'));
+        this.deps.terminal.appendOutput(i18next.t('manCommand.rules.content'));
+        break;
+      case 'ai':
+        this.deps.terminal.appendOutput(i18next.t('manCommand.ai.title'));
+        this.deps.terminal.appendOutput(i18next.t('manCommand.ai.content'));
+        break;
+      case 'tournament':
+        this.deps.terminal.appendOutput(i18next.t('manCommand.tournament.title'));
+        this.deps.terminal.appendOutput(i18next.t('manCommand.tournament.content'));
+        break;
+      case 'commands':
+        this.deps.terminal.appendOutput(i18next.t('manCommand.commands.title'));
+        this.deps.terminal.appendOutput(i18next.t('manCommand.commands.content'));
+        break;
+      default:
+        this.deps.terminal.appendOutput(i18next.t('manCommand.unknown_section', { section }));
+        this.deps.terminal.appendOutput(i18next.t('manCommand.available_sections'));
     }
   }
 }

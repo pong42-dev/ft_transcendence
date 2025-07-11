@@ -274,8 +274,33 @@
   "helpCommand": {
     "api_status": "APIステータス",
     "full_help_text": {
-      "true": "利用可能なコマンド:\n  help       - このヘルプメッセージを表示\n  profile    - ユーザープロフィールを表示 (profile <username>)\n  play       - ポンゲームを開始\n  logout     - 現在のセッションからログアウト\n  friend     - 友達を管理 (friend follow|unfollow|list)\n  2fa        - 2要素認証を管理 (2fa enable|disable|status)\n  set        - プロフィール設定を更新 (set avatar|name)\n  lang       - 言語を変更 (lang en|ko|ja)\n  clear      - ターミナル画面をクリア",
-      "false": "利用可能なコマンド:\n  help       - このヘルプメッセージを表示\n  login      - アカウントにログイン\n  register   - 新しいアカウントを作成\n  lang       - 言語を変更 (lang en|ko|ja)\n  clear      - ターミナル画面をクリア"
+      "true": "利用可能なコマンド:\n  help       - このヘルプメッセージを表示\n  profile    - ユーザープロフィールを表示 (profile <username>)\n  play       - ポンゲームを開始\n  logout     - 現在のセッションからログアウト\n  friend     - 友達を管理 (friend follow|unfollow|list)\n  2fa        - 2要素認証を管理 (2fa enable|disable|status)\n  set        - プロフィール設定を更新 (set avatar|name)\n  lang       - 言語を変更 (lang en|ko|ja)\n  man        - ゲームマニュアル (man controls|rules|ai|tournament|commands)\n  clear      - ターミナル画面をクリア",
+      "false": "利用可能なコマンド:\n  help       - このヘルプメッセージを表示\n  login      - アカウントにログイン\n  register   - 新しいアカウントを作成\n  lang       - 言語を変更 (lang en|ko|ja)\n  man        - ゲームマニュアル (man controls|rules|ai|tournament|commands)\n  clear      - ターミナル画面をクリア"
+    }
+  },
+  "manCommand": {
+    "usage": "使用法: man <セクション>",
+    "available_sections": "利用可能なセクション:\n  controls   - ゲーム操作方法とショートカット\n  rules      - ゲームルールとスコアシステム\n  ai         - AI難易度レベル\n  tournament - トーナメントモードガイド\n  commands   - ターミナルコマンドリファレンス",
+    "unknown_section": "未知のマニュアルセクション: {{section}}",
+    "controls": {
+      "title": "🎮 ゲーム操作方法",
+      "content": "═══════════════════════════════════════════════════════════\n\n🕹️  プレイヤー操作:\n   プレイヤー1: W (上) / S (下)\n   プレイヤー2: ↑ (上) / ↓ (下)\n\n⌨️  ゲームショートカット:\n   ESC       - ゲーム一時停止/再開\n   SPACE     - クイック再スタート (ゲーム終了時)\n   TAB       - ゲーム統計表示/非表示\n\n💡 ヒント: キーを長押しで滑らかな動き、短押しで正確な操作"
+    },
+    "rules": {
+      "title": "📖 ゲームルール",
+      "content": "═══════════════════════════════════════════════════════════\n\n🏓 ポンゲームプレイ:\n   • パドルでボールを打ってポイントを獲得しましょう\n   • ボールの速度は各衝突で増加します\n   • ボールがあなたの側に届かないように防ぎましょう\n\n🎯 スコアシステム:\n   • 先に3ポイント獲得したプレイヤーがラウンド勝利\n   • 先に3ラウンド勝利したプレイヤーが試合勝利\n   • 相手がミスするとポイントを獲得します\n\n🏆 マッチタイプ:\n   • VS AI: コンピューター相手と対戦\n   • Local: 同一デバイスでゲストとプレイ\n   • Tournament: 4人トーナメントブラケット競技"
+    },
+    "ai": {
+      "title": "🤖 AI難易度レベル",
+      "content": "═══════════════════════════════════════════════════════════\n\n🟢 イージー:\n   • 遅い反応速度\n   • 時々ミスをする\n   • 初心者に最適\n\n🟡 ミディアム:\n   • バランスの取れたゲームプレイ\n   • 適度なチャレンジ\n   • ほとんどのプレイヤーにおすすめ\n\n🔴 ハード:\n   • 稲妻のような速い反射神経\n   • ほぼ完璧な精度\n   • 熟練プレイヤー専用の難易度\n\n💡 ヒント: イージーから始めて徐々に難易度を上げてみましょう！"
+    },
+    "tournament": {
+      "title": "🏆 トーナメントモード",
+      "content": "═══════════════════════════════════════════════════════════\n\n👥 トーナメント設定:\n   • 合計4人のプレイヤー (あなた + ゲスト3人)\n   • シングルイリミネーショントーナメント\n   • 準決勝 → 決勝の構造\n\n🎮 進行方式:\n   1. ゲストプレイヤー3人の名前を入力\n   2. トーナメントブラケットが生成されます\n   3. 順番に試合を進行\n   4. 勝者が次のラウンドに進出\n\n🥇 トーナメント報酬:\n   • チャンピオン: 金メダル 🏆\n   • 準優勝: 銀メダル 🥈\n   • 準決勝進出者: 銅メダル 🥉\n\n💡 ヒント: トーナメント結果は対戦履歴に保存されます！"
+    },
+    "commands": {
+      "title": "💻 ターミナルコマンド",
+      "content": "═══════════════════════════════════════════════════════════\n\n🔐 アカウントコマンド:\n   login      - アカウントにログイン\n   register   - 新しいアカウントを作成\n   logout     - ログアウト\n   profile    - ユーザープロフィールを表示\n\n🎮 ゲームコマンド:\n   play       - ポンゲームを開始\n   man        - ゲームマニュアルを表示\n\n👥 ソーシャルコマンド:\n   friend     - 友達を管理 (follow/unfollow/list)\n\n⚙️  設定:\n   2fa        - 2要素認証\n   set        - プロフィールを更新 (avatar/name)\n   lang       - 言語を変更 (en/ko/ja)\n   clear      - ターミナル画面をクリア\n\n💡 ヒント: 引数なしでコマンドを入力すると使用法ヘルプが表示されます！"
     }
   },
   "loginCommand": {
