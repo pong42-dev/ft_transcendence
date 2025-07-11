@@ -330,7 +330,7 @@ export class GameSetupModal {
           ${i18n.t('common.cancel')}
         </button>
         <button id="start-ai-game-btn" class="px-4 py-2 bg-terminal-green text-terminal-black rounded hover:bg-opacity-80 transition-all">
-          ${i18n.t('gameSetupModal.start_ai_game')}
+          ${i18n.t('gameSetupModal.start_game')}
         </button>
       </div>
     `;
