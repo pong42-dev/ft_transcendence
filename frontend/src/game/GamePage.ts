@@ -113,40 +113,51 @@ export class GamePage {
                     return;
                 }
                 
-                console.log('Requesting to create a tournament...');
-                
-                // 사용자 ID를 JWT에서 직접 추출
-                const userId = this.decodeUserIdFromAccessToken();
-                console.log(i18next.t('game.page.log.decodedUserId'), userId);
-                if (!userId) {
-                    console.error('User must be logged in to participate in tournament');
-                    alert('토너먼트에 참가하려면 로그인이 필요합니다.');
-                    this.safeCallGameEndCallback();
+                // Validate tournament settings before proceeding
+                if (!this.validateTournamentSettings(gameSettings)) {
+                    this.showTournamentError('토너먼트 설정이 유효하지 않습니다.');
                     return;
                 }
                 
-                // GamePage의 CreateGameRequestDto를 그대로 백엔드에 전송
-                console.log('Tournament request data:', gameSettings);
+                console.log('Requesting to create a tournament...');
+                
+                // 사용자 ID를 JWT에서 직접 추출 및 검증
+                const userId = this.decodeUserIdFromAccessToken();
+                console.log('Decoded user ID:', userId);
+                if (!this.validateUserId(userId)) {
+                    this.showTournamentError('토너먼트에 참가하려면 유효한 로그인이 필요합니다.');
+                    return;
+                }
+                
+                // Sanitize opponent names before sending to server
+                const sanitizedSettings = {
+                    ...gameSettings,
+                    opponents: gameSettings.opponents?.map(name => this.sanitizeOpponentName(name))
+                };
+                
+                console.log('Tournament request data (sanitized):', sanitizedSettings);
 
                 // 토너먼트 생성 플래그 설정
                 this.isTournamentCreating = true;
 
                 // 토너먼트 생성 API 호출
                 try {
-                    const tournamentInfo = await this.apiClient.tournament.createTournament(gameSettings);
-                    console.log(i18next.t('game.page.log.tournamentCreated'), tournamentInfo);
+                    const tournamentInfo = await this.apiClient.tournament.createTournament(sanitizedSettings);
+                    console.log('Tournament created:', tournamentInfo);
                     
                     // TournamentClient 시작
                     this.startTournament(tournamentInfo);
                 } catch (error: any) {
-                    console.error(i18next.t('game.page.error.tournamentCreationFailed'), error);
+                    console.error('Tournament creation failed:', error);
                     if (error.status === 429) {
-                        alert(i18next.t('game.page.alert.tournamentCreationRateLimit'));
+                        this.showTournamentError('토너먼트 생성 요청이 너무 빈번합니다. 잠시 후 다시 시도해주세요.');
+                    } else if (error.status === 400) {
+                        this.showTournamentError('토너먼트 설정이 올바르지 않습니다.');
+                    } else if (error.status === 401 || error.status === 403) {
+                        this.showTournamentError('토너먼트 생성 권한이 없습니다. 다시 로그인해주세요.');
                     } else {
-                        alert(i18next.t('game.page.alert.tournamentCreationFailed') + (error.message || i18next.t('common.error.unknownError')));
+                        this.showTournamentError('토너먼트 생성 중 오류가 발생했습니다: ' + (error.message || '알 수 없는 오류'));
                     }
-                    this.safeCallGameEndCallback();
-                    return;
                 } finally {
                     // 토너먼트 생성 완료 (성공 또는 실패)
                     this.isTournamentCreating = false;
@@ -268,17 +279,17 @@ export class GamePage {
             case 'vs ai':
                 // AI 모드에서는 'type'만 필요하고 opponents 배열은 비워둡니다.
                 gameMode = 'ai_1v1';
-                console.log(i18next.t('game.page.log.aiModeSelected'));
+                console.log('AI mode selected');
                 break;
 
             case 'local':
                 // 로컬 1:1 모드에서는 opponents 배열에 게스트 닉네임 1명을 담습니다.
                 gameMode = 'local_1v1';
                 const guestNickname = setupResult.opponents[0];
-                console.log(i18next.t('game.page.log.localModeSelected'), guestNickname);
+                console.log('Local mode selected with guest:', guestNickname);
 
                 if (!guestNickname) {
-                    console.error(i18next.t('game.page.error.guestNicknameRequired'));
+                    console.error('Guest nickname is required for local mode');
                     return null;
                 }
                 opponents = [guestNickname];
@@ -287,18 +298,35 @@ export class GamePage {
             case 'tournament':
                 // 토너먼트 모드에서는 opponents 배열에 게스트 닉네임 3명을 담습니다.
                 gameMode = 'tournament';
-                console.log(i18next.t('game.page.log.tournamentModeSelected'));
+                console.log('Tournament mode selected');
 
-                if (setupResult.opponents.length < 3) { // 3명으로 가정
-                    console.error(i18next.t('game.page.error.threeGuestNicknamesRequired'));
+                // Validate tournament opponents
+                if (!setupResult.opponents || !Array.isArray(setupResult.opponents)) {
+                    console.error('Tournament opponents must be an array');
                     return null;
                 }
-                opponents = setupResult.opponents;
-                console.log(i18next.t('game.page.log.tournamentOpponents'), opponents);
+                
+                if (setupResult.opponents.length !== 3) {
+                    console.error('Tournament requires exactly 3 opponents');
+                    return null;
+                }
+                
+                // Validate each opponent name
+                for (let i = 0; i < setupResult.opponents.length; i++) {
+                    const opponent = setupResult.opponents[i];
+                    if (!this.validateOpponentName(opponent)) {
+                        console.error(`Invalid opponent name at index ${i}:`, opponent);
+                        return null;
+                    }
+                }
+                
+                // Sanitize opponent names
+                opponents = setupResult.opponents.map(name => this.sanitizeOpponentName(name));
+                console.log('Tournament opponents (sanitized):', opponents);
                 break;
 
             default:
-                console.error(i18next.t('game.page.error.unsupportedGameMode'), setupResult.mode);
+                console.error('Unsupported game mode:', setupResult.mode);
                 return null;
         }
 
@@ -321,7 +349,7 @@ export class GamePage {
      * [신규] 게임을 명시적으로 취소하는 메서드
      */
     private cancelGame() {
-        console.log(i18next.t('game.page.log.gameCanceledByUser'));
+        console.log('Game canceled by user');
         
         // 게임 비활성화
         this.isGameActive = false;
@@ -371,7 +399,7 @@ export class GamePage {
         this.popStateHandler = (_event: PopStateEvent) => {
             if (this.isGameActive && (this.gameClient || this.tournamentClient)) {
                 console.log('Browser back/forward button detected during active game, canceling...');
-                // 뒤로가기를 시도했을 때 게임 취소
+                // 뒤로가기를 시도했을 때 게임 완전 취소
                 this.handleUnexpectedExit();
                 // 잠시 후 실제로 뒤로가기 실행 (게임 정리 시간 확보)
                 setTimeout(() => {
@@ -412,7 +440,7 @@ export class GamePage {
      */
     private handleUnexpectedExit() {
         if ((this.gameClient || this.tournamentClient) && this.isGameActive) {
-            console.log(i18next.t('game.page.log.handlingUnexpectedExit'));
+            console.log('Handling unexpected exit');
             
             // 터미널 입력 활성화
             this.terminal.enableInput();
@@ -427,9 +455,25 @@ export class GamePage {
      * [신규] 토너먼트 클라이언트를 시작하는 메서드
      */
     private startTournament(tournamentInfo: any) {
-        if (!this.container) return;
+        // Validate tournament info
+        if (!tournamentInfo || typeof tournamentInfo !== 'object') {
+            this.showTournamentError('토너먼트 정보가 유효하지 않습니다.');
+            return;
+        }
+        
+        if (!tournamentInfo.id || typeof tournamentInfo.id !== 'number') {
+            this.showTournamentError('토너먼트 ID가 유효하지 않습니다.');
+            return;
+        }
+        
+        if (!this.container) {
+            this.showTournamentError('UI 컨테이너를 찾을 수 없습니다.');
+            return;
+        }
+        
+        // Clean up existing tournament client
         if (this.tournamentClient) {
-            console.log(i18next.t('game.page.log.destroyingExistingTournamentClient'));
+            console.log('Destroying existing tournament client');
             this.tournamentClient.destroy();
             this.tournamentClient = null;
         }
@@ -446,21 +490,31 @@ export class GamePage {
         // GamePage의 UI를 비우고 토너먼트 UI를 렌더링할 준비
         this.container.innerHTML = '';
 
-        // GameRenderer와 InputHandler 생성
+        // GameRenderer 생성 (InputHandler는 TournamentClient에서 필요시 생성)
         this.renderer = new GameRenderer();
-        const inputHandler = new InputHandler();
         
         // tournamentId와 userId를 TournamentClient에 전달
         const tournamentId = tournamentInfo.id; 
         const userId = this.decodeUserIdFromAccessToken();
-        console.log(i18next.t('game.page.log.tournamentClientDecodedUserId'), userId);
+        console.log('Tournament client decoded user ID:', userId);
         
-        this.tournamentClient = new TournamentClient(
-            this.container,
-            tournamentId,
-            Number(userId), // JWT에서 추출한 user_id를 number로 변환
-        );
-        this.tournamentClient.start();
+        // Validate user ID before creating tournament client
+        if (!this.validateUserId(userId)) {
+            this.showTournamentError('유효하지 않은 사용자 ID입니다. 다시 로그인해주세요.');
+            return;
+        }
+        
+        try {
+            this.tournamentClient = new TournamentClient(
+                this.container,
+                tournamentId,
+                Number(userId), // JWT에서 추출한 user_id를 number로 변환
+            );
+            this.tournamentClient.start();
+        } catch (error) {
+            console.error('Failed to start tournament client:', error);
+            this.showTournamentError('토너먼트 클라이언트 시작 중 오류가 발생했습니다.');
+        }
     }
 
     /**
@@ -499,16 +553,32 @@ export class GamePage {
     }
 
     /**
-     * JWT에서 user_id 추출하는 메서드
+     * JWT에서 user_id 추출하는 메서드 (보안 강화)
      */
     private decodeUserIdFromAccessToken(): string | undefined {
         try {
             const accessToken = sessionStorage.getItem('access_token_session');
-            console.log(i18next.t('game.page.log.accessTokenStatus'), accessToken ? i18next.t('common.status.exists') : i18next.t('common.status.notFound'));
-            if (!accessToken) return undefined;
+            console.log('Access token status:', accessToken ? 'exists' : 'not found');
+            if (!accessToken || typeof accessToken !== 'string') return undefined;
             
-            const payloadBase64 = accessToken.split('.')[1];
-            if (!payloadBase64) return undefined;
+            // Basic JWT format validation
+            const parts = accessToken.split('.');
+            if (parts.length !== 3) {
+                console.error('Invalid JWT format');
+                return undefined;
+            }
+            
+            const payloadBase64 = parts[1];
+            if (!payloadBase64) {
+                console.error('Missing JWT payload');
+                return undefined;
+            }
+            
+            // Validate base64 format
+            if (!/^[A-Za-z0-9_-]+$/.test(payloadBase64)) {
+                console.error('Invalid base64 format in JWT payload');
+                return undefined;
+            }
             
             const base64 = payloadBase64.replace(/-/g, '+').replace(/_/g, '/');
             const jsonPayload = decodeURIComponent(
@@ -519,13 +589,97 @@ export class GamePage {
                     })
                     .join('')
             );
+            
             const payload = JSON.parse(jsonPayload);
-            console.log(i18next.t('game.page.log.jwtPayload'), payload);
-            console.log(i18next.t('game.page.log.jwtUserId'), payload.user_id);
-            return payload.user_id ? String(payload.user_id) : undefined;
+            
+            // Validate payload structure
+            if (!payload || typeof payload !== 'object') {
+                console.error('Invalid JWT payload structure');
+                return undefined;
+            }
+            
+            // Check token expiration
+            if (payload.exp && typeof payload.exp === 'number') {
+                const currentTime = Math.floor(Date.now() / 1000);
+                if (payload.exp < currentTime) {
+                    console.error('JWT token has expired');
+                    return undefined;
+                }
+            }
+            
+            // Validate user_id
+            if (!payload.user_id || typeof payload.user_id !== 'number') {
+                console.error('Invalid or missing user_id in JWT');
+                return undefined;
+            }
+            
+            console.log('JWT payload validated successfully');
+            console.log('JWT user ID:', payload.user_id);
+            return String(payload.user_id);
         } catch (e) {
-            console.error(i18next.t('game.page.error.jwtDecodingError'), e);
+            console.error('JWT decoding error:', e);
             return undefined;
         }
+    }
+
+    // Tournament-specific validation and sanitization methods
+    private validateTournamentSettings(gameSettings: CreateGameRequestDto): boolean {
+        if (gameSettings.type !== 'tournament') return true;
+        
+        // Validate opponents array
+        if (!gameSettings.opponents || !Array.isArray(gameSettings.opponents)) {
+            console.error('Tournament requires opponents array');
+            return false;
+        }
+        
+        // Tournament should have exactly 3 opponents (4 total including current user)
+        if (gameSettings.opponents.length !== 3) {
+            console.error('Tournament requires exactly 3 opponents');
+            return false;
+        }
+        
+        // Validate each opponent name
+        for (const opponent of gameSettings.opponents) {
+            if (!this.validateOpponentName(opponent)) {
+                console.error('Invalid opponent name:', opponent);
+                return false;
+            }
+        }
+        
+        return true;
+    }
+    
+    private validateOpponentName(name: string): boolean {
+        if (typeof name !== 'string') return false;
+        if (name.length === 0 || name.length > 50) return false;
+        if (!/^[a-zA-Z0-9가-힣_\-\s]+$/.test(name)) return false; // Only allow safe characters
+        return true;
+    }
+    
+    private sanitizeOpponentName(name: string): string {
+        if (typeof name !== 'string') return 'Unknown';
+        
+        return name
+            .replace(/[<>&"']/g, '') // Remove HTML special characters
+            .trim()
+            .substring(0, 50) || 'Unknown';
+    }
+    
+    private validateUserId(userId: string | undefined): boolean {
+        console.log('Validating user ID:', userId, 'type:', typeof userId);
+        if (!userId) {
+            console.log('User ID is falsy');
+            return false;
+        }
+        const id = parseInt(userId, 10);
+        const isValid = !isNaN(id) && id > 0 && Number.isInteger(id);
+        console.log('Parsed ID:', id, 'isValid:', isValid);
+        return isValid;
+    }
+    
+    private showTournamentError(message: string): void {
+        console.error('Tournament error:', message);
+        alert(message); // In a real app, this should be a proper modal
+        this.safeCallGameEndCallback();
     }
 }

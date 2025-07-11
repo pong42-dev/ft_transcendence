@@ -94,6 +94,38 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 			userId?: number,
 			displayName?: string
 		): Promise<number> {
+			// 입력 검증
+			if (!tournamentId || typeof tournamentId !== 'number' || tournamentId <= 0) {
+				throw new Error('Invalid tournament ID');
+			}
+		if (playerType !== 'user' && playerType !== 'guest') {
+			throw new Error('Invalid player type');
+		}
+
+			if (playerType === 'user') {
+				if (!userId || typeof userId !== 'number' || userId <= 0) {
+					throw new Error('Valid user ID is required for user type participant');
+				}
+			}
+
+			if (playerType === 'guest') {
+				if (!displayName || typeof displayName !== 'string' || displayName.trim().length === 0) {
+					throw new Error('Valid display name is required for guest participant');
+				}
+				
+				// 게스트 이름 정제 및 검증
+				displayName = displayName.trim();
+				if (displayName.length > 50 || displayName.length < 2) {
+					throw new Error('Display name must be between 2 and 50 characters');
+				}
+				
+				// 특수문자 및 HTML 태그 제거
+				const sanitizedName = displayName.replace(/<[^>]*>/g, '').replace(/[<>\"'&]/g, '');
+				if (sanitizedName !== displayName) {
+					throw new Error('Display name contains invalid characters');
+				}
+			}
+
 			const trx = await knex.transaction();
 
 			try {
@@ -169,6 +201,39 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 			userId?: number,
 			displayName?: string
 		): Promise<number> {
+			// 입력 검증
+			if (!tournamentId || typeof tournamentId !== 'number' || tournamentId <= 0) {
+				throw new Error('Invalid tournament ID');
+			}
+
+			if (playerType !== 'user' && playerType !== 'guest') {
+				throw new Error('Invalid player type');
+			}
+
+			if (playerType === 'user') {
+				if (!userId || typeof userId !== 'number' || userId <= 0) {
+					throw new Error('Valid user ID is required for user type participant');
+				}
+			}
+
+			if (playerType === 'guest') {
+				if (!displayName || typeof displayName !== 'string' || displayName.trim().length === 0) {
+					throw new Error('Valid display name is required for guest participant');
+				}
+				
+				// 게스트 이름 정제 및 검증
+				displayName = displayName.trim();
+				if (displayName.length > 50 || displayName.length < 2) {
+					throw new Error('Display name must be between 2 and 50 characters');
+				}
+				
+				// 특수문자 및 HTML 태그 제거
+				const sanitizedName = displayName.replace(/<[^>]*>/g, '').replace(/[<>\"'&]/g, '');
+				if (sanitizedName !== displayName) {
+					throw new Error('Display name contains invalid characters');
+				}
+			}
+
 			let playerId: number;
 
 			if (playerType === 'user' && userId) {
@@ -619,20 +684,21 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 							eliminated: false
 						});
 					}
+				});			// 탈락한 참가자 확인 (4강전에서 패배한 참가자들)
+			const semifinalLosers: number[] = [];
+			completedMatches
+				.filter(m => m.round_number === 1)
+				.forEach(m => {
+					const losers = m.participants.filter(p => p.id !== m.winner_id);
+					semifinalLosers.push(...losers.map(p => p.id));
 				});
 
-				// 탈락한 참가자 확인 (4강전에서 패배한 참가자들)
-				const semifinalLosers = completedMatches
-					.filter(m => m.round_number === 1)
-					.flatMap(m => m.participants.filter(p => p.id !== m.winner_id))
-					.map(p => p.id);
-
-				semifinalLosers.forEach(playerId => {
-					const participant = allParticipants.get(playerId);
-					if (participant) {
-						participant.eliminated = true;
-					}
-				});
+			semifinalLosers.forEach(playerId => {
+				const participant = allParticipants.get(playerId);
+				if (participant) {
+					participant.eliminated = true;
+				}
+			});
 
 				return {
 					tournament_id: tournamentId,
@@ -750,6 +816,22 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 			status: 'waiting' | 'in-progress' | 'ended' | 'canceled',
 			winnerPlayerId?: number
 		): Promise<void> {
+			// 입력 검증
+			if (!tournamentId || typeof tournamentId !== 'number' || tournamentId <= 0) {
+				throw new Error('Invalid tournament ID');
+			}
+
+			const validStatuses = ['waiting', 'in-progress', 'ended', 'canceled'];
+			if (!status || validStatuses.indexOf(status) === -1) {
+				throw new Error('Invalid tournament status');
+			}
+
+			if (status === 'ended' && winnerPlayerId) {
+				if (typeof winnerPlayerId !== 'number' || winnerPlayerId <= 0) {
+					throw new Error('Invalid winner player ID');
+				}
+			}
+
 			try {
 				const updateData: any = { status };
 

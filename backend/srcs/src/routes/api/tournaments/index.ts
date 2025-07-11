@@ -59,12 +59,33 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 					return reply.status(400).send({ message: 'Tournament must have exactly 3 opponents' });
 				}
 
-				// 게스트 닉네임 유효성 검증
+				// 게스트 닉네임 유효성 검증 및 정제
 				for (const opponent of opponents) {
 					if (!opponent || opponent.trim().length === 0) {
 						shouldCommit = null;
 						await trx.rollback();
 						return reply.status(400).send({ message: 'Opponent names are required' });
+					}
+					
+					// 문자열 길이 검증
+					if (opponent.length > 50) {
+						shouldCommit = null;
+						await trx.rollback();
+						return reply.status(400).send({ message: 'Opponent names must be 50 characters or less' });
+					}
+					
+					// 위험한 문자 검증
+					if (/<script|javascript:|on\w+\s*=|<iframe|<object|<embed/i.test(opponent)) {
+						shouldCommit = null;
+						await trx.rollback();
+						return reply.status(400).send({ message: 'Invalid characters in opponent name' });
+					}
+					
+					// HTML 태그 검증
+					if (/<[^>]*>/g.test(opponent)) {
+						shouldCommit = null;
+						await trx.rollback();
+						return reply.status(400).send({ message: 'HTML tags are not allowed in opponent names' });
 					}
 				}
 				// 2. 인증된 사용자 정보를 request.user에서 가져옵니다.

@@ -1,7 +1,7 @@
 // backend/srcs/websocket/TournamentWebsocketHandler.ts
 
 import { FastifyInstance, FastifyRequest } from 'fastify';
-import { WebSocket } from 'ws';
+import WebSocket from 'ws';
 import { TournamentSession } from './TournamentSession';
 
 export class TournamentWebSocketHandler {
@@ -14,9 +14,33 @@ export class TournamentWebSocketHandler {
     const { tournamentId } = (request as any).params as { tournamentId: string };
     const { userId } = (request as any).query as { userId?: string };
 
-    if (!userId) {
-      (this.fastify as any).log.error('User ID is missing.');
-      socket.close(1008, 'User ID is required');
+    // 입력 데이터 검증 및 정제
+    if (!userId || !/^\d+$/.test(userId)) {
+      (this.fastify as any).log.error('Invalid or missing User ID.');
+      socket.close(1008, 'Valid User ID is required');
+      return;
+    }
+
+    if (!tournamentId || !/^\d+$/.test(tournamentId)) {
+      (this.fastify as any).log.error('Invalid or missing Tournament ID.');
+      socket.close(1008, 'Valid Tournament ID is required');
+      return;
+    }
+
+    const numericUserId = parseInt(userId, 10);
+    const numericTournamentId = parseInt(tournamentId, 10);
+
+    // 토너먼트 참가자 검증
+    try {
+      const isParticipant = await this.verifyTournamentParticipant(numericTournamentId, numericUserId);
+      if (!isParticipant) {
+        (this.fastify as any).log.error(`User ${numericUserId} is not a participant in tournament ${numericTournamentId}`);
+        socket.close(1008, 'User is not a participant in this tournament');
+        return;
+      }
+    } catch (error) {
+      (this.fastify as any).log.error('Error verifying tournament participant:', error);
+      socket.close(1011, 'Server error during authentication');
       return;
     }
 
@@ -29,13 +53,28 @@ export class TournamentWebSocketHandler {
     }
 
     // 단일 연결만 관리: 한 번만 addPlayer 호출
-    session.addPlayer(Number(userId), socket);
+    await session.addPlayer(numericUserId, socket);
     (this.fastify as any).log.info(`[Handler] User ${userId} connected to tournament ${tournamentId}`);
 
-    // 연결이 끊어졌을 때 세션에서 플레이어 제거
-    socket.on('close', () => {
-      session?.removePlayer(Number(userId));
-      // 세션이 비었는지 확인하는 로직은 필요시 추가
-    });
+    // TournamentSession에서 이미 close 이벤트를 처리하므로 여기서는 중복 처리하지 않음
+  }
+
+  /**
+   * 토너먼트 참가자 검증
+   */
+  private async verifyTournamentParticipant(tournamentId: number, userId: number): Promise<boolean> {
+    try {
+      const participant = await (this.fastify as any).knex('players')
+        .join('game_participants', 'players.id', 'game_participants.player_id')
+        .join('games', 'game_participants.game_id', 'games.id')
+        .where('games.tournament_id', tournamentId)
+        .where('players.user_id', userId)
+        .first();
+      
+      return !!participant;
+    } catch (error) {
+      (this.fastify as any).log.error('Database error during participant verification:', error);
+      return false;
+    }
   }
 }
