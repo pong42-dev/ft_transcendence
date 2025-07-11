@@ -2,8 +2,10 @@ import { GameClient } from './GameClient';
 import { GameRenderer } from './GameRenderer';
 import { InputHandler } from './InputHandler';
 import { WebSocketService } from '../services/websocket/WebSocketService';
-import { ModalManager, ModalContent } from '../managers/ModalManager';
+import { ModalManager } from '../managers/ModalManager';
 import { TournamentRenderer } from './TournamentRenderer';
+import { TournamentErrorHandler } from './TournamentErrorHandler';
+import { UIUtils } from '../utils/UIUtils';
 
 
 
@@ -69,15 +71,12 @@ export class TournamentClient {
   // 타이밍 제어를 위한 상태 추가
   private isProcessingMatch: boolean = false;
   private currentTimeout: number | null = null;
-  
-  // 토너먼트 종료 상태 추가
-  private tournamentEnded: boolean = false;
-  
-  // 사용자가 의도적으로 종료했는지 추적 (오류 메시지 표시 방지용)
-  private isManualExit: boolean = false;
 
   // UI 렌더링 전담 클래스
   private renderer: TournamentRenderer;
+  
+  // 오류 처리 전담 클래스
+  private errorHandler: TournamentErrorHandler;
 
   constructor(
     container: HTMLElement,
@@ -89,6 +88,7 @@ export class TournamentClient {
     this.currentUserId = currentUserId;
     this.modalManager = ModalManager.getInstance();
     this.renderer = new TournamentRenderer(currentUserId, this.bracketResults);
+    this.errorHandler = new TournamentErrorHandler();
   }
 
   public start(): void {
@@ -97,7 +97,7 @@ export class TournamentClient {
 
   public destroy(): void {
     // 사용자가 의도적으로 종료함을 표시 (오류 메시지 방지)
-    this.isManualExit = true;
+    this.errorHandler.setManualExit(true);
     
     // 타이머 정리
     if (this.currentTimeout) {
@@ -117,18 +117,21 @@ export class TournamentClient {
     
     this.container.innerHTML = '';
     this.isProcessingMatch = false;
+    
+    // 오류 핸들러 정리
+    this.errorHandler.cleanup();
   }
 
   private connectToTournament(): void {
     // Validate user ID and tournament ID
-    if (!this.validateUserId(this.currentUserId)) {
-      this.showErrorMessage('유효하지 않은 사용자 ID입니다.');
+    if (!UIUtils.validateUserId(this.currentUserId)) {
+      this.errorHandler.handleValidationError('userId');
       this.destroy();
       return;
     }
 
-    if (!this.validateTournamentId(this.tournamentId)) {
-      this.showErrorMessage('유효하지 않은 토너먼트 ID입니다.');
+    if (!UIUtils.validateTournamentId(this.tournamentId)) {
+      this.errorHandler.handleValidationError('tournamentId');
       this.destroy();
       return;
     }
@@ -178,24 +181,21 @@ export class TournamentClient {
       try {
         this.handleTournamentBracket(data);
       } catch (error) {
-        console.error('Error handling tournament bracket:', error);
-        this.showErrorMessage('브라켓 정보 처리 중 오류가 발생했습니다.');
+        this.errorHandler.handleTournamentBracketError(error);
       }
     });
     this.webSocketService.on('bracket_update', (data: any) => {
       try {
         this.handleBracketUpdate(data);
       } catch (error) {
-        console.error('Error handling bracket update:', error);
-        this.showErrorMessage('브라켓 업데이트 중 오류가 발생했습니다.');
+        this.errorHandler.handleBracketUpdateError(error);
       }
     });
     this.webSocketService.on('match_starting', (data: any) => {
       try {
         this.handleMatchStarting(data);
       } catch (error) {
-        console.error('Error handling match starting:', error);
-        this.showErrorMessage('매치 시작 중 오류가 발생했습니다.');
+        this.errorHandler.handleMatchStartingError(error);
         this.isProcessingMatch = false; // Reset processing state on error
       }
     });
@@ -203,27 +203,16 @@ export class TournamentClient {
       try {
         this.handleTournamentEnd();
       } catch (error) {
-        console.error('Error handling tournament end:', error);
-        this.showErrorMessage('토너먼트 종료 처리 중 오류가 발생했습니다.');
+        this.errorHandler.handleTournamentEndError(error);
       }
     });
     this.webSocketService.on('error', (error: any) => {
-      console.error('WebSocket error:', error);
-      this.showErrorMessage('토너먼트 연결 중 오류가 발생했습니다. 다시 시도해주세요.');
+      this.errorHandler.handleWebSocketError(error);
       this.destroy();
     });
     this.webSocketService.on('close', () => {
-      console.log('WebSocket connection closed');
-      // 토너먼트가 정상 종료된 경우에는 연결이 끊어져도 결과 화면 유지
-      if (this.tournamentEnded) {
-        console.log('Tournament ended normally, keeping result screen');
-        return;
-      }
-      
-      // 토너먼트가 정상 종료되지 않고 매치 처리 중이 아닌 경우, 그리고 사용자가 의도적으로 종료하지 않은 경우에만 오류 표시
-      if (!this.isProcessingMatch && !this.isManualExit) {
-        this.showErrorMessage('토너먼트 연결이 끊어졌습니다.');
-        // 현재 게임도 함께 정리
+      const shouldDestroy = this.errorHandler.handleWebSocketClose(this.isProcessingMatch);
+      if (shouldDestroy) {
         this.destroy();
       }
     });
@@ -266,7 +255,7 @@ export class TournamentClient {
       // 현재 표시된 브라켓 HTML을 새로운 데이터로 교체
       const semiFinals = this.bracketMatches.filter(m => m.round_number === 1);
       const finals = this.bracketMatches.filter(m => m.round_number === 2);
-      const newBracketHTML = this.renderer.renderBracket(semiFinals, finals);
+      const newBracketHTML = this.renderer.renderBracketLayoutContainer(semiFinals, finals);
       const tempDiv = document.createElement('div');
       tempDiv.innerHTML = newBracketHTML;
       const newBracketElement = tempDiv.querySelector('.tournament-bracket');
@@ -287,8 +276,8 @@ export class TournamentClient {
     }
     
     // Validate match data
-    if (!this.validateMatchData(data)) {
-      this.showErrorMessage('매치 데이터가 유효하지 않습니다.');
+    if (!UIUtils.validateMatchData(data)) {
+      this.errorHandler.handleValidationError('matchData');
       return;
     }
     
@@ -359,7 +348,7 @@ export class TournamentClient {
           onPreGameCountdown: (time) => {
             // 게임 카운트다운 중에는 카운트다운 화면 표시
             if (time > 0) {
-              this.container.innerHTML = this.renderer.renderGameCountdown(time);
+              this.container.innerHTML = this.renderer.renderGameCountdownContainer(time);
             }
           },
           onGameStart: () => {
@@ -404,7 +393,7 @@ export class TournamentClient {
     if (this.bracketMatches) {
       const semiFinals = this.bracketMatches.filter(m => m.round_number === 1);
       const finals = this.bracketMatches.filter(m => m.round_number === 2);
-      bracketHTML = this.renderer.renderBracket(semiFinals, finals);
+      bracketHTML = this.renderer.renderBracketLayoutContainer(semiFinals, finals);
     } else {
       bracketHTML = '<div class="text-center text-terminal-gray">브라켓 정보를 불러오는 중...</div>';
     }
@@ -423,7 +412,7 @@ export class TournamentClient {
     const cancelBtn = this.container.querySelector('#cancel-tournament-btn');
     if (cancelBtn) {
       cancelBtn.addEventListener('click', () => {
-        this.isManualExit = true;
+        this.errorHandler.setManualExit(true);
         this.destroy();
         window.location.href = '/';
       });
@@ -451,7 +440,7 @@ export class TournamentClient {
     console.log('Tournament ended');
     
     // 토너먼트 정상 종료 플래그 설정
-    this.tournamentEnded = true;
+    this.errorHandler.setTournamentEnded(true);
     
     // 타이머 정리
     if (this.currentTimeout) {
@@ -480,7 +469,7 @@ export class TournamentClient {
     if (this.bracketMatches) {
       const semiFinals = this.bracketMatches.filter(m => m.round_number === 1);
       const finals = this.bracketMatches.filter(m => m.round_number === 2);
-      bracketHTML = this.renderer.renderBracket(semiFinals, finals);
+      bracketHTML = this.renderer.renderBracketLayoutContainer(semiFinals, finals);
     } else {
       bracketHTML = '<div class="text-center text-terminal-gray">브라켓 정보를 불러오는 중...</div>';
     }
@@ -499,7 +488,7 @@ export class TournamentClient {
     const cancelBtn = this.container.querySelector('#cancel-tournament-btn');
     if (cancelBtn) {
       cancelBtn.addEventListener('click', () => {
-        this.isManualExit = true;
+        this.errorHandler.setManualExit(true);
         this.destroy();
         window.location.href = '/';
       });
@@ -530,7 +519,7 @@ export class TournamentClient {
     }
 
     // Validate game result before processing
-    if (!this.validateGameResult(gameResult)) {
+    if (!UIUtils.validateGameResult(gameResult)) {
       throw new Error('Invalid game result data');
     }
 
@@ -612,7 +601,7 @@ export class TournamentClient {
   // TournamentClient에 최종 토너먼트 결과 모달을 띄우는 메서드 (홈으로 버튼 있음)
   public showFinalTournamentResultModal() {
     // 토너먼트 정상 종료 플래그 설정 (만약 이전에 설정되지 않았다면)
-    this.tournamentEnded = true;
+    this.errorHandler.setTournamentEnded(true);
     
     // 최종 우승자 찾기
     const finalMatch = this.bracketMatches?.find(m => m.round_number === 2);
@@ -625,7 +614,7 @@ export class TournamentClient {
     if (this.bracketMatches) {
       const semiFinals = this.bracketMatches.filter(m => m.round_number === 1);
       const finals = this.bracketMatches.filter(m => m.round_number === 2);
-      bracketHTML = this.renderer.renderBracket(semiFinals, finals);
+      bracketHTML = this.renderer.renderBracketLayoutContainer(semiFinals, finals);
     } else {
       bracketHTML = '<div class="text-center text-terminal-red">브라켓 정보를 불러올 수 없습니다.</div>';
     }
@@ -655,165 +644,14 @@ export class TournamentClient {
     console.log('Force stopping tournament client');
     
     // 사용자가 의도적으로 종료함을 표시 (오류 메시지 방지)
-    this.isManualExit = true;
+    this.errorHandler.setManualExit(true);
     
     // 토너먼트 종료 플래그 설정
-    this.tournamentEnded = true;
+    this.errorHandler.setTournamentEnded(true);
     this.isProcessingMatch = false;
     
     // 정리 작업 수행
     this.destroy();
   }
 
-  // Input validation and sanitization methods
-  private validateUserId(userId: any): boolean {
-    return typeof userId === 'number' && userId > 0 && Number.isInteger(userId);
-  }
-
-  private validateTournamentId(tournamentId: any): boolean {
-    return typeof tournamentId === 'number' && tournamentId > 0 && Number.isInteger(tournamentId);
-  }
-
-  private validateMatchData(data: any): boolean {
-    console.log('Validating match data:', data);
-    if (!data || typeof data !== 'object') {
-      console.log('Invalid: data is not an object');
-      return false;
-    }
-    
-    // Check required fields
-    if (!data.matchId || typeof data.matchId !== 'number' || data.matchId <= 0) {
-      console.log('Invalid: matchId is invalid', data.matchId);
-      return false;
-    }
-    if (!data.participants || !Array.isArray(data.participants)) {
-      console.log('Invalid: participants is not an array');
-      return false;
-    }
-    if (data.participants.length !== 2) {
-      console.log('Invalid: participants length is not 2', data.participants.length);
-      return false;
-    }
-    
-    // Validate participants
-    for (const participant of data.participants) {
-      if (!participant || typeof participant !== 'object') {
-        console.log('Invalid: participant is not an object', participant);
-        return false;
-      }
-      if (!participant.id || !this.validateUserId(participant.id)) {
-        console.log('Invalid: participant id is invalid', participant.id);
-        return false;
-      }
-      if (!participant.name && !participant.display_name) {
-        console.log('Invalid: participant has no name or display_name', participant);
-        return false;
-      }
-      const name = participant.name || participant.display_name;
-      if (typeof name !== 'string' || name.length > 50) {
-        console.log('Invalid: participant name is invalid', name);
-        return false;
-      }
-    }
-    
-    console.log('Match data validation passed');
-    return true;
-  }
-
-  // Validation method for game results before sending to server
-  private validateGameResult(gameResult: any): boolean {
-    console.log('Validating game result:', gameResult);
-    
-    if (!gameResult || typeof gameResult !== 'object') {
-      console.log('Invalid: gameResult is not an object');
-      return false;
-    }
-    
-    // Validate score range (typical Pong scores should be reasonable)
-    const leftScore = gameResult.leftPlayer?.score || 0;
-    const rightScore = gameResult.rightPlayer?.score || 0;
-    
-    console.log('Scores - Left:', leftScore, 'Right:', rightScore);
-    
-    if (typeof leftScore !== 'number' || typeof rightScore !== 'number') {
-      console.log('Invalid: scores are not numbers');
-      return false;
-    }
-    if (leftScore < 0 || rightScore < 0) {
-      console.log('Invalid: negative scores');
-      return false;
-    }
-    if (leftScore > 100 || rightScore > 100) {
-      console.log('Invalid: scores too high');
-      return false;
-    }
-    
-    // Validate winner
-    const winner = gameResult.winner;
-    console.log('Winner:', winner);
-    
-    if (winner !== 'left' && winner !== 'right') {
-      console.log('Invalid: winner is not left or right');
-      return false;
-    }
-    
-    // 승자 검증을 더 관대하게 수정 (동점인 경우도 허용)
-    if (winner === 'left' && leftScore < rightScore) {
-      console.log('Invalid: left winner but right score is higher');
-      return false;
-    }
-    if (winner === 'right' && rightScore < leftScore) {
-      console.log('Invalid: right winner but left score is higher');
-      return false;
-    }
-    
-    console.log('Game result validation passed');
-    return true;
-  }
-
-  private sanitizeDisplayName(name: string): string {
-    if (typeof name !== 'string') return 'Unknown Player';
-    
-    // Remove potentially dangerous characters and limit length
-    return name
-      .replace(/[<>&"']/g, '') // Remove HTML special characters
-      .trim()
-      .substring(0, 50) || 'Unknown Player';
-  }
-
-  private showErrorMessage(message: string): void {
-    console.error('Tournament error:', message);
-    
-    // 사용자가 의도적으로 종료한 경우 오류 메시지를 표시하지 않음
-    if (this.isManualExit) {
-      console.log('Skipping error message due to manual exit');
-      return;
-    }
-    
-    // Show user-friendly error message
-    const errorModal: ModalContent = {
-      title: '⚠️ 오류',
-      content: () => {
-        const el = document.createElement('div');
-        el.className = 'text-center p-4';
-        el.innerHTML = `
-          <div class="text-terminal-red mb-4">${this.sanitizeDisplayName(message)}</div>
-          <button class="px-4 py-2 bg-terminal-green text-terminal-black rounded hover:bg-terminal-yellow transition-colors">
-            확인
-          </button>
-        `;
-        
-        el.querySelector('button')?.addEventListener('click', () => {
-          this.modalManager.hide();
-        });
-        
-        return el;
-      },
-      onShow: () => {},
-      onClose: () => {},
-      config: { closable: true }
-    };
-    
-    this.modalManager.show(errorModal);
-  }
 }

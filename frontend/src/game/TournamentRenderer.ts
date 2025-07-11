@@ -1,4 +1,5 @@
 import { TournamentMatchResult } from './TournamentClient';
+import { UIUtils } from '../utils/UIUtils';
 
 /**
  * TournamentRenderer - 토너먼트 UI 렌더링 전담 클래스
@@ -37,7 +38,7 @@ export class TournamentRenderer {
   /**
    * 개별 플레이어 카드 컴포넌트 렌더링
    */
-  private renderPlayerCardComponent(participant: any, isWinner: boolean, isCurrentUser: boolean, score: string, matchStatus: string, emptyText: string = 'TBD'): string {
+  private renderPlayerCard(participant: any, isWinner: boolean, isCurrentUser: boolean, score: string, matchStatus: string, emptyText: string = 'TBD'): string {
     // 패배자인지 확인
     const isLoser = (matchStatus === 'completed' || matchStatus === 'finished') && !isWinner;
     const isPlaying = matchStatus === 'playing' || matchStatus === 'in_progress' || matchStatus === 'active';
@@ -58,7 +59,7 @@ export class TournamentRenderer {
         <div class="flex items-start justify-between h-full">
           <div class="flex flex-col flex-grow min-w-0">
             <span class="font-bold truncate text-lg ${isEmpty || isLoser ? 'text-gray-500' : ''}">${
-              isEmpty ? emptyText : this.sanitizeDisplayName(participant.display_name || participant.name || 'Unknown')
+              isEmpty ? emptyText : UIUtils.sanitizePlayerName(participant.display_name || participant.name || 'Unknown')
             }</span>
             <div class="h-6 mt-2 flex items-center gap-2">
               ${!isEmpty && isCurrentUser ? '<span class="inline-block px-2 py-1 text-xs font-bold text-terminal-black bg-terminal-green opacity-65 rounded-full">You</span>' : ''}
@@ -72,9 +73,9 @@ export class TournamentRenderer {
   }
 
   /**
-   * 준결승 카드 렌더링 (세로형)
+   * 준결승 매치 카드 컨테이너 렌더링 (세로형)
    */
-  renderSemifinalCard(match: any, matchNumber: number): string {
+  renderSemifinalMatchContainer(match: any, matchNumber: number): string {
     const hasValidMatch = match && match.participants && match.participants.length >= 2;
     
     // 매치 정보
@@ -95,13 +96,13 @@ export class TournamentRenderer {
         </div>
         <div class="flex-1 flex flex-col justify-center space-y-2">
           ${hasValidMatch 
-            ? this.renderPlayerCardComponent(player1, winner === player1.id, !!(this.currentUserId && player1.user_id === this.currentUserId), player1Score, match.status)
-            : this.renderPlayerCardComponent(null, false, false, '-', 'waiting', 'TBD')
+            ? this.renderPlayerCard(player1, winner === player1.id, !!(this.currentUserId && player1.user_id === this.currentUserId), player1Score, match.status)
+            : this.renderPlayerCard(null, false, false, '-', 'waiting', 'TBD')
           }
           <div class="text-center text-xs text-terminal-green opacity-50">vs</div>
           ${hasValidMatch 
-            ? this.renderPlayerCardComponent(player2, winner === player2.id, !!(this.currentUserId && player2.user_id === this.currentUserId), player2Score, match.status)
-            : this.renderPlayerCardComponent(null, false, false, '-', 'waiting', 'TBD')
+            ? this.renderPlayerCard(player2, winner === player2.id, !!(this.currentUserId && player2.user_id === this.currentUserId), player2Score, match.status)
+            : this.renderPlayerCard(null, false, false, '-', 'waiting', 'TBD')
           }
         </div>
         ${hasValidMatch ? `<div class="text-center text-xs text-terminal-gray mt-2">Match #${match.id}</div>` : ''}
@@ -110,9 +111,9 @@ export class TournamentRenderer {
   }
 
   /**
-   * 결승 카드 렌더링 (횡형)
+   * 결승 매치 카드 컨테이너 렌더링 (횡형)
    */
-  renderFinalCard(match: any): string {
+  renderFinalMatchContainer(match: any): string {
     const hasValidMatch = match && match.participants && match.participants.length >= 2;
     
     // 매치 정보
@@ -129,13 +130,13 @@ export class TournamentRenderer {
       <div class="h-full flex flex-col justify-center">
         <div class="flex items-center gap-2 justify-center">
           ${hasValidMatch 
-            ? this.renderPlayerCardComponent(player1, winner === player1.id, !!(this.currentUserId && player1.user_id === this.currentUserId), player1Score, match.status)
-            : this.renderPlayerCardComponent(null, false, false, '-', 'waiting', '?')
+            ? this.renderPlayerCard(player1, winner === player1.id, !!(this.currentUserId && player1.user_id === this.currentUserId), player1Score, match.status)
+            : this.renderPlayerCard(null, false, false, '-', 'waiting', '?')
           }
           <div class="text-xs text-terminal-green opacity-50 px-2">vs</div>
           ${hasValidMatch 
-            ? this.renderPlayerCardComponent(player2, winner === player2.id, !!(this.currentUserId && player2.user_id === this.currentUserId), player2Score, match.status)
-            : this.renderPlayerCardComponent(null, false, false, '-', 'waiting', '?')
+            ? this.renderPlayerCard(player2, winner === player2.id, !!(this.currentUserId && player2.user_id === this.currentUserId), player2Score, match.status)
+            : this.renderPlayerCard(null, false, false, '-', 'waiting', '?')
           }
         </div>
         ${hasValidMatch ? `<div class="text-center text-xs text-terminal-gray mt-2">Match #${match.id}</div>` : ''}
@@ -144,9 +145,9 @@ export class TournamentRenderer {
   }
 
   /**
-   * 전체 브라켓 렌더링 (준결승-결승-준결승)
+   * 전체 브라켓 레이아웃 컨테이너 렌더링 (준결승-결승-준결승)
    */
-  renderBracket(semiFinals: any[], finals: any[]): string {
+  renderBracketLayoutContainer(semiFinals: any[], finals: any[]): string {
     const semifinal1 = semiFinals[0];
     const semifinal2 = semiFinals[1];
     let final = finals[0];
@@ -177,26 +178,26 @@ export class TournamentRenderer {
               box-border">
           <!-- 준결승 1 -->
         <div class="flex-1 basis-0 min-w-0 flex flex-col items-center justify-center">
-            ${this.renderSemifinalCard(semifinal1, 1)}
+            ${this.renderSemifinalMatchContainer(semifinal1, 1)}
           </div>
           
           <!-- 결승 -->
         <div class="flex-1 basis-0 min-w-0 flex flex-col items-center justify-center">
-            ${this.renderFinalCard(final)}
+            ${this.renderFinalMatchContainer(final)}
           </div>
           
           <!-- 준결승 2 -->
         <div class="flex-1 basis-0 min-w-0 flex flex-col items-center justify-center">
-            ${this.renderSemifinalCard(semifinal2, 2)}
+            ${this.renderSemifinalMatchContainer(semifinal2, 2)}
           </div>
         </div>
     `;
   }
 
   /**
-   * 제목 섹션 렌더링
+   * 제목 섹션 컨테이너 렌더링
    */
-  renderTitle(title: string, subtitle: string, matchId?: number): string {
+  renderTitleSection(title: string, subtitle: string, matchId?: number): string {
     return `
       <div class="text-center mb-8">
         <h2 class="text-2xl font-bold text-terminal-green">${title}</h2>
@@ -207,9 +208,9 @@ export class TournamentRenderer {
   }
 
   /**
-   * 카운트다운 섹션 렌더링
+   * 카운트다운 섹션 컨테이너 렌더링
    */
-  renderCountdown(seconds: number, message: string): string {
+  renderCountdownSection(seconds: number, message: string): string {
     return `
       <div class="text-center mb-8">
         <div id="countdown-number" class="text-4xl font-bold text-terminal-cyan">${seconds}</div>
@@ -219,9 +220,9 @@ export class TournamentRenderer {
   }
 
   /**
-   * 버튼 섹션 렌더링
+   * 액션 버튼 섹션 컨테이너 렌더링
    */
-  renderButton(type: 'cancel' | 'home'): string {
+  renderActionButtonSection(type: 'cancel' | 'home'): string {
     const buttons = {
       cancel: {
         id: 'cancel-tournament-btn',
@@ -258,23 +259,23 @@ export class TournamentRenderer {
   ): string {
     return this.createTournamentContainer(`
       <!-- Title -->
-      ${this.renderTitle(title, subtitle, matchId)}
+      ${this.renderTitleSection(title, subtitle, matchId)}
       
       <!-- Bracket -->
         ${bracketHTML}
       
       <!-- Countdown -->
-      ${countdown ? this.renderCountdown(countdown.seconds, countdown.message) : '<div class="mb-8"></div>'}
+      ${countdown ? this.renderCountdownSection(countdown.seconds, countdown.message) : '<div class="mb-8"></div>'}
       
       <!-- Button -->
-      ${buttonType ? this.renderButton(buttonType) : ''}
+      ${buttonType ? this.renderActionButtonSection(buttonType) : ''}
     `);
   }
 
   /**
-   * 게임 카운트다운 화면 렌더링
+   * 게임 시작 전 카운트다운 컨테이너 렌더링
    */
-  renderGameCountdown(time: number): string {
+  renderGameCountdownContainer(time: number): string {
     return this.createTournamentContainer(`
       <div id="waiting-screen" class="flex-1 flex flex-col items-center justify-center">
         <h2 class="text-3xl font-bold mb-4">토너먼트 매치 시작</h2>
@@ -283,18 +284,5 @@ export class TournamentRenderer {
         <div class="text-sm text-terminal-cyan">준비하세요!</div>
       </div>
     `);
-  }
-
-  /**
-   * 텍스트 새니타이즈
-   */
-  private sanitizeDisplayName(name: string): string {
-    if (typeof name !== 'string') return 'Unknown Player';
-    
-    // Remove potentially dangerous characters and limit length
-    return name
-      .replace(/[<>&"']/g, '') // Remove HTML special characters
-      .trim()
-      .substring(0, 50) || 'Unknown Player';
   }
 }
