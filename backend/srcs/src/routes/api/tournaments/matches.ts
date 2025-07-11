@@ -240,6 +240,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 							user_id: Type.Optional(Type.Integer()),
 							type: Type.String(),
 							score: Type.Optional(Type.Integer()),
+							avatarUrl: Type.Optional(Type.String()) 
 						})),
 						winner_id: Type.Optional(Type.Integer()),
 						started_at: Type.Optional(Type.String()),

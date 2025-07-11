@@ -145,6 +145,7 @@ export interface TournamentMatch {
     display_name?: string;
     user_id?: number;
     type?: 'user' | 'guest'; // 플레이어 타입 추가
+    avatarUrl?: string; // 아바타 URL 추가
   }>;
   winner_id?: number;
   started_at?: string;
@@ -440,12 +441,19 @@ export class TournamentClient {
         gameId,
         type: 'tournament' as const,
         status: 'countdown' as const,
-        players: participants.map((p: any) => ({
-          id: p.id,
-          type: p.user_id ? 'user' : 'guest',
-          name: p.display_name || p.name || `Player${p.id}`,
-          avatarUrl: p.avatarUrl || undefined
-        }))
+        players: participants.map((p: any) => {
+          // 전체 참가자 정보에서 아바타 URL 등 추가 정보 찾기
+          const fullParticipantInfo = this.bracketMatches
+            ?.flatMap(m => m.participants)
+            .find(fp => fp.id === p.id);
+
+          return {
+            id: p.id,
+            type: p.user_id ? 'user' : 'guest',
+            name: p.display_name || p.name || `Player${p.id}`,
+            avatarUrl: fullParticipantInfo?.avatarUrl || undefined
+          };
+        })
       };
       
       console.log('Starting tournament match with game info:', gameInfo);

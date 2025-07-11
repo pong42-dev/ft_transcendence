@@ -46,17 +46,26 @@ export function createMatchesRepository(fastify: FastifyInstance) {
 				}
 
 				// 참가자 정보 조회
-				const participants = await knex('game_participants as gp')
+				const participantsData = await knex('game_participants as gp')
 					.join('players as p', 'gp.player_id', 'p.id')
-					.leftJoin('user_profiles as up', function() {
-						this.on('p.user_id', '=', 'up.user_id');
-					})
-					.select('p.id', 'p.type', 'p.user_id', 'p.display_name', 'up.name as user_name', 'gp.score')
-					.where('gp.game_id', matchId)
-					.then(rows => rows.map(row => ({
-						...row,
-						display_name: row.type === 'user' && row.user_name ? row.user_name : row.display_name
-					})));
+					.leftJoin('user_profiles as up', 'p.user_id', 'up.user_id')
+					.select('p.id', 'p.type', 'p.user_id', 'p.display_name', 'up.name as user_name', 'up.avatar', 'gp.score')
+					.where('gp.game_id', match.id); // 또는 matchId
+
+				const participants = participantsData.map(p => {
+					const name = p.type === 'user' && p.user_name ? p.user_name : p.display_name;
+					const defaultAvatar = `http://localhost:3000/public/default-avatar.png`;
+					const avatarUrl = p.avatar ? `http://localhost:3000/${p.avatar}` : defaultAvatar;
+
+					return {
+						id: p.id,
+						type: p.type,
+						user_id: p.user_id,
+						display_name: name,
+						score: p.score,
+						avatarUrl: avatarUrl // 아바타 URL 추가
+					};
+				});
 
 				return {
 					...match,

@@ -75,7 +75,7 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 					created_at: new Date().toISOString(),
 					ended_at: null
 				});
-				
+
 				return tournamentId;
 			} catch (err: any) {
 				console.error('Error creating tournament:', err);
@@ -89,13 +89,13 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 		 * 토너먼트 참가자 등록 (players 테이블에 먼저 등록 후 game_participants에 연결)
 		 */
 		async addTournamentParticipant(
-			tournamentId: number, 
-			playerType: 'user' | 'guest', 
-			userId?: number, 
+			tournamentId: number,
+			playerType: 'user' | 'guest',
+			userId?: number,
 			displayName?: string
 		): Promise<number> {
 			const trx = await knex.transaction();
-			
+
 			try {
 				let playerId: number;
 
@@ -104,7 +104,7 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 					const existingPlayer = await trx('players')
 						.where('user_id', userId)
 						.first();
-					
+
 					if (existingPlayer) {
 						playerId = existingPlayer.id;
 						console.log(`Using existing player for user ${userId}: ${playerId}`);
@@ -150,7 +150,7 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 				});
 
 				await trx.commit();
-				
+
 				console.log(`Participant added to tournament ${tournamentId}. Player ID: ${playerId}, Game ID: ${gameId}`);
 				return playerId;
 			} catch (error) {
@@ -164,9 +164,9 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 		 */
 		async addTournamentParticipantWithTransaction(
 			trx: Knex.Transaction,
-			tournamentId: number, 
-			playerType: 'user' | 'guest', 
-			userId?: number, 
+			tournamentId: number,
+			playerType: 'user' | 'guest',
+			userId?: number,
 			displayName?: string
 		): Promise<number> {
 			let playerId: number;
@@ -176,7 +176,7 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 				const existingPlayer = await trx('players')
 					.where('user_id', userId)
 					.first();
-				
+
 				if (existingPlayer) {
 					playerId = existingPlayer.id;
 					console.log(`Using existing player for user ${userId}: ${playerId}`);
@@ -220,7 +220,7 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 				player_id: playerId,
 				score: 0
 			});
-			
+
 			console.log(`Participant added to tournament ${tournamentId}. Player ID: ${playerId}, Game ID: ${gameId}`);
 			return playerId;
 		},
@@ -231,7 +231,7 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 		 */
 		async generateTournamentBracket(tournamentId: number): Promise<number[]> {
 			const trx = await knex.transaction();
-			
+
 			try {
 				// 1. 토너먼트의 모든 게임과 참가자 조회
 				const tournamentGames = await trx('games as g')
@@ -246,14 +246,14 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 				await trx('game_participants')
 					.whereIn('game_id', tournamentGames.map(g => g.game_id))
 					.del();
-				
+
 				await trx('games')
 					.where('tournament_id', tournamentId)
 					.del();
 
 				// 3. 참가자 목록 추출
 				const participants = tournamentGames
-					.filter((game, index, self) => 
+					.filter((game, index, self) =>
 						self.findIndex(g => g.player_id === game.player_id) === index
 					);
 
@@ -268,7 +268,7 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 
 				// 5. 4강전 게임 생성 (2개)
 				const semifinalGames: number[] = [];
-				
+
 				// 게임 1: 참가자 1 vs 참가자 2
 				const [game1Id] = await trx('games').insert({
 					type: 'tournament',
@@ -317,9 +317,9 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 				});
 
 				await trx.commit();
-				
+
 				console.log(`Tournament bracket generated for tournament ${tournamentId}. Games: ${semifinalGames.join(', ')}, Final: ${finalGameId}`);
-				
+
 				// [4강게임1, 4강게임2, 결승게임] 순서로 반환
 				return [...semifinalGames, finalGameId];
 			} catch (error) {
@@ -345,14 +345,14 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 			await trx('game_participants')
 				.whereIn('game_id', tournamentGames.map(g => g.game_id))
 				.del();
-			
+
 			await trx('games')
 				.where('tournament_id', tournamentId)
 				.del();
 
 			// 3. 참가자 목록 추출
 			const participants = tournamentGames
-				.filter((game, index, self) => 
+				.filter((game, index, self) =>
 					self.findIndex(g => g.player_id === game.player_id) === index
 				);
 
@@ -367,7 +367,7 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 
 			// 5. 4강전 게임 생성 (2개)
 			const semifinalGames: number[] = [];
-			
+
 			// 게임 1: 참가자 1 vs 참가자 2
 			const [game1Id] = await trx('games').insert({
 				type: 'tournament',
@@ -414,9 +414,9 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 				started_at: null,
 				ended_at: null
 			});
-			
+
 			console.log(`Tournament bracket generated for tournament ${tournamentId}. Games: ${semifinalGames.join(', ')}, Final: ${finalGameId}`);
-			
+
 			// [4강게임1, 4강게임2, 결승게임] 순서로 반환
 			return [...semifinalGames, finalGameId];
 		},
@@ -475,18 +475,31 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 				// 4. 각 게임의 참가자 정보 조회 (user_profiles 조인)
 				const gamesWithParticipants = await Promise.all(
 					games.map(async (game) => {
-						const gameParticipants = await knex('game_participants as gp')
+						const gameParticipantsData = await knex('game_participants as gp')
 							.join('players as p', 'gp.player_id', 'p.id')
 							.leftJoin('user_profiles as up', 'p.user_id', 'up.user_id')
 							.select(
-								'p.id',
-								'p.type',
-								'p.user_id',
-								'p.display_name',
-								'gp.score',
-								knex.raw('COALESCE(up.name, p.display_name) as name')
+								'p.id', 'p.type', 'p.user_id', 'p.display_name', 'gp.score',
+								'up.name as user_name', 'up.avatar'
 							)
 							.where('gp.game_id', game.id);
+
+						const gameParticipants = gameParticipantsData.map(p => {
+							const name = p.type === 'user' && p.user_name ? p.user_name : p.display_name;
+							const defaultAvatar = `http://localhost:3000/public/default-avatar.png`;
+							const avatarUrl = p.avatar ? `http://localhost:3000/${p.avatar}` : defaultAvatar;
+
+							return {
+								id: p.id,
+								type: p.type,
+								user_id: p.user_id,
+								name: name,
+								display_name: name,
+								score: p.score,
+								avatarUrl: avatarUrl // 아바타 URL 추가
+							};
+						});
+
 						return {
 							...game,
 							participants: gameParticipants
@@ -548,7 +561,7 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 				const matches = await knex('games as g')
 					.join('game_participants as gp', 'g.id', 'gp.game_id')
 					.join('players as p', 'gp.player_id', 'p.id')
-					.leftJoin('user_profiles as up', function() {
+					.leftJoin('user_profiles as up', function () {
 						this.on('p.user_id', '=', 'up.user_id');
 					})
 					.select(
@@ -733,13 +746,13 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 		 * 토너먼트 상태 업데이트
 		 */
 		async updateTournamentStatus(
-			tournamentId: number, 
+			tournamentId: number,
 			status: 'waiting' | 'in-progress' | 'ended' | 'canceled',
 			winnerPlayerId?: number
 		): Promise<void> {
 			try {
 				const updateData: any = { status };
-				
+
 				if (status === 'ended' && winnerPlayerId) {
 					updateData.winner_player_id = winnerPlayerId;
 					updateData.ended_at = new Date().toISOString();
@@ -763,7 +776,7 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 			try {
 				const tournaments = await knex('tournaments')
 					.orderBy('created_at', 'desc');
-				
+
 				return tournaments as Tournament[];
 			} catch (err: any) {
 				console.error('Error getting all tournaments:', err.message);
@@ -775,128 +788,128 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 		 * 사용자의 토너먼트 매치 기록 조회 (프로필용 - 간단한 버전)
 		 */
 		async getTournamentHistoryForProfile(userId: number): Promise<any[]> {
-		try {
-			const knex = fastify.knex;
+			try {
+				const knex = fastify.knex;
 
-			// 1. userId로 player_id 조회
-			const player = await knex('players').where('user_id', userId).first('id');
-			if (!player) return [];
+				// 1. userId로 player_id 조회
+				const player = await knex('players').where('user_id', userId).first('id');
+				if (!player) return [];
 
-			// 2. 내가 참가한 토너먼트 ID 목록 조회 (중복 제거)
-			const tournamentIdsRows = await knex('games as g')
-			.join('game_participants as gp', 'g.id', 'gp.game_id')
-			.where('g.type', 'tournament')
-			.where('gp.player_id', player.id)
-			.distinct('g.tournament_id');
+				// 2. 내가 참가한 토너먼트 ID 목록 조회 (중복 제거)
+				const tournamentIdsRows = await knex('games as g')
+					.join('game_participants as gp', 'g.id', 'gp.game_id')
+					.where('g.type', 'tournament')
+					.where('gp.player_id', player.id)
+					.distinct('g.tournament_id');
 
-			const tournamentIds = tournamentIdsRows.map(r => r.tournament_id);
+				const tournamentIds = tournamentIdsRows.map(r => r.tournament_id);
 
-			// 3. 토너먼트별 참가자 정보와 게임 기록 조회
-			const tournHistories = [];
+				// 3. 토너먼트별 참가자 정보와 게임 기록 조회
+				const tournHistories = [];
 
-			for (const tournamentId of tournamentIds) {
-			// 토너먼트 기본 정보
-			const tournamentInfo = await knex('tournaments')
-				.where('id', tournamentId)
-				.first('id', 'created_at', 'winner_player_id');
-			if (!tournamentInfo) continue;
+				for (const tournamentId of tournamentIds) {
+					// 토너먼트 기본 정보
+					const tournamentInfo = await knex('tournaments')
+						.where('id', tournamentId)
+						.first('id', 'created_at', 'winner_player_id');
+					if (!tournamentInfo) continue;
 
-			// 참가자 목록 조회
-			const participantsRows = await knex('game_participants as gp')
-				.join('players as p', 'gp.player_id', 'p.id')
-				.join('games as g', 'gp.game_id', 'g.id')
-				.where('g.tournament_id', tournamentId)
-				.distinct('p.id', 'p.type', 'p.user_id', 'p.display_name');
+					// 참가자 목록 조회
+					const participantsRows = await knex('game_participants as gp')
+						.join('players as p', 'gp.player_id', 'p.id')
+						.join('games as g', 'gp.game_id', 'g.id')
+						.where('g.tournament_id', tournamentId)
+						.distinct('p.id', 'p.type', 'p.user_id', 'p.display_name');
 
-			// 1. user_id만 모아서
-			const userIds = participantsRows
-				.filter(p => p.type === 'user')
-				.map(p => p.user_id);
+					// 1. user_id만 모아서
+					const userIds = participantsRows
+						.filter(p => p.type === 'user')
+						.map(p => p.user_id);
 
-			// 2. 한 번에 이름들을 가져옴
-			const userProfiles = await knex('user_profiles')
-				.whereIn('user_id', userIds)
-				.select('user_id', 'name');
+					// 2. 한 번에 이름들을 가져옴
+					const userProfiles = await knex('user_profiles')
+						.whereIn('user_id', userIds)
+						.select('user_id', 'name');
 
-			// 3. user_id → name 맵으로 변환
-			const userIdToName: Record<number, string> = {};
-			userProfiles.forEach(profile => {
-				userIdToName[profile.user_id] = profile.name;
-			});
+					// 3. user_id → name 맵으로 변환
+					const userIdToName: Record<number, string> = {};
+					userProfiles.forEach(profile => {
+						userIdToName[profile.user_id] = profile.name;
+					});
 
-			// 4. participants 이름 변환
-			const participants = participantsRows.map(p => {
-				if (p.type === 'user') {
-					return userIdToName[p.user_id] || 'Unknown User';
+					// 4. participants 이름 변환
+					const participants = participantsRows.map(p => {
+						if (p.type === 'user') {
+							return userIdToName[p.user_id] || 'Unknown User';
+						}
+						return p.display_name || 'Unknown';
+					});
+
+					// rounds 배열 생성 (게임별 1v1 상세)
+					const games = await knex('games as g')
+						.join('game_participants as me', 'g.id', 'me.game_id')
+						.join('players as me_player', 'me.player_id', 'me_player.id')
+						.join('game_participants as op', function () {
+							this.on('g.id', '=', 'op.game_id').andOn('me.player_id', '!=', 'op.player_id');
+						})
+						.join('players as op_player', 'op.player_id', 'op_player.id')
+						.select(
+							'g.round_number',
+							'g.ended_at',
+							'g.winner_id',
+							'me.score as my_score',
+							'op.score as opponent_score',
+							'op_player.id as opponent_id',
+							'op_player.type as opponent_type',
+							'op_player.user_id as opponent_user_id',
+							'op_player.display_name as opponent_display_name',
+							'me_player.id as my_player_id'
+						)
+						.where('g.tournament_id', tournamentId)
+						.where('me_player.user_id', userId)
+						.orderBy('g.round_number', 'asc');
+
+					const rounds = games.map(game => {
+						const opponentName = game.opponent_display_name || 'Unknown';
+						return {
+							round_number: game.round_number,
+							endedAt: game.ended_at,
+							opponent: {
+								id: game.opponent_id,
+								type: game.opponent_type,
+								name: opponentName,
+							},
+							myScore: game.my_score,
+							opponentScore: game.opponent_score,
+							winnerId: game.winner_id,
+							my_player_id: game.my_player_id,
+						};
+					});
+
+					// final_rank 계산 (결승(round_number=2) 승리시 1, 결승 진출 후 패배시 2, 아니면 3)
+					let final_rank = 3;
+					const finalGame = rounds.find(r => r.round_number === 2);
+					if (finalGame) {
+						final_rank = finalGame.winnerId === finalGame.my_player_id ? 1 : 2;
+					}
+
+					// my_player_id는 반환할 필요 없으니 rounds에서 삭제
+					const cleanRounds = rounds.map(({ my_player_id, ...rest }) => rest);
+
+					tournHistories.push({
+						tournament_id: tournamentInfo.id,
+						tournament_date: tournamentInfo.created_at,
+						participants: participants,
+						rounds: cleanRounds,
+						final_rank: final_rank,
+					});
 				}
-				return p.display_name || 'Unknown';
-			});
 
-			// rounds 배열 생성 (게임별 1v1 상세)
-			const games = await knex('games as g')
-				.join('game_participants as me', 'g.id', 'me.game_id')
-				.join('players as me_player', 'me.player_id', 'me_player.id')
-				.join('game_participants as op', function () {
-				this.on('g.id', '=', 'op.game_id').andOn('me.player_id', '!=', 'op.player_id');
-				})
-				.join('players as op_player', 'op.player_id', 'op_player.id')
-				.select(
-				'g.round_number',
-				'g.ended_at',
-				'g.winner_id',
-				'me.score as my_score',
-				'op.score as opponent_score',
-				'op_player.id as opponent_id',
-				'op_player.type as opponent_type',
-				'op_player.user_id as opponent_user_id',
-				'op_player.display_name as opponent_display_name',
-				'me_player.id as my_player_id'
-				)
-				.where('g.tournament_id', tournamentId)
-				.where('me_player.user_id', userId)
-				.orderBy('g.round_number', 'asc');
-
-			const rounds = games.map(game => {
-				const opponentName = game.opponent_display_name || 'Unknown';
-				return {
-				round_number: game.round_number,  
-				endedAt: game.ended_at,
-				opponent: {
-					id: game.opponent_id,
-					type: game.opponent_type,
-					name: opponentName,
-				},
-				myScore: game.my_score,
-				opponentScore: game.opponent_score,
-				winnerId: game.winner_id,
-				my_player_id: game.my_player_id,
-				};
-			});
-
-			// final_rank 계산 (결승(round_number=2) 승리시 1, 결승 진출 후 패배시 2, 아니면 3)
-			let final_rank = 3;
-			const finalGame = rounds.find(r => r.round_number === 2);
-			if (finalGame) {
-				final_rank = finalGame.winnerId === finalGame.my_player_id ? 1 : 2;
+				return tournHistories;
+			} catch (err: any) {
+				console.error('Error getting tournament history:', err.message);
+				return [];
 			}
-
-			// my_player_id는 반환할 필요 없으니 rounds에서 삭제
-			const cleanRounds = rounds.map(({ my_player_id, ...rest }) => rest);
-
-			tournHistories.push({
-				tournament_id: tournamentInfo.id,
-				tournament_date: tournamentInfo.created_at,
-				participants: participants,
-				rounds: cleanRounds,
-				final_rank: final_rank,
-			});
-			}
-
-			return tournHistories;
-		} catch (err: any) {
-			console.error('Error getting tournament history:', err.message);
-			return [];
-		}
 		}
 
 
