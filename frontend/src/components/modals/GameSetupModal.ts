@@ -87,10 +87,6 @@ export class GameSetupModal {
 
     this.contentElement.innerHTML = `
       <div class="flex items-center justify-between mb-6">
-        <h3 class="text-terminal-green text-xl font-bold">${i18n.t('gameSetupModal.select_game_mode')}</h3>
-        <button class="text-terminal-gray hover:text-terminal-green transition-all" id="close-btn">
-          ✕
-        </button>
       </div>
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <button data-mode="vs ai" class="rounded-lg border border-terminal-gray p-4 text-left transition-all hover:bg-terminal-gray hover:bg-opacity-10">
@@ -121,7 +117,6 @@ export class GameSetupModal {
 
     const modeButtons = this.contentElement.querySelectorAll('[data-mode]');
     const cancelBtn = this.contentElement.querySelector('#cancel-btn') as HTMLButtonElement;
-    const closeBtn = this.contentElement.querySelector('#close-btn') as HTMLButtonElement;
 
     // Mode selection
     modeButtons.forEach(button => {
@@ -133,12 +128,6 @@ export class GameSetupModal {
 
     // Cancel button
     cancelBtn?.addEventListener('click', () => {
-      this.isCancelled = true;
-      this.close();
-    });
-
-    // Close button
-    closeBtn?.addEventListener('click', () => {
       this.isCancelled = true;
       this.close();
     });
@@ -206,9 +195,6 @@ export class GameSetupModal {
     this.contentElement.innerHTML = `
       <div class="flex items-center justify-between mb-6">
         <h3 class="text-terminal-green text-xl font-bold">${title}</h3>
-        <button class="text-terminal-gray hover:text-terminal-green transition-all" id="close-btn">
-          ✕
-        </button>
       </div>
       
       <div class="mb-6">
@@ -218,18 +204,13 @@ export class GameSetupModal {
         </div>
       </div>
       
-      <div class="flex justify-between gap-2">
-        <button id="back-btn" class="px-4 py-2 text-terminal-gray border border-terminal-gray rounded hover:bg-terminal-gray hover:bg-opacity-10 transition-all">
-          ${i18n.t('common.back')}
+      <div class="flex justify-end gap-2">
+        <button id="cancel-btn" class="px-4 py-2 text-terminal-gray border border-terminal-gray rounded hover:bg-terminal-gray hover:bg-opacity-10 transition-all">
+          ${i18n.t('common.cancel')}
         </button>
-        <div class="flex gap-2">
-          <button id="cancel-btn" class="px-4 py-2 text-terminal-gray border border-terminal-gray rounded hover:bg-terminal-gray hover:bg-opacity-10 transition-all">
-            ${i18n.t('common.cancel')}
-          </button>
-          <button id="start-game-btn" class="px-4 py-2 bg-terminal-green text-terminal-black rounded hover:bg-opacity-80 transition-all disabled:opacity-50 disabled:cursor-not-allowed" disabled>
-            ${i18n.t('gameSetupModal.start_game')}
-          </button>
-        </div>
+        <button id="start-game-btn" class="px-4 py-2 bg-terminal-green text-terminal-black rounded hover:bg-opacity-80 transition-all disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+          ${i18n.t('gameSetupModal.start_game')}
+        </button>
       </div>
     `;
 
@@ -239,10 +220,8 @@ export class GameSetupModal {
   private attachGuestInputEventListeners(playerCount: number = 1): void {
     if (!this.contentElement) return;
 
-    const backBtn = this.contentElement.querySelector('#back-btn') as HTMLButtonElement;
     const cancelBtn = this.contentElement.querySelector('#cancel-btn') as HTMLButtonElement;
     const startGameBtn = this.contentElement.querySelector('#start-game-btn') as HTMLButtonElement;
-    const closeBtn = this.contentElement.querySelector('#close-btn') as HTMLButtonElement;
 
     // Get all input elements
     const guestNameInputs: HTMLInputElement[] = [];
@@ -266,19 +245,8 @@ export class GameSetupModal {
       input.addEventListener('input', validateInputs);
     });
 
-    // Back button
-    backBtn?.addEventListener('click', () => {
-      this.renderModeSelectionView();
-    });
-
     // Cancel button
     cancelBtn?.addEventListener('click', () => {
-      this.isCancelled = true;
-      this.close();
-    });
-
-    // Close button
-    closeBtn?.addEventListener('click', () => {
       this.isCancelled = true;
       this.close();
     });
@@ -326,53 +294,45 @@ export class GameSetupModal {
     this.contentElement.innerHTML = `
       <div class="flex items-center justify-between mb-6">
         <h3 class="text-terminal-green text-xl font-bold">${i18n.t('gameSetupModal.ai_difficulty_title')}</h3>
-        <button class="text-terminal-gray hover:text-terminal-green transition-all" id="close-btn">
-          ✕
-        </button>
       </div>
       
       <div class="space-y-4">
         <!-- Difficulty Selection -->
         <div>
           <h4 class="text-terminal-gray text-lg font-medium mb-3">${i18n.t('gameSetupModal.choose_challenge_level')}</h4>
-          <div class="grid grid-cols-1 gap-3">
-            <label class="flex items-center space-x-3 p-4 rounded-lg border border-terminal-gray cursor-pointer hover:bg-terminal-gray hover:bg-opacity-10 transition-all">
-              <input type="radio" name="difficulty" value="easy" class="text-terminal-green focus:ring-terminal-green">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <label class="difficulty-label p-4 rounded-lg border border-terminal-gray cursor-pointer hover:bg-terminal-gray hover:bg-opacity-10 transition-all text-center">
+              <input type="radio" name="difficulty" value="easy" class="sr-only">
               <div>
-                <div class="text-terminal-green font-medium">🟢 ${i18n.t('gameSetupModal.easy')}</div>
-                <div class="text-sm text-terminal-gray">${i18n.t('gameSetupModal.easy_description')}</div>
+                <div class="text-terminal-green font-medium text-lg"></div>
+                <div class="font-bold mt-2">${i18n.t('gameSetupModal.easy')}</div>
               </div>
             </label>
-            <label class="flex items-center space-x-3 p-4 rounded-lg border border-terminal-gray cursor-pointer hover:bg-terminal-gray hover:bg-opacity-10 transition-all">
-              <input type="radio" name="difficulty" value="medium" class="text-terminal-green focus:ring-terminal-green" checked>
+            <label class="difficulty-label p-4 rounded-lg border border-terminal-gray cursor-pointer hover:bg-terminal-gray hover:bg-opacity-10 transition-all text-center">
+              <input type="radio" name="difficulty" value="medium" class="sr-only" checked>
               <div>
-                <div class="text-terminal-green font-medium">🟡 ${i18n.t('gameSetupModal.medium')}</div>
-                <div class="text-sm text-terminal-gray">${i18n.t('gameSetupModal.medium_description')}</div>
+                <div class="text-terminal-green font-medium text-lg"></div>
+                <div class="font-bold mt-2">${i18n.t('gameSetupModal.medium')}</div>
               </div>
             </label>
-            <label class="flex items-center space-x-3 p-4 rounded-lg border border-terminal-gray cursor-pointer hover:bg-terminal-gray hover:bg-opacity-10 transition-all">
-              <input type="radio" name="difficulty" value="hard" class="text-terminal-green focus:ring-terminal-green">
+            <label class="difficulty-label p-4 rounded-lg border border-terminal-gray cursor-pointer hover:bg-terminal-gray hover:bg-opacity-10 transition-all text-center">
+              <input type="radio" name="difficulty" value="hard" class="sr-only">
               <div>
-                <div class="text-terminal-green font-medium">🔴 ${i18n.t('gameSetupModal.hard')}</div>
-                <div class="text-sm text-terminal-gray">${i18n.t('gameSetupModal.hard_description')}</div>
+                <div class="text-terminal-green font-medium text-lg"></div>
+                <div class="font-bold mt-2">${i18n.t('gameSetupModal.hard')}</div>
               </div>
             </label>
           </div>
         </div>
       </div>
       
-      <div class="flex justify-between gap-2 mt-6">
-        <button id="back-btn" class="px-4 py-2 text-terminal-gray border border-terminal-gray rounded hover:bg-terminal-gray hover:bg-opacity-10 transition-all">
-          ${i18n.t('common.back')}
+      <div class="flex justify-end gap-2 mt-6">
+        <button id="cancel-btn" class="px-4 py-2 text-terminal-gray border border-terminal-gray rounded hover:bg-terminal-gray hover:bg-opacity-10 transition-all">
+          ${i18n.t('common.cancel')}
         </button>
-        <div class="flex gap-2">
-          <button id="cancel-btn" class="px-4 py-2 text-terminal-gray border border-terminal-gray rounded hover:bg-terminal-gray hover:bg-opacity-10 transition-all">
-            ${i18n.t('common.cancel')}
-          </button>
-          <button id="start-ai-game-btn" class="px-4 py-2 bg-terminal-green text-terminal-black rounded hover:bg-opacity-80 transition-all">
-            ${i18n.t('gameSetupModal.start_ai_game')}
-          </button>
-        </div>
+        <button id="start-ai-game-btn" class="px-4 py-2 bg-terminal-green text-terminal-black rounded hover:bg-opacity-80 transition-all">
+          ${i18n.t('gameSetupModal.start_ai_game')}
+        </button>
       </div>
     `;
 
@@ -382,24 +342,36 @@ export class GameSetupModal {
   private attachAISettingsEventListeners(): void {
     if (!this.contentElement) return;
 
-    const backBtn = this.contentElement.querySelector('#back-btn') as HTMLButtonElement;
     const cancelBtn = this.contentElement.querySelector('#cancel-btn') as HTMLButtonElement;
     const startAIGameBtn = this.contentElement.querySelector('#start-ai-game-btn') as HTMLButtonElement;
-    const closeBtn = this.contentElement.querySelector('#close-btn') as HTMLButtonElement;
+    const difficultyLabels = this.contentElement.querySelectorAll('.difficulty-label');
 
-    // Back button
-    backBtn?.addEventListener('click', () => {
-      this.renderModeSelectionView();
+    const updateSelectedStyle = () => {
+      difficultyLabels.forEach(label => {
+        const radio = label.querySelector('input[type="radio"]') as HTMLInputElement;
+        if (radio.checked) {
+          label.classList.add('border-terminal-green', 'bg-terminal-green', 'bg-opacity-20');
+          label.classList.remove('border-terminal-gray');
+        } else {
+          label.classList.remove('border-terminal-green', 'bg-terminal-green', 'bg-opacity-20');
+          label.classList.add('border-terminal-gray');
+        }
+      });
+    };
+
+    difficultyLabels.forEach(label => {
+      label.addEventListener('click', () => {
+        const radio = label.querySelector('input[type="radio"]') as HTMLInputElement;
+        radio.checked = true;
+        updateSelectedStyle();
+      });
     });
+
+    // Initial style update
+    updateSelectedStyle();
 
     // Cancel button
     cancelBtn?.addEventListener('click', () => {
-      this.isCancelled = true;
-      this.close();
-    });
-
-    // Close button
-    closeBtn?.addEventListener('click', () => {
       this.isCancelled = true;
       this.close();
     });
