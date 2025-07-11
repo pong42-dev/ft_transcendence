@@ -581,7 +581,8 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 						status: first.status,
 						participants: participants.map(p => ({
 							id: p.player_id,
-							display_name: p.display_name || `User${p.user_id}`,
+							// display_name: p.display_name || `User${p.user_id}`,
+							display_name: p.display_name || p.user_id,
 							user_id: p.user_id
 						})),
 						winner_id: first.winner_id,
@@ -807,8 +808,27 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 				.where('g.tournament_id', tournamentId)
 				.distinct('p.id', 'p.type', 'p.user_id', 'p.display_name');
 
+			// 1. user_id만 모아서
+			const userIds = participantsRows
+				.filter(p => p.type === 'user')
+				.map(p => p.user_id);
+
+			// 2. 한 번에 이름들을 가져옴
+			const userProfiles = await knex('user_profiles')
+				.whereIn('user_id', userIds)
+				.select('user_id', 'name');
+
+			// 3. user_id → name 맵으로 변환
+			const userIdToName: Record<number, string> = {};
+			userProfiles.forEach(profile => {
+				userIdToName[profile.user_id] = profile.name;
+			});
+
+			// 4. participants 이름 변환
 			const participants = participantsRows.map(p => {
-				if (p.type === 'user') return `User${p.user_id}`;
+				if (p.type === 'user') {
+					return userIdToName[p.user_id] || 'Unknown User';
+				}
 				return p.display_name || 'Unknown';
 			});
 
@@ -837,13 +857,9 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 				.orderBy('g.round_number', 'asc');
 
 			const rounds = games.map(game => {
-				const opponentName =
-				game.opponent_type === 'user'
-					? `User${game.opponent_user_id}`
-					: game.opponent_display_name || 'Unknown';
-
+				const opponentName = game.opponent_display_name || 'Unknown';
 				return {
-				round_number: game.round_number,  // round_number 추가
+				round_number: game.round_number,  
 				endedAt: game.ended_at,
 				opponent: {
 					id: game.opponent_id,
@@ -853,7 +869,7 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 				myScore: game.my_score,
 				opponentScore: game.opponent_score,
 				winnerId: game.winner_id,
-				my_player_id: game.my_player_id, // 비교용으로 둠
+				my_player_id: game.my_player_id,
 				};
 			});
 

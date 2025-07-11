@@ -19,6 +19,14 @@ async function login(
 	const userData = { user_id: user_id }
 	const isNotLoggedIn = await this.tokenManager.isNotLoggedIn(user_id)
 	if (!isNotLoggedIn) {
+		if (googleRefreshToken) {
+				const errorParams = new URLSearchParams({
+				error: 'account_in_use',
+				message: 'This account is already in use. Please log out and try again.'
+			});
+			reply.redirect(`${config.CLIENT_ORIGIN}?${errorParams.toString()}`);
+			return;
+		}
 		reply.status(409).send({
 			msg: 'This account is already in use. Please log out and try again.'
 		})
