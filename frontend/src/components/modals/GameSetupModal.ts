@@ -7,7 +7,8 @@
 
 import { GameSetupResult } from '../../types/types.js';
 import { ModalManager, ModalContent } from '../../managers/ModalManager.js';
-import i18n from '../../services/i18n';
+import i18n from '../../services/i18n.js';
+import { validateNickname } from '../../utils/validators.js';
 
 export class GameSetupModal {
   private modalManager: ModalManager;
@@ -185,9 +186,10 @@ export class GameSetupModal {
             id="guest-name-input-${i}" 
             placeholder="${i18n.t('gameSetupModal.enter_guest_player_name_placeholder', { number: playerNumber })}"
             class="w-full px-4 py-3 bg-terminal-black border border-terminal-gray rounded-lg text-terminal-green focus:outline-none focus:border-terminal-green"
-            maxlength="20"
+            maxlength="16"
             autocomplete="off"
           />
+          <div class="text-xs text-terminal-red mt-1 hidden" id="guest-nickname-${i}-error"></div>
         </div>
       `;
     }
@@ -234,7 +236,24 @@ export class GameSetupModal {
 
     // Input validation function
     const validateInputs = () => {
-      const allValid = guestNameInputs.every(input => input.value.trim().length > 0);
+      let allValid = true;
+      guestNameInputs.forEach((input, idx) => {
+        const nickname = input.value.trim();
+        const result = validateNickname(nickname);
+        const errorDiv = this.contentElement?.querySelector(`#guest-nickname-${idx}-error`) as HTMLElement;
+        if (nickname && !result.isValid) {
+          errorDiv.textContent = i18n.t(result.error || 'validation.invalid_nickname_format');
+          errorDiv.classList.remove('hidden');
+          input.classList.add('border-terminal-red');
+          input.classList.remove('border-terminal-gray');
+          allValid = false;
+        } else {
+          errorDiv.classList.add('hidden');
+          input.classList.remove('border-terminal-red');
+          input.classList.add('border-terminal-gray');
+          if (!nickname) allValid = false;
+        }
+      });
       if (startGameBtn) {
         startGameBtn.disabled = !allValid;
       }
@@ -243,6 +262,7 @@ export class GameSetupModal {
     // Add input validation to all inputs
     guestNameInputs.forEach(input => {
       input.addEventListener('input', validateInputs);
+      input.addEventListener('blur', validateInputs);
     });
 
     // Cancel button
@@ -398,6 +418,85 @@ export class GameSetupModal {
       
       this.close();
     });
+  }
+
+  private setupEventListeners(container: HTMLElement): void {
+    // ... (기존 이벤트 리스너들)
+
+    // 게스트 닉네임 입력에 대한 이벤트 리스너 추가
+    const mode = (container.querySelector('#game-mode-selector') as HTMLSelectElement).value;
+    if (mode === 'local') {
+      const input = container.querySelector('#guest-nickname-1') as HTMLInputElement;
+      input?.addEventListener('input', () => this.validateGuestNickname(1));
+      input?.addEventListener('blur', () => this.validateGuestNickname(1));
+    } else if (mode === 'tournament') {
+      for (let i = 1; i <= 3; i++) {
+        const input = container.querySelector(`#guest-nickname-${i}`) as HTMLInputElement;
+        input?.addEventListener('input', () => this.validateGuestNickname(i));
+        input?.addEventListener('blur', () => this.validateGuestNickname(i));
+      }
+    }
+  }
+
+  /**
+   * 게스트 닉네임 유효성 검사
+   */
+  private validateGuestNickname(index: number): boolean {
+    const input = document.querySelector(`#guest-nickname-${index}`) as HTMLInputElement;
+    const errorDiv = document.querySelector(`#guest-nickname-${index}-error`) as HTMLElement;
+    if (!input || !errorDiv) return true; // 요소가 없으면 통과
+
+    const nickname = input.value.trim();
+    const result = validateNickname(nickname);
+
+    if (nickname && !result.isValid) {
+      errorDiv.textContent = i18n.t(result.error || 'validation.invalid_nickname_format');
+      errorDiv.classList.remove('hidden');
+      input.classList.add('border-terminal-red');
+      input.classList.remove('border-terminal-gray');
+      return false;
+    } else {
+      errorDiv.classList.add('hidden');
+      input.classList.remove('border-terminal-red');
+      input.classList.add('border-terminal-gray');
+      return true;
+    }
+  }
+
+  /**
+   * 폼 제출 시 전체 유효성 검사
+   */
+  private validateForm(): boolean {
+    const mode = (document.querySelector('#game-mode-selector') as HTMLSelectElement)?.value;
+    let allValid = true;
+
+    if (mode === 'local') {
+      if (!this.validateGuestNickname(1)) {
+        allValid = false;
+      }
+    } else if (mode === 'tournament') {
+      for (let i = 1; i <= 3; i++) {
+        if (!this.validateGuestNickname(i)) {
+          allValid = false;
+        }
+      }
+    }
+    
+    // 다른 필드 검증...
+
+    return allValid;
+  }
+
+  /**
+   * 확인 버튼 클릭 처리
+   */
+  private handleConfirm(): void {
+    if (!this.validateForm()) {
+      // 유효성 검사 실패 시 처리 중단
+      return;
+    }
+
+    // ... (기존 확인 버튼 처리 로직)
   }
 
 }
