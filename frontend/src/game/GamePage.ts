@@ -5,12 +5,13 @@ import { TournamentClient } from '../game/TournamentClient';
 import { ApiClient } from '../services/ApiClient'; // ApiClient를 직접 import
 import { WebSocketService } from '../services/websocket/WebSocketService';
 import { GameMode, GameSetupResult, CreateGameRequestDto, GameResponseDto } from '../types/types';
-import { GameEndModal } from '../components/modals/GameEndModal';
+import { Terminal } from '../components/Terminal';
 import i18next from 'i18next';
 
 export class GamePage {
     private container: HTMLElement;
     private apiClient: ApiClient;
+    private terminal: Terminal;
     private onGameEndCallback: () => void;
 
     private gameClient: GameClient | null = null;
@@ -48,9 +49,10 @@ export class GamePage {
      * @param gameSetupResult - 게임 설정 데이터 (null이면 모달을 열어서 설정)
      * @param onGameEnd - 게임이 완전히 끝나고 페이지를 닫아야 할 때 호출할 콜백
      */
-    constructor(container: HTMLElement, apiClient: ApiClient, gameSetupResult: GameSetupResult | null, onGameEnd: () => void) {
+    constructor(container: HTMLElement, apiClient: ApiClient, terminal: Terminal, gameSetupResult: GameSetupResult | null, onGameEnd: () => void) {
         this.container = container;
         this.apiClient = apiClient;
+        this.terminal = terminal;
         this.onGameEndCallback = onGameEnd;
         this.init(gameSetupResult);
     }
@@ -173,6 +175,9 @@ export class GamePage {
 
         // 2. 게임이 활성 상태로 설정
         this.isGameActive = true;
+        
+        // 3. 터미널 입력 비활성화 (게임 중 키입력 방지)
+        this.terminal.disableInput();
 
         // 3. 브라우저 이벤트 리스너 설정
         this.setupBrowserEventListeners();
@@ -321,6 +326,9 @@ export class GamePage {
         // 게임 비활성화
         this.isGameActive = false;
         
+        // 터미널 입력 활성화
+        this.terminal.enableInput();
+        
         // 브라우저 이벤트 리스너 제거
         this.removeBrowserEventListeners();
         
@@ -405,6 +413,10 @@ export class GamePage {
     private handleUnexpectedExit() {
         if ((this.gameClient || this.tournamentClient) && this.isGameActive) {
             console.log(i18next.t('game.page.log.handlingUnexpectedExit'));
+            
+            // 터미널 입력 활성화
+            this.terminal.enableInput();
+            
             this.gameClient?.destroy();
             this.tournamentClient?.destroy();
             this.isGameActive = false;
@@ -424,6 +436,9 @@ export class GamePage {
 
         // 게임이 활성 상태로 설정
         this.isGameActive = true;
+        
+        // 터미널 입력 비활성화 (토너먼트 중 키입력 방지)
+        this.terminal.disableInput();
 
         // 브라우저 이벤트 리스너 설정
         this.setupBrowserEventListeners();
@@ -453,6 +468,10 @@ export class GamePage {
      */
     private handleGameFinish() {
         this.isGameActive = false;
+        
+        // 터미널 입력 활성화
+        this.terminal.enableInput();
+        
         this.removeBrowserEventListeners();
         this.safeCallGameEndCallback();
     }

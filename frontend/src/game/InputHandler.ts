@@ -25,17 +25,17 @@ export class InputHandler {
     window.addEventListener('keydown', (e) => {
       if (!this.isActive || this.keyState[e.key]) return; // 중복 입력 방지
       this.keyState[e.key] = true;
-      this.handleKeyPress(e.key, true); // keydown
+      this.handleKeyPress(e.key, true, e); // keydown
     });
 
     window.addEventListener('keyup', (e) => {
       if (!this.isActive || !this.keyState[e.key]) return;
       this.keyState[e.key] = false;
-      this.handleKeyPress(e.key, false); // keyup
+      this.handleKeyPress(e.key, false, e); // keyup
     });
   }
 
-  private handleKeyPress(key: string, isKeyDown: boolean): void {
+  private handleKeyPress(key: string, isKeyDown: boolean, event?: KeyboardEvent): void {
     let action: InputAction | null = null;
     let playerSide: PlayerSide | null = null;
     switch (key.toLowerCase()) {
@@ -60,6 +60,12 @@ export class InputHandler {
     }
     
     if (action && playerSide) {
+      // 게임 키 처리 시 이벤트 전파 방지 (터미널 입력 방지)
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+      
       if (this.isLocalMultiplayer) {
         // 로컬 멀티플레이어: 플레이어 구분해서 전송
         this.emit(action, playerSide);

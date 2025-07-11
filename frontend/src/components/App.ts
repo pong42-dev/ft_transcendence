@@ -252,6 +252,7 @@ export class App {
     this.gamePage = new GamePage(
       mainContent,
       this.apiClient,
+      this.mainTerminal, // 터미널 인스턴스 전달
       this.gameSetupResult, // 게임 설정 데이터 전달
       () => {
         // 게임 종료 콜백

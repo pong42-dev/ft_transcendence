@@ -10,6 +10,7 @@ export class Terminal {
   private commandCallback: (command: string) => void;
   private outputContent: string = '';
   private initialMessage: string = i18n.t('terminal.initial_message_logged_out');
+  private isInputEnabled: boolean = true;
 
   constructor(commandCallback: (command: string) => void) {
     this.commandCallback = commandCallback;
@@ -51,7 +52,9 @@ export class Terminal {
     this.terminalElement.appendChild(inputContainer);
     
     this.terminalElement.addEventListener('click', () => {
-      this.inputElement.focus();
+      if (this.isInputEnabled) {
+        this.inputElement.focus();
+      }
     });
 
     // Ensure initial scroll to bottom
@@ -126,11 +129,29 @@ export class Terminal {
   public focus(): void {
     // 약간의 지연을 두어 DOM 업데이트 완료 후 포커스
     setTimeout(() => {
-      this.inputElement.focus();
+      if (this.isInputEnabled) {
+        this.inputElement.focus();
+      }
     }, 50);
   }
 
+  public disableInput(): void {
+    this.isInputEnabled = false;
+    this.inputElement.blur();
+    this.inputElement.disabled = true;
+  }
+
+  public enableInput(): void {
+    this.isInputEnabled = true;
+    this.inputElement.disabled = false;
+  }
+
   private handleInputKeydown(event: KeyboardEvent): void {
+    if (!this.isInputEnabled) {
+      event.preventDefault();
+      return;
+    }
+    
     if (event.key === 'Enter') {
       const command = this.inputElement.value.trim();
       
