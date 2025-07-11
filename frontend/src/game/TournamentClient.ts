@@ -541,32 +541,16 @@ export class TournamentClient {
           
           if (result) {
             try {
-              // GameResult를 TournamentMatchResult로 변환
               const tournamentResult = this.convertGameResultToTournamentResult(result);
-              
-              // 브라켓 결과 배열에 추가/업데이트
               this.onGameResult(tournamentResult);
-              
-              // 게임 클라이언트 리소스 정리 (하지만 토너먼트 WebSocket은 유지)
-              gameClient.destroy();
-              this.isProcessingMatch = false; // 매치 처리 완료
-              
-              // 잠시 후 다음 매치를 기다리기 위해 브라켓 모달 다시 표시
-              setTimeout(() => {
-                if (this.bracketMatches) {
-                  this.openBracketModal('다음 매치를 기다리는 중...');
-                }
-              }, 2000); // 2초 후 브라켓 모달 표시 (결과를 잠시 확인할 시간)
             } catch (error) {
-              console.error('Error converting game result to tournament result:', error);
-              console.log('Game result that failed to convert:', result);
-              gameClient.destroy();
-              this.isProcessingMatch = false; // 에러 발생 시에도 처리 완료 표시
+              console.error('Error converting game result:', error);
             }
-          } else {
-            gameClient.destroy();
-            this.isProcessingMatch = false; // 결과가 없을 때도 처리 완료 표시
           }
+
+          // 게임 클라이언트 리소스 정리 (하지만 토너먼트 WebSocket은 유지)
+          gameClient.destroy();
+          this.isProcessingMatch = false; // 매치 처리 완료  
         }
       }
     );
