@@ -259,28 +259,6 @@ export class TokenManager {
     return !!this.accessToken;
   }
   
-  // ============= 기존 호환성을 위한 메서드들 =============
-  
-  /**
-   * @deprecated Use setTokens() instead
-   */
-  static setToken(token: string): void {
-    this.setTokens(token);
-  }
-  
-  /**
-   * @deprecated Use getAccessToken() instead
-   */
-  static getToken(): string | null {
-    return this.getAccessToken();
-  }
-  
-  /**
-   * @deprecated Use clearTokens() instead
-   */
-  static clearToken(): void {
-    this.clearTokens();
-  }
   
   // ============= 세션 스토리지 관리 메서드들 =============
   
@@ -337,26 +315,6 @@ export class TokenManager {
     });
   }
 
-  /**
-   * 토큰 동기화 상태 확인 (개발용)
-   */
-  static validateTokenSync(): { isValid: boolean; issues: string[] } {
-    const issues: string[] = [];
-    
-    if (!this.accessToken) {
-      issues.push('No access token in memory');
-    }
-    
-    // 토큰이 있지만 너무 짧거나 형식이 이상한 경우
-    if (this.accessToken && this.accessToken.length < 50) {
-      issues.push('Access token seems too short');
-    }
-    
-    return {
-      isValid: issues.length === 0,
-      issues
-    };
-  }
 }
 
 // 디버깅을 위해 window 객체에 TokenManager 노출 (개발 환경에서만)

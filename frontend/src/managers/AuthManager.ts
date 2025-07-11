@@ -44,6 +44,9 @@ export class AuthManager {
           if (event.data.type === 'logout') {
             console.info('[AuthManager] Received logout event from another tab');
             this.handleCrossTabLogout();
+          } else if (event.data.type === 'login') {
+            console.info('[AuthManager] Received login event from another tab');
+            this.handleCrossTabLogin(event.data.user, event.data.accessToken);
           }
         });
         console.info('[AuthManager] Cross-tab synchronization enabled via BroadcastChannel');
@@ -53,6 +56,14 @@ export class AuthManager {
           if (event.key === 'auth_logout_event') {
             console.info('[AuthManager] Received logout event from another tab via localStorage');
             this.handleCrossTabLogout();
+          } else if (event.key === 'auth_login_event' && event.newValue) {
+            console.info('[AuthManager] Received login event from another tab via localStorage');
+            try {
+              const eventData = JSON.parse(event.newValue);
+              this.handleCrossTabLogin(eventData.user, eventData.accessToken);
+            } catch (error) {
+              console.warn('[AuthManager] Failed to parse login event data:', error);
+            }
           }
         });
         console.info('[AuthManager] Cross-tab synchronization enabled via localStorage events');
@@ -83,6 +94,47 @@ export class AuthManager {
     // 홈으로 이동
     this.router.navigate('/');
   }
+
+  /**
+   * 크로스 탭 로그인 처리
+   */
+  private handleCrossTabLogin(user: User, accessToken?: string): void {
+    console.info('[AuthManager] Handling cross-tab login', { username: user.username, hasToken: !!accessToken });
+    
+    // 이미 로그인 상태라면 사용자 정보만 업데이트
+    const currentUser = authStore.getCurrentUser();
+    if (currentUser && currentUser.username === user.username) {
+      console.info('[AuthManager] User already logged in, updating user info');
+      authStore.updateUser(user);
+      UserStateCache.cache(user);
+      return;
+    }
+    
+    // 전달받은 토큰이 있으면 직접 설정
+    if (accessToken) {
+      console.info('[AuthManager] Setting access token from cross-tab login');
+      TokenManager.setTokens(accessToken);
+      this.apiClient.setToken(accessToken);
+      
+      // 로그인 상태로 업데이트
+      authStore.login(user);
+      UserStateCache.cache(user);
+      
+      // 터미널 메시지 표시
+      this.terminal.appendOutput(i18next.t('auth.loggedInFromOtherTab', { username: user.username }));
+      this.terminal.appendOutput(i18next.t('auth.typeHelp'));
+      
+      // 프로필 페이지로 이동
+      setTimeout(() => {
+        this.router.navigate('/profile');
+        this.terminal.focus();
+      }, 100);
+    } else {
+      console.warn('[AuthManager] No access token received in cross-tab login event');
+      this.terminal.appendOutput('Failed to sync authentication from other tab.');
+    }
+  }
+
 
   /**
    * 세션 스토리지에서 토큰을 즉시 복원하여 초기 인증 상태 설정

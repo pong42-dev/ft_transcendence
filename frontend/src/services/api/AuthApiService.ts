@@ -51,7 +51,12 @@ export class AuthApiService extends BaseApiService {
       });
       
       // 로그인 후 사용자 정보 가져오기 (2FA 없이 로그인했으므로 2FA 비활성화 상태)
-      return await this._fetchUserProfile(false);
+      const user = await this._fetchUserProfile(false);
+      
+      // 다른 탭에 로그인 이벤트 브로드캐스트
+      this.broadcastLogin(user);
+      
+      return user;
     }
     
     // 디버깅을 위한 로그
@@ -70,7 +75,12 @@ export class AuthApiService extends BaseApiService {
     TokenManager.setTokens(response.token, 'cookie-managed');
     
     // 사용자 정보 가져오기 (2FA 완료 상태)
-    return await this._fetchUserProfile(true);
+    const user = await this._fetchUserProfile(true);
+    
+    // 다른 탭에 로그인 이벤트 브로드캐스트
+    this.broadcastLogin(user);
+    
+    return user;
   }
 
   // 회원가입 - /api/users/register (multipart/form-data)
@@ -189,6 +199,37 @@ export class AuthApiService extends BaseApiService {
     }
   }
 
+  // 다른 탭에 로그인 이벤트 브로드캐스트
+  private broadcastLogin(user: Types.User): void {
+    try {
+      const accessToken = TokenManager.getAccessToken();
+      const loginData = { 
+        type: 'login', 
+        user, 
+        accessToken // 토큰도 함께 전달
+      };
+      
+      // BroadcastChannel 지원 확인
+      if (typeof BroadcastChannel !== 'undefined') {
+        const channel = new BroadcastChannel('auth_channel');
+        channel.postMessage(loginData);
+        channel.close();
+        console.info('[Auth] Login event with token broadcasted to other tabs');
+      } else {
+        // BroadcastChannel 미지원 시 localStorage 이벤트 사용
+        localStorage.setItem('auth_login_event', JSON.stringify({ 
+          timestamp: Date.now(), 
+          user, 
+          accessToken 
+        }));
+        localStorage.removeItem('auth_login_event');
+        console.info('[Auth] Login event with token dispatched via localStorage');
+      }
+    } catch (error) {
+      console.warn('[Auth] Failed to broadcast login event:', error);
+    }
+  }
+
   // Google OAuth 로그인 - /api/users/login/google
   async loginWithGoogle(): Promise<never> {
     // Mock 환경에서는 직접 API 호출로 사용자 반환
@@ -226,7 +267,12 @@ export class AuthApiService extends BaseApiService {
       }
       
       // OAuth 완료 후 사용자 정보 가져오기 (OAuth 로그인은 일반적으로 2FA 우회하므로 기본값 사용)
-      return await this._fetchUserProfile(false);
+      const user = await this._fetchUserProfile(false);
+      
+      // 다른 탭에 로그인 이벤트 브로드캐스트
+      this.broadcastLogin(user);
+      
+      return user;
     } catch (error) {
       this.errorHandler.handleError(
         error as Error,
@@ -241,11 +287,6 @@ export class AuthApiService extends BaseApiService {
     }
   }
 
-  // Google OAuth 신규 회원가입 감지 및 프로필 설정 모달 표시
-  async handleGoogleRegisterFlow(): Promise<Types.User | null> {
-    // 실제 환경에서는 사용하지 않음 (Mock에서만 구현)
-    return null;
-  }
 
   // 토큰 검증 및 사용자 정보 조회 - /api/users/me
   async verifyToken(): Promise<Types.User> {
