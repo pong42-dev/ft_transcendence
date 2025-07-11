@@ -112,7 +112,7 @@ export class TournamentFinalResultModal {
     const isChampion = label.includes('결승') && winner;
     
     return `
-      <div class="p-4 border-2 rounded-lg bg-terminal-black bg-opacity-50 w-64 text-center ${isChampion ? 'border-terminal-yellow shadow-lg' : label.includes('결승') ? 'border-terminal-yellow' : 'border-terminal-green'}">
+      <div class="p-4 border-2 rounded-lg bg-terminal-black bg-opacity-50 w-full text-center ${isChampion ? 'border-terminal-yellow shadow-lg' : label.includes('결승') ? 'border-terminal-yellow' : 'border-terminal-green'}">
         <div class="text-lg font-bold mb-2">${label}</div>
         <div class="flex flex-col gap-2">
           <div class="flex justify-between items-center ${winner === player1Id ? 'text-terminal-yellow font-bold' : ''}">
@@ -383,7 +383,7 @@ export class TournamentClient {
   private renderBracketMatch(match: any, label: string): string {
     if (!match) {
       return `
-        <div class="p-4 border-2 rounded-lg bg-terminal-black bg-opacity-50 w-56 text-center border-terminal-gray">
+        <div class="p-4 border-2 rounded-lg bg-terminal-black bg-opacity-50 w-full text-center border-terminal-gray">
           <div class="text-lg font-bold mb-2">${label}</div>
           <div class="text-terminal-gray">대기중</div>
         </div>
@@ -423,7 +423,7 @@ export class TournamentClient {
     const winner = match.winnerId || match.winner_id;
     
     return `
-      <div class="p-4 border-2 rounded-lg bg-terminal-black bg-opacity-50 w-64 text-center ${label === '결승' ? 'border-terminal-yellow' : 'border-terminal-green'}">
+      <div class="p-4 border-2 rounded-lg bg-terminal-black bg-opacity-50 w-full text-center ${label === '결승' ? 'border-terminal-yellow' : 'border-terminal-green'}">
         <div class="text-lg font-bold mb-2">${label}</div>
         <div class="flex flex-col gap-2">
           <div class="flex justify-between items-center ${winner === player1Id ? 'text-terminal-yellow font-bold' : ''}">
