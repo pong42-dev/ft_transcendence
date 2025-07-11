@@ -237,6 +237,14 @@ export class App {
       this.gamePage = null;
     }
 
+    // 게임 설정 데이터가 없으면 바로 프로필로 리다이렉트 및 렌더링
+    if (!this.gameSetupResult) {
+      this.uiRenderer.setGameState(false);
+      this.router.navigate('/profile');
+      this.uiRenderer.render(); // 프로필 화면을 즉시 렌더링
+      return;
+    }
+
     // 게임 상태로 설정
     this.uiRenderer.setGameState(true);
     this.uiRenderer.render();

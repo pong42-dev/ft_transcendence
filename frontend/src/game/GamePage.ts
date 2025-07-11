@@ -379,9 +379,6 @@ export class GamePage {
      * [신규] 브라우저 이벤트 리스너들을 설정합니다.
      */
     private setupBrowserEventListeners() {
-        // 히스토리에 게임 상태 추가 (뒤로가기 감지를 위해)
-        const gameState = { isInGame: true, timestamp: Date.now() };
-        history.pushState(gameState, '', window.location.href);
 
         // beforeunload 이벤트: 페이지를 떠나려고 할 때 (새로고침, 창 닫기 등)
         this.beforeUnloadHandler = (e: BeforeUnloadEvent) => {
@@ -400,15 +397,8 @@ export class GamePage {
         this.popStateHandler = (_event: PopStateEvent) => {
             if (this.isGameActive && (this.gameClient || this.tournamentClient)) {
                 console.log('Browser back/forward button detected during active game, canceling...');
-                // 뒤로가기를 시도했을 때 게임 완전 취소
                 this.handleUnexpectedExit();
-                // 잠시 후 실제로 뒤로가기 실행 (게임 정리 시간 확보)
-                setTimeout(() => {
-                    if (!this.isGameActive) {
-                        // 게임이 이미 비활성화되었다면 실제 뒤로가기 허용
-                        history.back();
-                    }
-                }, 100);
+                this.safeCallGameEndCallback(); // 페이지 전환을 App.ts에 위임
             }
         };
 
