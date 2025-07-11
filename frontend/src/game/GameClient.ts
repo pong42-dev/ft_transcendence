@@ -214,16 +214,28 @@ export class GameClient {
       return;
     }
 
-    leftPlayerName = players[0]?.name || i18next.t('game.client.player.defaultPlayer1');
-    rightPlayerName = players[1]?.name || i18next.t('game.client.player.defaultPlayer2');
+    // 토너먼트 모드에서는 플레이어 정보를 더 자세히 확인
+    if (this.isTournament) {
+      // any 타입으로 캐스팅하여 추가 속성 접근
+      const player1: any = players[0];
+      const player2: any = players[1];
+      
+      leftPlayerName = player1?.name || player1?.display_name || player1?.displayName || i18next.t('game.client.player.defaultPlayer1');
+      rightPlayerName = player2?.name || player2?.display_name || player2?.displayName || i18next.t('game.client.player.defaultPlayer2');
+    } else {
+      leftPlayerName = players[0]?.name || i18next.t('game.client.player.defaultPlayer1');
+      rightPlayerName = players[1]?.name || i18next.t('game.client.player.defaultPlayer2');
+    }
+    
     leftPlayerAvatar = players[0]?.avatarUrl;
     rightPlayerAvatar = players[1]?.avatarUrl;
 
-    console.log('Player info:', {
+    console.log('Player info to render:', {
       leftPlayerName,
       rightPlayerName,
       leftPlayerAvatar,
-      rightPlayerAvatar
+      rightPlayerAvatar,
+      isTournament: this.isTournament
     });
 
     // 렌더러에 플레이어 정보 업데이트 (아바타 포함)

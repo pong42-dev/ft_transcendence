@@ -358,12 +358,39 @@ export class TournamentSession {
     this.sendToClient(bracketUpdateMessage);
     (this.fastify as any).log?.info?.(`[Session ${this.tournamentId}] Starting match ${nextMatch.id}`);
     try {
-      const playersForNextMatch: PlayerResponseDto[] = nextMatch.participants.map(p => ({
-        id: p.id,
-        type: p.user_id ? 'user' : 'guest',
-        name: p.display_name || `Player${p.id}`,
-        avatarUrl: undefined
-      }));
+      // 실제 사용자 정보를 포함한 플레이어 정보 생성
+      const playersForNextMatch: PlayerResponseDto[] = await Promise.all(
+        nextMatch.participants.map(async (p) => {
+          let playerName = p.display_name || `Player${p.id}`;
+          let avatarUrl: string | undefined = undefined;
+          
+          // user_id가 있으면 user_profiles에서 실제 사용자 정보 가져오기
+          if (p.user_id) {
+            try {
+              const userProfile = await (this.fastify as any).knex('user_profiles')
+                .where('user_id', p.user_id)
+                .first();
+              if (userProfile) {
+                playerName = userProfile.name || playerName;
+                avatarUrl = userProfile.avatar_url || undefined;
+              }
+            } catch (err) {
+              (this.fastify as any).log?.warn?.(`[Session ${this.tournamentId}] Failed to fetch user profile for user ${p.user_id}:`, err);
+            }
+          }
+          
+          return {
+            id: p.id,
+            type: p.user_id ? 'user' : 'guest',
+            name: playerName,
+            avatarUrl
+          };
+        })
+      );
+      
+      (this.fastify as any).log?.info?.(`[Session ${this.tournamentId}] Players for match ${nextMatch.id}:`, 
+        playersForNextMatch.map(p => ({ id: p.id, name: p.name, type: p.type })));
+      
       const customCallbacks = {
         onStateUpdate: (gameState: GameStateDto) => {
           try {
@@ -399,11 +426,20 @@ export class TournamentSession {
           data: {
             matchId: nextMatch.id,
             gameId: this.currentGameSessionId,
-            participants: nextMatch.participants,
+            participants: playersForNextMatch.map(p => ({
+              id: p.id,
+              user_id: p.type === 'user' ? p.id : undefined,
+              display_name: p.name,
+              name: p.name,
+              type: p.type,
+              avatarUrl: p.avatarUrl
+            })),
+            round_number: nextMatch.round_number
           },
         };
         this.socket.send(JSON.stringify(message));
-        (this.fastify as any).log.info(`[Session ${this.tournamentId}] Match ${nextMatch.id} started.`);
+        (this.fastify as any).log.info(`[Session ${this.tournamentId}] Match ${nextMatch.id} started with players:`, 
+          playersForNextMatch.map(p => ({ id: p.id, name: p.name, type: p.type })));
       } else {
         (this.fastify as any).log.error(`[Session ${this.tournamentId}] No client socket connected for match ${nextMatch.id}.`);
       }

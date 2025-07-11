@@ -188,7 +188,6 @@ export class TournamentClient {
   private currentMatch: TournamentMatch | null = null; // 현재 매치 정보를 단일 인스턴스로 관리
   private bracketMatches: TournamentMatch[] | null = null; // 브라켓 정보를 저장할 배열
   private modalManager: ModalManager;
-  private bracketModalId: string | null = null;
 
   // 브라켓 결과 상태 추가
   private bracketResults: TournamentMatchResult[] = [];
@@ -224,64 +223,6 @@ export class TournamentClient {
     this.webSocketService?.disconnect();
     this.container.innerHTML = '';
     this.isProcessingMatch = false;
-  }
-
-  private openBracketModal(message?: string) {
-    // 기존 모달 닫기
-    if (this.bracketModalId) {
-      this.modalManager.hide();
-      this.bracketModalId = null;
-    }
-    const modalContent = {
-      title: '토너먼트 결과',
-      content: () => {
-        const wrapper = document.createElement('div');
-        wrapper.className = 'w-[700px] min-h-[400px] flex flex-col items-center justify-center';
-        const bracketDiv = document.createElement('div');
-        bracketDiv.id = 'bracket-container';
-        bracketDiv.className = 'w-full max-w-4xl flex flex-col items-center justify-center mb-8';
-        if (this.bracketMatches) {
-          bracketDiv.innerHTML = this.generateBracketHTML(this.bracketMatches);
-        }
-        wrapper.appendChild(bracketDiv);
-        if (message) {
-          const msgDiv = document.createElement('div');
-          msgDiv.className = 'bg-terminal-black bg-opacity-80 px-6 py-3 rounded-lg text-terminal-yellow text-xl font-bold shadow-lg mt-8';
-          msgDiv.textContent = message;
-          wrapper.appendChild(msgDiv);
-        }
-        return wrapper;
-      },
-      onShow: () => {},
-      onClose: () => {},
-      config: {
-        closable: false,
-        closeOnOutsideClick: false,
-        sizeClass: 'max-w-[750px] w-[95%] min-h-[400px] flex items-center justify-center'
-      }
-    };
-    this.modalManager.show(modalContent);
-    this.bracketModalId = 'bracket-modal';
-  }
-
-  private showInitialBracketModal(bracketData: any) {
-    const modalManager = ModalManager.getInstance();
-    modalManager.show({
-      title: '토너먼트 대진표',
-      content: () => {
-        const el = document.createElement('div');
-        el.className = 'modal-body';
-        el.innerHTML = this.generateBracketHTML(bracketData);
-        return el;
-      },
-      onShow: () => {},
-      onClose: () => {},
-      config: {
-        closable: true,
-        closeOnOutsideClick: true,
-        sizeClass: 'max-w-[700px] w-[95%]'
-      }
-    });
   }
 
   private connectToTournament(): void {
@@ -341,14 +282,14 @@ export class TournamentClient {
       const semiFinals = bracketData.rounds[0];
       const final = bracketData.rounds[1][0];
       return `
-        <div class="grid grid-cols-3 gap-8 items-center justify-center w-full">
-          <div class="flex flex-col gap-8 items-center">
+        <div class="grid grid-cols-3 gap-4 items-center justify-center w-full h-full max-h-full">
+          <div class="flex flex-col gap-4 items-center h-full justify-center">
             ${this.renderBracketMatch(semiFinals[0], '준결승 1')}
           </div>
-          <div class="flex flex-col gap-8 items-center">
+          <div class="flex flex-col gap-4 items-center h-full justify-center">
             ${this.renderBracketMatch(final, '결승')}
           </div>
-          <div class="flex flex-col gap-8 items-center">
+          <div class="flex flex-col gap-4 items-center h-full justify-center">
             ${this.renderBracketMatch(semiFinals[1], '준결승 2')}
           </div>
         </div>
@@ -366,15 +307,15 @@ export class TournamentClient {
     }
 
     return `
-      <div class="grid grid-cols-3 gap-8 items-center justify-center w-full">
-        <div class="flex flex-col gap-8 items-center">
-          ${semiFinals[0] ? this.renderBracketMatch(semiFinals[0], '준결승 1') : '<div class="text-terminal-gray">대기중</div>'}
+      <div class="grid grid-cols-3 gap-4 items-center justify-center w-full h-full max-h-full">
+        <div class="flex flex-col gap-4 items-center h-full justify-center">
+          ${semiFinals[0] ? this.renderBracketMatch(semiFinals[0], '준결승 1') : '<div class="text-terminal-gray text-sm">대기중</div>'}
         </div>
-        <div class="flex flex-col gap-8 items-center">
-          ${finals[0] ? this.renderBracketMatch(finals[0], '결승') : '<div class="text-terminal-gray">대기중</div>'}
+        <div class="flex flex-col gap-4 items-center h-full justify-center">
+          ${finals[0] ? this.renderBracketMatch(finals[0], '결승') : '<div class="text-terminal-gray text-sm">대기중</div>'}
         </div>
-        <div class="flex flex-col gap-8 items-center">
-          ${semiFinals[1] ? this.renderBracketMatch(semiFinals[1], '준결승 2') : '<div class="text-terminal-gray">대기중</div>'}
+        <div class="flex flex-col gap-4 items-center h-full justify-center">
+          ${semiFinals[1] ? this.renderBracketMatch(semiFinals[1], '준결승 2') : '<div class="text-terminal-gray text-sm">대기중</div>'}
         </div>
       </div>
     `;
@@ -383,9 +324,9 @@ export class TournamentClient {
   private renderBracketMatch(match: any, label: string): string {
     if (!match) {
       return `
-        <div class="p-4 border-2 rounded-lg bg-terminal-black bg-opacity-50 w-full text-center border-terminal-gray">
-          <div class="text-lg font-bold mb-2">${label}</div>
-          <div class="text-terminal-gray">대기중</div>
+        <div class="p-3 border-2 rounded-lg bg-terminal-black bg-opacity-50 w-full max-w-48 text-center border-terminal-gray">
+          <div class="text-sm font-bold mb-2">${label}</div>
+          <div class="text-terminal-gray text-xs">대기중</div>
         </div>
       `;
     }
@@ -423,35 +364,38 @@ export class TournamentClient {
     const winner = match.winnerId || match.winner_id;
     
     return `
-      <div class="p-4 border-2 rounded-lg bg-terminal-black bg-opacity-50 w-full text-center ${label === '결승' ? 'border-terminal-yellow' : 'border-terminal-green'}">
-        <div class="text-lg font-bold mb-2">${label}</div>
-        <div class="flex flex-col gap-2">
+      <div class="p-3 border-2 rounded-lg bg-terminal-black bg-opacity-50 w-full max-w-48 text-center ${label === '결승' ? 'border-terminal-yellow' : 'border-terminal-green'}">
+        <div class="text-sm font-bold mb-2">${label}</div>
+        <div class="flex flex-col gap-1 text-xs">
           <div class="flex justify-between items-center ${winner === player1Id ? 'text-terminal-yellow font-bold' : ''}">
             <span class="truncate flex-1 text-left">${player1Name}</span>
-            <span class="ml-2 text-lg font-mono">${player1Score}</span>
-            ${winner === player1Id ? '<span class="ml-1">🏆</span>' : ''}
+            <span class="ml-2 text-sm font-mono">${player1Score}</span>
+            ${winner === player1Id ? '<span class="ml-1 text-xs">🏆</span>' : ''}
           </div>
-          <div class="text-terminal-green text-sm">vs</div>
+          <div class="text-terminal-green text-xs">vs</div>
           <div class="flex justify-between items-center ${winner === player2Id ? 'text-terminal-yellow font-bold' : ''}">
             <span class="truncate flex-1 text-left">${player2Name}</span>
-            <span class="ml-2 text-lg font-mono">${player2Score}</span>
-            ${winner === player2Id ? '<span class="ml-1">🏆</span>' : ''}
+            <span class="ml-2 text-sm font-mono">${player2Score}</span>
+            ${winner === player2Id ? '<span class="ml-1 text-xs">🏆</span>' : ''}
           </div>
         </div>
-        <div class="text-xs text-terminal-gray mt-2">ID: ${matchId}</div>
+        <div class="text-xs text-terminal-gray mt-1">ID: ${matchId}</div>
         ${match.status ? `<div class="text-xs text-terminal-cyan mt-1">${match.status}</div>` : ''}
       </div>
     `;
   }
 
   private handleTournamentBracket(data: any): void {
+    console.log('Tournament bracket received:', data);
     this.bracketMatches = data.matches;
     this.updateBracketDisplay();
+    
+    // 토너먼트 시작 시 초기 브라켓을 한 번만 표시
     if (!this.initialBracketModalShown) {
-      this.showInitialBracketModal(data);
       this.initialBracketModalShown = true;
+      // 초기 브라켓을 5초간 표시
+      this.showBracketWithCountdown(0, 5, '토너먼트 시작');
     }
-    this.openBracketModal('토너먼트 대기 중...');
   }
 
   private handleBracketUpdate(data: any): void {
@@ -462,7 +406,7 @@ export class TournamentClient {
   }
 
   private handleMatchStarting(data: any): void {
-    console.log('Match starting, showing bracket for 5 seconds before game');
+    console.log('Match starting, data received:', data);
     
     // 이미 매치 처리 중이면 무시
     if (this.isProcessingMatch) {
@@ -483,31 +427,76 @@ export class TournamentClient {
       resultSent: false
     };
     
-    // 1. 먼저 브라켓 모달을 5초간 표시
-    this.openBracketModal(`매치 #${matchId} 시작 준비 중...`);
+    // 1. 브라켓과 함께 5초 카운트다운 표시
+    this.showBracketWithCountdown(matchId, 5, '매치 시작');
     
     // 2. 5초 후 게임 시작
     this.currentTimeout = window.setTimeout(() => {
-      // 모든 모달 닫기
-      this.modalManager.hide();
-      this.bracketModalId = null;
-      
       // 컨테이너 완전히 비우기 - 게임 화면만 표시되도록
       this.container.innerHTML = '';
       
-      // GameResponseDto 형태로 변환
+      // GameResponseDto 형태로 변환 - 실제 플레이어 정보가 포함되도록 수정
       const gameInfo = {
         gameId,
         type: 'tournament' as const,
         status: 'countdown' as const,
-        players: participants
+        players: participants.map((p: any) => ({
+          id: p.id,
+          type: p.user_id ? 'user' : 'guest',
+          name: p.display_name || p.name || `Player${p.id}`,
+          avatarUrl: p.avatarUrl || undefined
+        }))
       };
       
-      console.log('Starting tournament match with unified flow after 5 second wait');
+      console.log('Starting tournament match with game info:', gameInfo);
       
       // startWaitingFlow와 동일한 로직 사용
       this.startTournamentMatchFlow(gameInfo);
     }, 5000); // 5초 대기
+  }
+
+  /**
+   * 브라켓과 함께 카운트다운을 표시하는 메서드
+   */
+  private showBracketWithCountdown(matchId: number, seconds: number, message: string): void {
+    // 브라켓 HTML 생성
+    const bracketHTML = this.bracketMatches ? this.generateBracketHTML(this.bracketMatches) : 
+      '<div class="text-center text-terminal-gray">브라켓 정보를 불러오는 중...</div>';
+    
+    // 초기 화면 렌더링 (한 번만)
+    this.container.innerHTML = `
+      <div class="w-full h-full flex flex-col items-center justify-center bg-terminal-black text-terminal-green p-4">
+        <div class="text-center mb-4">
+          <h2 class="text-2xl font-bold mb-2">🏆 토너먼트 진행 중 🏆</h2>
+          <div class="text-lg text-terminal-yellow mb-2">${message}</div>
+          <div id="countdown-number" class="text-4xl font-bold text-terminal-cyan mb-2">${seconds}</div>
+          <div class="text-sm text-terminal-gray">매치 #${matchId}</div>
+        </div>
+        
+        <div class="flex-1 w-full flex items-center justify-center overflow-hidden">
+          <div class="w-full h-full flex justify-center items-center">
+            ${bracketHTML}
+          </div>
+        </div>
+      </div>
+    `;
+    
+    // 카운트다운 요소 참조
+    const countdownElement = this.container.querySelector('#countdown-number');
+    let countdown = seconds;
+    
+    const updateCountdown = () => {
+      countdown--;
+      if (countdownElement && countdown >= 0) {
+        countdownElement.textContent = countdown.toString();
+        if (countdown >= 0) {
+          setTimeout(updateCountdown, 1000);
+        }
+      }
+    };
+    
+    // 1초 후부터 카운트다운 시작
+    setTimeout(updateCountdown, 1000);
   }
 
   /**
@@ -543,6 +532,10 @@ export class TournamentClient {
             try {
               const tournamentResult = this.convertGameResultToTournamentResult(result);
               this.onGameResult(tournamentResult);
+              
+              // 게임 결과 후 브라켓과 카운트다운 표시 (5초)
+              this.showGameResultWithBracket(tournamentResult);
+              
             } catch (error) {
               console.error('Error converting game result:', error);
             }
@@ -602,13 +595,10 @@ export class TournamentClient {
     
     // 토너먼트 종료 시 모든 모달 닫기
     this.modalManager.hide();
-    this.bracketModalId = null;
     this.isProcessingMatch = false;
     
-    // 1초 후 최종 토너먼트 결과 모달 표시 (홈으로 버튼 포함)
-    setTimeout(() => {
-      this.showFinalTournamentResultModal();
-    }, 1000);
+    // 즉시 최종 토너먼트 결과 표시
+    this.showFinalTournamentResultModal();
   };
 
   private updateBracketDisplay(): void {
@@ -617,6 +607,57 @@ export class TournamentClient {
     if (bracketDiv && this.bracketMatches) {
       bracketDiv.innerHTML = this.generateBracketHTML(this.bracketMatches);
     }
+  }
+
+  /**
+   * 게임 결과와 함께 업데이트된 브라켓을 표시하는 메서드
+   */
+  private showGameResultWithBracket(result: TournamentMatchResult): void {
+    // 우승자 정보 표시
+    const winnerInfo = result.participants.find(p => p.id === result.winnerId);
+    const winnerName = winnerInfo ? (winnerInfo.displayName || winnerInfo.name) : 'Unknown';
+    
+    // 브라켓 HTML 생성
+    const bracketHTML = this.bracketMatches ? this.generateBracketHTML(this.bracketMatches) : 
+      '<div class="text-center text-terminal-gray">브라켓 정보를 불러오는 중...</div>';
+    
+    // 초기 화면 렌더링 (한 번만)
+    this.container.innerHTML = `
+      <div class="w-full h-full flex flex-col items-center justify-center bg-terminal-black text-terminal-green p-4">
+        <div class="text-center mb-4">
+          <h2 class="text-2xl font-bold mb-2">🏆 매치 결과 🏆</h2>
+          <div class="text-lg text-terminal-yellow mb-2">
+            승자: <span class="font-bold">${winnerName}</span>
+          </div>
+          <div class="text-md text-terminal-cyan mb-2">다음 매치 준비 중...</div>
+          <div id="result-countdown" class="text-4xl font-bold text-terminal-cyan mb-2">5</div>
+          <div class="text-sm text-terminal-gray">매치 #${result.matchId} 완료</div>
+        </div>
+        
+        <div class="flex-1 w-full flex items-center justify-center overflow-hidden">
+          <div class="w-full h-full flex justify-center items-center">
+            ${bracketHTML}
+          </div>
+        </div>
+      </div>
+    `;
+    
+    // 카운트다운 요소 참조
+    const countdownElement = this.container.querySelector('#result-countdown');
+    let countdown = 5;
+    
+    const updateCountdown = () => {
+      countdown--;
+      if (countdownElement && countdown >= 0) {
+        countdownElement.textContent = countdown.toString();
+        if (countdown >= 0) {
+          setTimeout(updateCountdown, 1000);
+        }
+      }
+    };
+    
+    // 1초 후부터 카운트다운 시작
+    setTimeout(updateCountdown, 1000);
   }
 
   // GameResult를 TournamentMatchResult로 변환하는 헬퍼 메서드
@@ -702,9 +743,47 @@ export class TournamentClient {
 
   // TournamentClient에 최종 토너먼트 결과 모달을 띄우는 메서드 (홈으로 버튼 있음)
   public showFinalTournamentResultModal() {
-    if (this.bracketMatches) {
-      const modal = new TournamentFinalResultModal(this.bracketMatches, this.bracketResults);
-      modal.show();
+    // 최종 우승자 찾기
+    const finalMatch = this.bracketMatches?.find(m => m.round_number === 2);
+    const winnerId = finalMatch?.winner_id;
+    const winner = finalMatch?.participants?.find(p => p.id === winnerId);
+    const winnerName = winner ? (winner.display_name || winner.name) : 'Unknown';
+    
+    // 브라켓 HTML 생성
+    const bracketHTML = this.bracketMatches ? this.generateBracketHTML(this.bracketMatches) : 
+      '<div class="text-center text-terminal-gray">브라켓 정보를 불러올 수 없습니다.</div>';
+    
+    // 최종 결과 화면 표시
+    this.container.innerHTML = `
+      <div class="w-full h-full flex flex-col items-center justify-center bg-terminal-black text-terminal-green p-4">
+        <div class="text-center mb-4">
+          <h2 class="text-3xl font-bold mb-2">🏆 토너먼트 완료! 🏆</h2>
+          <div class="text-2xl text-terminal-yellow mb-4">
+            우승자: <span class="font-bold">${winnerName}</span>
+          </div>
+          <div class="text-lg text-terminal-cyan mb-2">축하합니다!</div>
+        </div>
+        
+        <div class="flex-1 w-full flex items-center justify-center overflow-hidden mb-4">
+          <div class="w-full h-full flex justify-center items-center">
+            ${bracketHTML}
+          </div>
+        </div>
+        
+        <div class="flex gap-4">
+          <button id="home-btn" class="px-6 py-2 bg-terminal-green text-terminal-black font-bold rounded-lg hover:bg-opacity-80 transition-all">
+            홈으로 돌아가기
+          </button>
+        </div>
+      </div>
+    `;
+    
+    // 홈 버튼 이벤트 리스너 추가
+    const homeBtn = this.container.querySelector('#home-btn');
+    if (homeBtn) {
+      homeBtn.addEventListener('click', () => {
+        window.location.href = '/';
+      });
     }
   }
 }
