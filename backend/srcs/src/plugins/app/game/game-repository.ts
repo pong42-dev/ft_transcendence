@@ -148,7 +148,7 @@ export function createGameRepository(fastify: FastifyInstance) {
 				.count('* as count')
 				.join('game_participants', 'games.id', 'game_participants.game_id')
 				.join('players', 'game_participants.player_id', 'players.id')
-				.where('games.type', 'local_1v1')
+				.whereIn('games.type', ['local_1v1', 'ai_1v1'])
 				.andWhere('players.user_id', userId)
 				.first();
 
