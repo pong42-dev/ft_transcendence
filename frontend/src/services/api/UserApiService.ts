@@ -49,7 +49,7 @@ export class UserApiService extends BaseApiService {
       ...oneOnOneHistory.map((match: any) => ({
         date: new Date(match.endedAt).toISOString().split('T')[0],
         opponent: match.opponent.name,
-        rank: match.winnerId === null ? 2 : (match.winnerId === match.myPlayerId ? 1 : 2),
+        rank: match.winnerId === null ? 2 : (match.winnerId === match.opponent.id ? 2 : 1),
         type: '1v1' as const,
         myScore: match.myScore,
         opponentScore: match.opponentScore
