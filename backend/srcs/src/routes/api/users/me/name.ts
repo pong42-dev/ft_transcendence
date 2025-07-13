@@ -5,6 +5,7 @@ import { UserData } from '../../../../schemas/users/common.js'
 const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 	const { config,
 			userProfilesRepository,
+			isValidName,
 			authenticate } = fastify
 
 	fastify.patch(
@@ -45,6 +46,12 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 			console.log ("request.user:", request.user);
 			const { user_id } = request.user as UserData;
 			const { name: newName } = request.body as UserData;
+			if (!isValidName(newName)) {
+				return reply.send({
+					success: false,
+					msg: 'Invalid name format.'
+				});
+			}
 			const nameExists = await userProfilesRepository.checkDupRow('name', newName)
 			if (nameExists) {
 				return reply.send({

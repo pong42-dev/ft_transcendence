@@ -7,6 +7,7 @@ import { authStore } from '../store/index.js';
 import { User } from '../types/types.js';
 import { UserStateCache } from '../services/UserStateCache.js';
 import i18next, { changeLanguage } from '../services/i18n.js';
+import { validateNickname } from '../utils/validators.js';
 
 export interface CommandHandlerDependencies {
   apiClient: ApiClient;
@@ -437,6 +438,12 @@ export class CommandHandler {
       return;
     }
     
+    const validation = validateNickname(newName);
+    if (!validation.isValid) {
+      this.deps.terminal.appendOutput(validation.error || i18next.t('setCommand.provide_valid_name'));
+      return;
+    }
+
     try {
       this.deps.terminal.appendOutput(i18next.t('setCommand.updating_name', { newName: newName }));
       
