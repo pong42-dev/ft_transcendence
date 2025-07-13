@@ -61,8 +61,8 @@ export const validateNickname = (nickname: string): ValidationResult => {
     return { isValid: false, error: i18n.t('validation.nickname_length_invalid') };
   }
   
-  // Check for valid characters (alphanumeric, spaces, underscores, hyphens)
-  const nicknameRegex = /^[a-zA-Z0-9\s_-]+$/;
+  // Check for valid characters (alphanumeric, Korean)
+  const nicknameRegex = /^[a-zA-Z0-9가-힣]+$/;
   if (!nicknameRegex.test(nickname)) {
     return { isValid: false, error: i18n.t('validation.nickname_invalid_chars') };
   }
