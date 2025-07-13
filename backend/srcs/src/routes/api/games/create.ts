@@ -23,10 +23,11 @@ function validateCreateGameRequest(
 				return { valid: false, message: 'local_1v1 mode requires exactly one opponent (guest player).' }
 			}
 			const guestDisplayName = opponents[0]
-			if (!fastify.isValidName(guestDisplayName)) {
+			const invalidNameMessage = fastify.isValidName(guestDisplayName);
+			if (invalidNameMessage) {
 				return {
 					valid: false,
-					message: 'Invalid guest player name. Name must be 2–16 characters, using letters, numbers, or Korean characters.'
+					message: invalidNameMessage
 				}
 			}
 			break

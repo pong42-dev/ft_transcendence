@@ -31,10 +31,11 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 		async function (request, reply) {
 			try {
 				const { name } = request.body as UserName;
-				if (!isValidName(name)) {
+				const invalidNameMessage = isValidName(name);
+				if (invalidNameMessage) {
 					return reply.send({
 						success: false,
-						msg: 'Invalid name format.'
+						msg: invalidNameMessage
 					});
 				}
 				const nameExists = await userProfilesRepository.checkDupRow('name', name);
