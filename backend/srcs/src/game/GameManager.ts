@@ -59,8 +59,9 @@ export class GameManager {
       
       // 1. DB에 게임 생성
       const dbGameId = await this.gameRepository?.createGameWithPlayers(
-        mode, 
-        players.map(p => p.id)
+        mode,
+        players.map((p) => p.id),
+        tournamentId
       );
 
       // 2. 게임 세션 생성 (DB ID를 문자열로 변환해서 gameId로 사용)

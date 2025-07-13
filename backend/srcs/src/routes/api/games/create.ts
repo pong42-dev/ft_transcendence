@@ -125,10 +125,9 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				const gameId = await gameManager.createGame(
 					type,
 					players,
+					undefined, // tournamentId
 					undefined, // customCallbacks
-					aiSettings ? {
-						difficulty: aiSettings.difficulty
-					} : undefined
+					aiSettings
 				);
 
 				if (!gameId) {

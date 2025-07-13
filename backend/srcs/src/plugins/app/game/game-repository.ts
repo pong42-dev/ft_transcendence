@@ -144,60 +144,30 @@ export function createGameRepository(fastify: FastifyInstance) {
 		},
 
 		async getUserGameCount(userId: number): Promise<number> {
-			// local_1v1 게임 수
-			const localCountQuery = knex('games')
+			// local_1v1, ai_1v1, tournament 모든 경기 수
+			const totalCountQuery = knex('games')
 				.count('* as count')
 				.join('game_participants', 'games.id', 'game_participants.game_id')
 				.join('players', 'game_participants.player_id', 'players.id')
-				.whereIn('games.type', ['local_1v1', 'ai_1v1'])
 				.andWhere('players.user_id', userId)
+				.andWhere('games.status', 'finished')
 				.first();
 
-			// 참가한 tournament_id 개수 (중복 없이)
-			const tournamentCountQuery = knex('games')
-				.distinct('games.tournament_id')
-				.join('game_participants', 'games.id', 'game_participants.game_id')
-				.join('players', 'game_participants.player_id', 'players.id')
-				.where('games.type', 'tournament')
-				.andWhere('players.user_id', userId)
-				.whereNotNull('games.tournament_id');
-
-			// 병렬로 실행
-			const [localResult, tournamentRows] = await Promise.all([
-				localCountQuery,
-				tournamentCountQuery,
-			]);
-
-			const localCount = Number(localResult?.count) || 0;
-			const tournamentCount = tournamentRows.length;
-
-			return localCount + tournamentCount;
+			const totalResult = await totalCountQuery;
+			return Number(totalResult?.count) || 0;
 		},
 
 
 		async getUserWinCount(userId: number) {
-			// 1. local_1v1 또는 ai_1v1 게임 승리 수
-			const localWinResult = await knex('games')
+			// local_1v1, ai_1v1, tournament 모든 경기 승리 수
+			const totalWinResult = await knex('games')
 				.count('* as count')
 				.join('players', 'games.winner_id', 'players.id')
-				.whereIn('games.type', ['local_1v1', 'ai_1v1'])
 				.andWhere('games.status', 'finished')
 				.andWhere('players.user_id', userId)
 				.first();
 
-			const localWinCount = Number(localWinResult?.count) || 0;
-
-			// 2. 사용자가 우승한 토너먼트 수
-			const tournamentWinResult = await knex('tournaments')
-				.countDistinct('tournaments.id as count')
-				.join('players', 'tournaments.winner_player_id', 'players.id')
-				.where('tournaments.status', 'ended')
-				.andWhere('players.user_id', userId)
-				.first();
-
-			const tournamentWinCount = Number(tournamentWinResult?.count) || 0;
-
-			return localWinCount + tournamentWinCount;
+			return Number(totalWinResult?.count) || 0;
 		},
 
 
@@ -326,25 +296,43 @@ export function createGameRepository(fastify: FastifyInstance) {
 		 * 게임 생성 (플레이어들과 함께)
 		 */
 		async createGameWithPlayers(
-			gameMode: GameMode, 
+			gameMode: GameMode,
 			playerIds: number[],
 			tournamentId?: number
 		): Promise<number> {
 			const trx = await knex.transaction();
 			
 			try {
+				let round = 1; // 기본 라운드
+				if (tournamentId) {
+					// 해당 토너먼트에 이미 생성된 게임 수를 센다.
+					const gameCountResult = await trx('games')
+						.where('tournament_id', tournamentId)
+						.count('* as gameCount')
+						.first();
+					
+					const gameCount = Number(gameCountResult?.gameCount) || 0;
+
+					// 게임 카운트가 2 미만이면 준결승(라운드 1), 2이면 결승(라운드 2)
+					if (gameCount < 2) {
+						round = 1;
+					} else {
+						round = 2;
+					}
+				}
+
 				// 1. 게임 생성
 				const [gameId] = await trx('games').insert({
 					type: gameMode,
 					tournament_id: tournamentId ?? null,
-					round_number: 1,
+					round_number: round,
 					status: 'waiting',
 					started_at: null,
 					ended_at: null,
 					winner_id: null
 				});
 
-				// 2. 플레이어들을 game_participants에 등록
+				// 2. 참가자 추가
 				if (playerIds.length > 0) {
 					const participantData = playerIds.map(playerId => ({
 						game_id: gameId,
