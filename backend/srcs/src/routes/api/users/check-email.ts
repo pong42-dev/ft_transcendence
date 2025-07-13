@@ -31,10 +31,11 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 		async function (request, reply) {
 			try {
 				const { email } = request.body as UserEmail;
-				if (!isValidEmail(email)) {
+				const validEmailMsg = isValidEmail(email)
+				if (validEmailMsg) {
 					return reply.send({ 
 						success: false, 
-						msg: 'Invalid email format.'
+						msg: validEmailMsg
 					});
 				}
 				const emailExists = await usersRepository.checkDupRow('email', email)
