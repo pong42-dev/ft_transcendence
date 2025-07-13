@@ -133,6 +133,16 @@ export function manageTokens(fastify: FastifyInstance) {
 				return false;
 			}
 			return true;
+		},
+
+		async cleanExpiredToken(): Promise<void> {
+			const { userTokensRepository } = fastify;
+			try {
+				await userTokensRepository.deleteRowsBeforeExpiry();
+				console.log('Expired user tokens cleaned up.');
+			} catch (err) {
+				console.error('Failed to clean expired user tokens:', err);
+			}
 		}
 	};
 }

@@ -46,10 +46,11 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 			console.log ("request.user:", request.user);
 			const { user_id } = request.user as UserData;
 			const { name: newName } = request.body as UserData;
-			if (!isValidName(newName)) {
+			const validNameMsg = isValidName(newName) 
+			if (!validNameMsg) {
 				return reply.send({
 					success: false,
-					msg: 'Invalid name format.'
+					msg: validNameMsg
 				});
 			}
 			const nameExists = await userProfilesRepository.checkDupRow('name', newName)

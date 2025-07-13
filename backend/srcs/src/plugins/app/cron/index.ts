@@ -3,15 +3,16 @@ import cron from 'node-cron';
 import dayjs from 'dayjs';
 
 export default fp(async function cronPlugin(fastify, opts) {
-	// 5분마다 실행되는 작업 등록
+	// Task scheduled to run every 5 minutes
 	cron.schedule('*/5 * * * *', async () => {
 		try {
+			await fastify.tokenManager.cleanExpiredToken();
 			await fastify.twoFAManager.cleanExpired2FA();
-			fastify.log.info(`[${dayjs().format()}] 만료된 임시토큰 삭제 완료`);
+			fastify.log.info(`[${dayjs().format()}] Expired tokens cleaned successfully`);
 		} catch (err) {
-			fastify.log.error(`만료된 임시토큰 삭제 실패: ${err}`);
+			fastify.log.error(`Failed to clean expired temporary tokens: ${err}`);
 		}
 	});
 
-	fastify.log.info('Cron 작업 등록 완료');
+	fastify.log.info('Cron job scheduled successfully');
 });

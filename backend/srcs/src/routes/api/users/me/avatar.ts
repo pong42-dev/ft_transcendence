@@ -6,7 +6,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 	const { config, 
 			userProfilesRepository,
 			authenticate, 
-			isValidProfileFormData,
+			isValidProfileImage,
 			formDataManager, fileManager } = fastify;
 
 	fastify.put(
@@ -42,7 +42,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 		async (request: FastifyRequest, reply: FastifyReply) => {
 			try {
 				const formData = await formDataManager.registerFormData(request);
-				const validFormDataMsg = isValidProfileFormData(formData);
+				const validFormDataMsg = isValidProfileImage(formData);
 				if (validFormDataMsg) {
 					return reply.send({
 						success: false,

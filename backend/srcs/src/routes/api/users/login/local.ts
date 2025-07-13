@@ -4,7 +4,8 @@ import { Credentials } from '../../../../schemas/users/login/local.js'
 const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 	const { config,
 			usersRepository, 
-			loginManager, passwordManager, twoFAManager } = fastify;
+			loginManager, passwordManager, twoFAManager,
+			isValidLoginCredentials } = fastify;
 
 	fastify.post(
 		'/local',
@@ -21,14 +22,20 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 					password: Type.String()
 				}),
 				response: {
-					200: Type.Object({
-						success: Type.Literal(true),
-						requires2FA: Type.Optional(Type.Boolean()),
-						msg: Type.String(),
-						data: Type.Optional(Type.Object({
-							token: Type.String()
-						})),
-					}),
+					200: Type.Union([
+						Type.Object({
+							success: Type.Literal(true),
+							requires2FA: Type.Optional(Type.Boolean()),
+							msg: Type.String(),
+							data: Type.Optional(Type.Object({
+								token: Type.String()
+							})),
+						}),
+						Type.Object({
+							success: Type.Literal(false),
+							msg: Type.String(),
+						})
+					]),
 					401: Type.Object({
 						msg: Type.String()
 					}),
@@ -45,6 +52,13 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 		async function (request, reply): Promise<void> {
 			try {
 				console.log(request.body);
+				const validCredentialsMsg = isValidLoginCredentials(request.body as Credentials);
+				if (validCredentialsMsg) {
+					return reply.send({ 
+						success: false,
+						msg: validCredentialsMsg
+					});
+				}
 				const { email, password } = request.body as Credentials;
 				const user = await usersRepository.getRowByColumnValue('email', email);
 				if (!user || user.provider != 'local') {

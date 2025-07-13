@@ -63,10 +63,10 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				let avatarPath: string | undefined;
 				console.log(formData.files.avatar);
 				if (formData.files && formData.files.avatar) {
-					console.log("here1");
+					// console.log("here1");
 					avatarPath = await fileManager.saveFile(formData.files.avatar.file, dirPath);
 				} else {
-					console.log("here2");
+					// console.log("here2");
 					avatarPath = undefined
 				}
 				const hashedPassword = await passwordManager.hashPassword(password);

@@ -120,6 +120,17 @@ export function createUserTokensRepository(fastify: FastifyInstance) {
 				fastify.log.error(`Error checking valid tokens for user ${userId}:`, err.message);
 				throw err;
 			}
+		},
+
+		async deleteRowsBeforeExpiry(): Promise<void> {
+			try {
+				await knex('user_tokens')
+					.whereRaw("server_expires_at < datetime('now')")
+					.del();
+			} catch (err: any) {
+				fastify.log.error('Error deleting expired user tokens:', err.message);
+				throw err;
+			}
 		}
 	};
 }
