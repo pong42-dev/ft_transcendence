@@ -264,7 +264,10 @@ export class App {
       this.gameSetupResult, // 게임 설정 데이터 전달
       () => {
         // 게임 종료 콜백
-        this.gamePage = null;
+        if (this.gamePage) {
+          this.gamePage.destroy();
+          this.gamePage = null;
+        }
         this.gameSetupResult = null; // 게임 설정 데이터 정리
         this.uiRenderer.setGameState(false);
         
