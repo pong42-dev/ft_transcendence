@@ -35,7 +35,9 @@
     "uploadingAvatar": "アバターをアップロードしています...",
     "avatarUpdatedSuccessfully": "✅ アバターが正常に更新されました！",
     "failedToUploadAvatar": "アバターのアップロードに失敗しました",
-    "avatarUploadFailedWithMessage": "❌ アバターのアップロードに失敗しました: {{message}}"
+    "avatarUploadFailedWithMessage": "❌ アバターのアップロードに失敗しました: {{message}}",
+    "tournament_final": "決勝",
+    "tournament_semifinal": "準決勝{{num}}試合"
   },
   "loginModal": {
     "welcome_back": "おかえりなさい",
@@ -662,4 +664,4 @@
   "commandHandler": {
     "unknown_command": "不明なコマンド: {{commandName}}。「help」と入力してコマンド一覧を表示してください。"
   }
-} 
+}

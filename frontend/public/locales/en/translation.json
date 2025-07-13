@@ -35,7 +35,9 @@
     "uploadingAvatar": "Uploading avatar...",
     "avatarUpdatedSuccessfully": "✅ Avatar updated successfully!",
     "failedToUploadAvatar": "Failed to upload avatar",
-    "avatarUploadFailedWithMessage": "❌ Avatar upload failed: {{message}}"
+    "avatarUploadFailedWithMessage": "❌ Avatar upload failed: {{message}}",
+    "tournament_final": "Final",
+    "tournament_semifinal": "Semifinal {{num}}"
   },
   "loginModal": {
     "welcome_back": "Welcome Back",
@@ -662,4 +664,4 @@
   "commandHandler": {
     "unknown_command": "Unknown command: {{commandName}}. Type 'help' for a list of commands."
   }
-} 
+}
