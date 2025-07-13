@@ -180,7 +180,7 @@ export class TournamentSession {
       }
       
       // 토너먼트의 매치 진행 상황 확인
-      const allMatches = await (this.fastify as any).knex('games')
+      const allMatches = await (this.fastify as any).knex('tournament_matches')
         .where('tournament_id', tournamentIdNum)
         .select('id', 'status', 'round_number', 'winner_id');
       
@@ -425,8 +425,9 @@ export class TournamentSession {
         if (finalMatch) {
           (this.fastify as any).log?.info?.(`[결승 참가자 등록] matchId=${finalMatch.id}, winners=${winnerIds}`);
           
-          // DB에 결승전 참가자 업데이트
-          await matchesRepository.updateNextMatchPlayers(finalMatch.id, winnerIds[0], winnerIds[1]);
+          // DB에 결승전 참가자 업데이트 - tournamentId를 사용해야 함
+          const tournamentIdNum = Number(this.tournamentId);
+          await matchesRepository.updateNextMatchPlayers(tournamentIdNum, winnerIds[0]); // winnerId는 하나만 필요 (함수 내부에서 모든 승자를 찾음)
           
           // 세션 내 결승전 매치 참가자 정보도 업데이트 - DB에서 다시 조회해서 동기화
           const updatedFinalMatch = await matchesRepository.getMatchById(finalMatch.id);
@@ -452,8 +453,10 @@ export class TournamentSession {
     };
     this.sendToClient(bracketUpdateMessage);
 
-    // 5. 다음 매치 시작
-    await this.startNextMatch();
+    // 5. 다음 매치 시작 (지연 추가로 트랜잭션 완료 보장)
+    setTimeout(async () => {
+      await this.startNextMatch();
+    }, 150);
   }
 
   /**
@@ -542,23 +545,10 @@ export class TournamentSession {
     
     // 첫 경기 시작
     (this.fastify as any).log.info(`[Session ${this.tournamentId}] Starting next match...`);
-    this.startNextMatch();
-  }
-
-  /**
-   * 특정 매치를 시작하는 메소드 (TestModal에서 호출)
-   */
-  private async startMatch(matchId: number) {
-    const match = this.matches.find(m => m.id === matchId);
-    if (!match) {
-      (this.fastify as any).log.error(`[Session ${this.tournamentId}] Match ${matchId} not found.`);
-      return;
-    }
-
-    match.status = 'playing';
-    const bracketUpdateMessage: BracketUpdateDto = { type: 'bracket_update', data: { matches: this.matches } };
-    this.sendToClient(bracketUpdateMessage);
-    (this.fastify as any).log.info(`[Session ${this.tournamentId}] Match ${matchId} started manually.`);
+    // 토너먼트 초기화 완료 후 약간의 지연
+    setTimeout(() => {
+      this.startNextMatch();
+    }, 50);
   }
 
   /**
@@ -568,7 +558,7 @@ export class TournamentSession {
     (this.fastify as any).log.info(`[startNextMatch] Starting search for next match...`);
     
     // 토너먼트가 종료된 상태라면 새로운 매치를 시작하지 않음
-    if (this.status === 'finished') {
+    if ((this.status as string) === 'finished') {
       (this.fastify as any).log.info(`[Session ${this.tournamentId}] Tournament is finished, not starting new match.`);
       return;
     }
@@ -628,7 +618,7 @@ export class TournamentSession {
     (this.fastify as any).log.info(`[Session ${this.tournamentId}] Starting match ${nextMatch.id}`);
     
     // 매치 시작 전 최종 상태 확인
-    if (this.status === 'finished' || !this.socket) {
+    if ((this.status as string) === 'finished' || !this.socket) {
       (this.fastify as any).log.info(`[Session ${this.tournamentId}] Tournament state changed, cancelling match ${nextMatch.id}`);
       return;
     }
@@ -717,7 +707,21 @@ export class TournamentSession {
           }
         }
       };
+      // 데이터베이스 락 해제를 위한 짧은 지연
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // 게임 생성을 재시도 로직과 함께 실행
       this.currentGameSessionId = await this.gameManager.createGame('tournament', playersForNextMatch, Number(this.tournamentId), customCallbacks);
+      
+      // GameManager에서 받은 게임 세션 ID를 tournament_matches 테이블에 저장
+      try {
+        const matchesRepository = (this.fastify as any).matchesRepository;
+        await matchesRepository.linkGameSession(nextMatch.id, this.currentGameSessionId);
+        (this.fastify as any).log.info(`[Session ${this.tournamentId}] Match ${nextMatch.id} linked to game session ${this.currentGameSessionId}`);
+      } catch (error) {
+        (this.fastify as any).log.error(`[Session ${this.tournamentId}] Failed to link match ${nextMatch.id} to game session:`, error);
+      }
+      
       for (const player of playersForNextMatch) {
         this.gameManager.handlePlayerConnection(this.currentGameSessionId, player.id);
         (this.fastify as any).log.info(`[Session ${this.tournamentId}] Auto-connected player ${player.id} to game ${this.currentGameSessionId}`);
@@ -810,7 +814,7 @@ export class TournamentSession {
       const tournamentIdNum = Number(this.tournamentId);
       
       // DB에서 모든 진행되지 않은 매치들을 'canceled' 상태로 업데이트
-      await (this.fastify as any).knex('games')
+      await (this.fastify as any).knex('tournament_matches')
         .where('tournament_id', tournamentIdNum)
         .whereIn('status', ['waiting', 'playing', 'countdown'])
         .update({

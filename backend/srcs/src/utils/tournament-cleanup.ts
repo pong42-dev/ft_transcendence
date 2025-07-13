@@ -37,7 +37,7 @@ export async function cleanupIncompleteTournaments(fastify: FastifyInstance): Pr
         });
       
       // 해당 토너먼트의 미완료 게임들도 canceled로 업데이트
-      const updatedGames = await fastify.knex('games')
+      const updatedGames = await fastify.knex('tournament_matches')
         .where('tournament_id', tournamentId)
         .whereIn('status', ['waiting', 'playing', 'countdown'])
         .update({
@@ -80,7 +80,7 @@ export async function gracefulTournamentCleanup(fastify: FastifyInstance): Promi
       
       // 해당 토너먼트들의 미완료 게임들도 canceled로 업데이트
       for (const tournament of activeTournaments) {
-        await fastify.knex('games')
+        await fastify.knex('tournament_matches')
           .where('tournament_id', tournament.id)
           .whereIn('status', ['waiting', 'playing', 'countdown'])
           .update({
@@ -120,7 +120,7 @@ export async function emergencyTournamentCleanup(fastify: FastifyInstance, signa
         });
       
       for (const tournament of activeTournaments) {
-        await fastify.knex('games')
+        await fastify.knex('tournament_matches')
           .where('tournament_id', tournament.id)
           .whereIn('status', ['waiting', 'playing', 'countdown'])
           .update({

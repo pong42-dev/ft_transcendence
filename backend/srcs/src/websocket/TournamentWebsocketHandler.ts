@@ -60,18 +60,33 @@ export class TournamentWebSocketHandler {
   }
 
   /**
-   * 토너먼트 참가자 검증
+   * 토너먼트 참가자 검증 - tournament_matches의 participant 컬럼 사용
    */
   private async verifyTournamentParticipant(tournamentId: number, userId: number): Promise<boolean> {
     try {
-      const participant = await (this.fastify as any).knex('players')
-        .join('game_participants', 'players.id', 'game_participants.player_id')
-        .join('games', 'game_participants.game_id', 'games.id')
-        .where('games.tournament_id', tournamentId)
-        .where('players.user_id', userId)
+      // 해당 user_id를 가진 플레이어 찾기
+      const player = await (this.fastify as any).knex('players')
+        .where('user_id', userId)
         .first();
       
-      return !!participant;
+      if (!player) {
+        (this.fastify as any).log.warn(`Player not found for user_id: ${userId}`);
+        return false;
+      }
+      
+      // tournament_matches에서 해당 플레이어가 참가자로 등록되어 있는지 확인
+      const participantMatch = await (this.fastify as any).knex('tournament_matches')
+        .where('tournament_id', tournamentId)
+        .where(function() {
+          this.where('participant_1_id', player.id)
+            .orWhere('participant_2_id', player.id);
+        })
+        .first();
+      
+      const isParticipant = !!participantMatch;
+      (this.fastify as any).log.info(`User ${userId} (player ${player.id}) participation verification: ${isParticipant}`);
+      
+      return isParticipant;
     } catch (error) {
       (this.fastify as any).log.error('Database error during participant verification:', error);
       return false;

@@ -123,10 +123,12 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 					created_at: new Date().toISOString(),
 					ended_at: null
 				});
-				// 5. 구성된 전체 참가자들을 등록합니다.
+				// 5. 구성된 전체 참가자들을 등록하고 플레이어 ID들을 수집합니다.
+				const playerIds: number[] = [];
 				for (const participant of allParticipants) {
+					let playerId: number;
 					if (participant.type === 'user') {
-						await fastify.tournamentsRepository.addTournamentParticipantWithTransaction(
+						playerId = await fastify.tournamentsRepository.addTournamentParticipantWithTransaction(
 							trx,
 							tournamentId,
 							'user',
@@ -134,7 +136,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 							undefined
 						);
 					} else {
-						await fastify.tournamentsRepository.addTournamentParticipantWithTransaction(
+						playerId = await fastify.tournamentsRepository.addTournamentParticipantWithTransaction(
 							trx,
 							tournamentId,
 							'guest',
@@ -142,9 +144,10 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 							(participant as { type: 'guest'; displayName: string }).displayName
 						);
 					}
+					playerIds.push(playerId);
 				}
-				// 6. 대진표를 생성합니다.
-				await fastify.tournamentsRepository.generateTournamentBracketWithTransaction(trx, tournamentId);
+				// 6. 수집된 플레이어 ID들로 대진표를 생성합니다.
+				await fastify.tournamentsRepository.generateTournamentBracketWithTransaction(trx, tournamentId, playerIds);
 				// 7. 생성된 토너먼트 정보 조회
 				const tournament = await trx('tournaments')
 					.where('id', tournamentId)

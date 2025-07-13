@@ -158,33 +158,12 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 						created_at: new Date().toISOString()
 					});
 					playerId = newPlayerId;
-					console.log(`Created new guest player: ${playerId}`);
-				} else {
-					throw new Error('Invalid player data');
-				}
+					console.log(`Created new guest player: ${playerId}`);			} else {
+				throw new Error('Invalid player data');
+			}
 
-				// 2. 토너먼트의 첫 번째 게임에 참가자로 등록
-				// (토너먼트가 시작되면 실제 대진표가 생성됨)
-				const [gameId] = await trx('games').insert({
-					type: 'tournament',
-					tournament_id: tournamentId,
-					round_number: 1,
-					winner_id: null,
-					status: 'waiting',
-					started_at: null,
-					ended_at: null
-				});
-
-				await trx('game_participants').insert({
-					game_id: gameId,
-					player_id: playerId,
-					score: 0
-				});
-
-				await trx.commit();
-
-				console.log(`Participant added to tournament ${tournamentId}. Player ID: ${playerId}, Game ID: ${gameId}`);
-				return playerId;
+			console.log(`Participant added to tournament ${tournamentId}. Player ID: ${playerId}`);
+			return playerId;
 			} catch (error) {
 				await trx.rollback();
 				throw error;
@@ -268,25 +247,7 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 				throw new Error('Invalid player data');
 			}
 
-			// 2. 토너먼트의 첫 번째 게임에 참가자로 등록
-			// (토너먼트가 시작되면 실제 대진표가 생성됨)
-			const [gameId] = await trx('games').insert({
-				type: 'tournament',
-				tournament_id: tournamentId,
-				round_number: 1,
-				winner_id: null,
-				status: 'waiting',
-				started_at: null,
-				ended_at: null
-			});
-
-			await trx('game_participants').insert({
-				game_id: gameId,
-				player_id: playerId,
-				score: 0
-			});
-
-			console.log(`Participant added to tournament ${tournamentId}. Player ID: ${playerId}, Game ID: ${gameId}`);
+			console.log(`Participant added to tournament ${tournamentId}. Player ID: ${playerId}`);
 			return playerId;
 		},
 
@@ -294,84 +255,76 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 		 * 초기 대진표 생성 (4명 토너먼트)
 		 * 반환값: [게임1, 게임2, 결승게임] 형태의 게임 ID 배열
 		 */
-		async generateTournamentBracket(tournamentId: number): Promise<number[]> {
+		async generateTournamentBracket(tournamentId: number, playerIds: number[]): Promise<number[]> {
 			const trx = await knex.transaction();
 
 			try {
-				// 1. 토너먼트의 모든 게임과 참가자 조회
-				const tournamentGames = await trx('games as g')
-					.join('game_participants as gp', 'g.id', 'gp.game_id')
-					.join('players as p', 'gp.player_id', 'p.id')
-					.select('g.id as game_id', 'g.round_number', 'p.id as player_id', 'p.type', 'p.user_id', 'p.display_name')
-					.where('g.tournament_id', tournamentId)
-					.orderBy('g.round_number', 'asc')
-					.orderBy('g.id', 'asc');
+				// 1. 기존 토너먼트 매치들 조회
+				const existingMatches = await trx('tournament_matches')
+					.where('tournament_id', tournamentId);
 
 				// 2. 기존 게임들 삭제 (새로운 대진표를 위해)
-				await trx('game_participants')
-					.whereIn('game_id', tournamentGames.map(g => g.game_id))
-					.del();
+				if (existingMatches.length > 0) {
+					await trx('tournament_matches')
+						.where('tournament_id', tournamentId)
+						.del();
+				}
 
-				await trx('games')
-					.where('tournament_id', tournamentId)
-					.del();
+				// 3. playerIds 배열에서 참가자 정보 조회
+				if (!playerIds || playerIds.length !== 4) {
+					throw new Error(`Tournament must have exactly 4 participants. Received: ${playerIds?.length || 0}`);
+				}
 
-				// 3. 참가자 목록 추출
-				const participants = tournamentGames
-					.filter((game, index, self) =>
-						self.findIndex(g => g.player_id === game.player_id) === index
-					);
+				const participants = await trx('players')
+					.whereIn('id', playerIds)
+					.select('id as player_id', 'type', 'user_id', 'display_name');
 
+				// 원래 순서 유지
+				participants.sort((a, b) => playerIds.indexOf(a.player_id) - playerIds.indexOf(b.player_id));
+
+				// 4. 참가자 목록 검증
 				if (participants.length !== 4) {
 					throw new Error(`Tournament must have exactly 4 participants. Current: ${participants.length}`);
 				}
 
-				// 4. 토너먼트 상태를 'in-progress'로 변경
+				// 5. 토너먼트 상태를 'in-progress'로 변경
 				await trx('tournaments')
 					.where('id', tournamentId)
 					.update({ status: 'in-progress' });
 
-				// 5. 4강전 게임 생성 (2개)
+				// 6. 4강전 게임 생성 (2개)
 				const semifinalGames: number[] = [];
 
 				// 게임 1: 참가자 1 vs 참가자 2
-				const [game1Id] = await trx('games').insert({
+				const [game1Id] = await trx('tournament_matches').insert({
 					type: 'tournament',
 					tournament_id: tournamentId,
 					round_number: 1,
 					winner_id: null,
 					status: 'waiting',
 					started_at: null,
-					ended_at: null
+					ended_at: null,
+					participant_1_id: participants[0].player_id,
+					participant_2_id: participants[1].player_id
 				});
 				semifinalGames.push(game1Id);
 
-				// 게임 1 참가자 등록
-				await trx('game_participants').insert([
-					{ game_id: game1Id, player_id: participants[0].player_id, score: 0 },
-					{ game_id: game1Id, player_id: participants[1].player_id, score: 0 }
-				]);
-
 				// 게임 2: 참가자 3 vs 참가자 4
-				const [game2Id] = await trx('games').insert({
+				const [game2Id] = await trx('tournament_matches').insert({
 					type: 'tournament',
 					tournament_id: tournamentId,
 					round_number: 1,
 					winner_id: null,
 					status: 'waiting',
 					started_at: null,
-					ended_at: null
+					ended_at: null,
+					participant_1_id: participants[2].player_id,
+					participant_2_id: participants[3].player_id
 				});
 				semifinalGames.push(game2Id);
 
-				// 게임 2 참가자 등록
-				await trx('game_participants').insert([
-					{ game_id: game2Id, player_id: participants[2].player_id, score: 0 },
-					{ game_id: game2Id, player_id: participants[3].player_id, score: 0 }
-				]);
-
-				// 6. 결승전 게임 생성 (나중에 사용)
-				const [finalGameId] = await trx('games').insert({
+				// 7. 결승전 게임 생성 (나중에 사용)
+				const [finalGameId] = await trx('tournament_matches').insert({
 					type: 'tournament',
 					tournament_id: tournamentId,
 					round_number: 2,
@@ -396,33 +349,35 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 		/**
 		 * 초기 대진표 생성 (4명 토너먼트) - 트랜잭션 버전
 		 */
-		async generateTournamentBracketWithTransaction(trx: Knex.Transaction, tournamentId: number): Promise<number[]> {
-			// 1. 토너먼트의 모든 게임과 참가자 조회
-			const tournamentGames = await trx('games as g')
-				.join('game_participants as gp', 'g.id', 'gp.game_id')
-				.join('players as p', 'gp.player_id', 'p.id')
-				.select('g.id as game_id', 'g.round_number', 'p.id as player_id', 'p.type', 'p.user_id', 'p.display_name')
-				.where('g.tournament_id', tournamentId)
-				.orderBy('g.round_number', 'asc')
-				.orderBy('g.id', 'asc');
+		async generateTournamentBracketWithTransaction(trx: Knex.Transaction, tournamentId: number, playerIds?: number[]): Promise<number[]> {
+			// 1. 기존 토너먼트 매치들 조회
+			const existingMatches = await trx('tournament_matches')
+				.where('tournament_id', tournamentId);
 
 			// 2. 기존 게임들 삭제 (새로운 대진표를 위해)
-			await trx('game_participants')
-				.whereIn('game_id', tournamentGames.map(g => g.game_id))
-				.del();
+			if (existingMatches.length > 0) {
+				await trx('tournament_matches')
+					.where('tournament_id', tournamentId)
+					.del();
+			}
 
-			await trx('games')
-				.where('tournament_id', tournamentId)
-				.del();
+			let participants;
 
-			// 3. 참가자 목록 추출
-			const participants = tournamentGames
-				.filter((game, index, self) =>
-					self.findIndex(g => g.player_id === game.player_id) === index
-				);
+			if (playerIds && playerIds.length === 4) {
+				// 3-1. 플레이어 ID 배열이 제공된 경우 (권장 방법)
+				participants = await trx('players')
+					.whereIn('id', playerIds)
+					.select('id as player_id', 'type', 'user_id', 'display_name');
+				
+				// 원래 순서 유지
+				participants.sort((a, b) => playerIds.indexOf(a.player_id) - playerIds.indexOf(b.player_id));
+			} else {
+				// 3-2. 플레이어 ID 배열이 없는 경우 - 에러 발생
+				throw new Error('Player IDs must be provided to generate tournament bracket');
+			}
 
 			if (participants.length !== 4) {
-				throw new Error(`Tournament must have exactly 4 participants. Current: ${participants.length}`);
+				throw new Error(`bracket.Tournament must have exactly 4 participants. Current: ${participants.length}`);
 			}
 
 			// 4. 토너먼트 상태를 'in-progress'로 변경
@@ -433,44 +388,36 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 			// 5. 4강전 게임 생성 (2개)
 			const semifinalGames: number[] = [];
 
-			// 게임 1: 참가자 1 vs 참가자 2
-			const [game1Id] = await trx('games').insert({
+			// 게임 1: 플레이어 0 vs 플레이어 1
+			const [game1Id] = await trx('tournament_matches').insert({
 				type: 'tournament',
 				tournament_id: tournamentId,
 				round_number: 1,
 				winner_id: null,
 				status: 'waiting',
 				started_at: null,
-				ended_at: null
+				ended_at: null,
+				participant_1_id: participants[0].player_id,
+				participant_2_id: participants[1].player_id
 			});
 			semifinalGames.push(game1Id);
 
-			// 게임 1 참가자 등록
-			await trx('game_participants').insert([
-				{ game_id: game1Id, player_id: participants[0].player_id, score: 0 },
-				{ game_id: game1Id, player_id: participants[1].player_id, score: 0 }
-			]);
-
-			// 게임 2: 참가자 3 vs 참가자 4
-			const [game2Id] = await trx('games').insert({
+			// 게임 2: 플레이어 2 vs 플레이어 3
+			const [game2Id] = await trx('tournament_matches').insert({
 				type: 'tournament',
 				tournament_id: tournamentId,
 				round_number: 1,
 				winner_id: null,
 				status: 'waiting',
 				started_at: null,
-				ended_at: null
+				ended_at: null,
+				participant_1_id: participants[2].player_id,
+				participant_2_id: participants[3].player_id
 			});
 			semifinalGames.push(game2Id);
 
-			// 게임 2 참가자 등록
-			await trx('game_participants').insert([
-				{ game_id: game2Id, player_id: participants[2].player_id, score: 0 },
-				{ game_id: game2Id, player_id: participants[3].player_id, score: 0 }
-			]);
-
-			// 6. 결승전 게임 생성 (나중에 사용)
-			const [finalGameId] = await trx('games').insert({
+			// 결승전 게임 생성 (나중에 사용)
+			const [finalGameId] = await trx('tournament_matches').insert({
 				type: 'tournament',
 				tournament_id: tournamentId,
 				round_number: 2,
@@ -516,54 +463,114 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 					return null;
 				}
 
-				// 2. 토너먼트 참가자 조회 (players 테이블에서, user_profiles 조인)
-				const participants = await knex('games as g')
-					.join('game_participants as gp', 'g.id', 'gp.game_id')
-					.join('players as p', 'gp.player_id', 'p.id')
+				// 2. 토너먼트 참가자 조회 (tournament_matches의 participant 컬럼에서)
+				const participantIds = await knex('tournament_matches')
+					.where('tournament_id', tournamentId)
+					.whereNotNull('participant_1_id')
+					.select('participant_1_id as player_id')
+					.union(function() {
+						this.select('participant_2_id as player_id')
+							.from('tournament_matches')
+							.where('tournament_id', tournamentId)
+							.whereNotNull('participant_2_id');
+					});
+
+				const participants = await knex('players as p')
 					.leftJoin('user_profiles as up', 'p.user_id', 'up.user_id')
 					.select(
 						'p.id',
-						'p.type',
+						'p.type', 
 						'p.user_id',
 						'p.display_name',
 						knex.raw('COALESCE(up.name, p.display_name) as name')
 					)
-					.where('g.tournament_id', tournamentId)
-					.distinct('p.id');
+					.whereIn('p.id', participantIds.map(p => p.player_id));
 
 				// 3. 토너먼트 게임들 조회
-				const games = await knex('games')
+				const games = await knex('tournament_matches')
 					.where('tournament_id', tournamentId)
 					.orderBy('round_number', 'asc')
 					.orderBy('id', 'asc');
 
-				// 4. 각 게임의 참가자 정보 조회 (user_profiles 조인)
+				// 4. 각 게임의 참가자 정보 조회
 				const gamesWithParticipants = await Promise.all(
 					games.map(async (game) => {
-						const gameParticipantsData = await knex('game_participants as gp')
-							.join('players as p', 'gp.player_id', 'p.id')
-							.leftJoin('user_profiles as up', 'p.user_id', 'up.user_id')
-							.select(
-								'p.id', 'p.type', 'p.user_id', 'p.display_name', 'gp.score',
-								'up.name as user_name', 'up.avatar'
-							)
-							.where('gp.game_id', game.id);
+						let gameParticipants = [];
 
-						const gameParticipants = gameParticipantsData.map(p => {
-							const name = p.type === 'user' && p.user_name ? p.user_name : p.display_name;
-							const defaultAvatar = `http://localhost:3000/public/default-avatar.png`;
-							const avatarUrl = p.avatar ? `http://localhost:3000/${p.avatar}` : defaultAvatar;
+						// 게임이 시작되어 game_session_id가 있는 경우, game_participants에서 조회
+						if (game.game_session_id) {
+							const gameParticipantsData = await knex('game_participants as gp')
+								.join('players as p', 'gp.player_id', 'p.id')
+								.leftJoin('user_profiles as up', 'p.user_id', 'up.user_id')
+								.select(
+									'p.id', 'p.type', 'p.user_id', 'p.display_name', 'gp.score',
+									'up.name as user_name', 'up.avatar'
+								)
+								.where('gp.game_id', game.game_session_id);
 
-							return {
-								id: p.id,
-								type: p.type,
-								user_id: p.user_id,
-								name: name,
-								display_name: name,
-								score: p.score,
-								avatarUrl: avatarUrl // 아바타 URL 추가
-							};
-						});
+							gameParticipants = gameParticipantsData.map(p => {
+								const name = p.type === 'user' && p.user_name ? p.user_name : p.display_name;
+								const defaultAvatar = `http://localhost:3000/public/default-avatar.png`;
+								const avatarUrl = p.avatar ? `http://localhost:3000/${p.avatar}` : defaultAvatar;
+
+								return {
+									id: p.id,
+									type: p.type,
+									user_id: p.user_id,
+									name: name,
+									display_name: name,
+									score: p.score,
+									avatarUrl: avatarUrl
+								};
+							});
+						} else {
+							// 게임이 아직 시작되지 않은 경우, tournament_matches의 participant 컬럼에서 조회
+							const participantPromises = [];
+							
+							if (game.participant_1_id) {
+								participantPromises.push(
+									knex('players as p')
+										.leftJoin('user_profiles as up', 'p.user_id', 'up.user_id')
+										.select(
+											'p.id', 'p.type', 'p.user_id', 'p.display_name',
+											'up.name as user_name', 'up.avatar'
+										)
+										.where('p.id', game.participant_1_id)
+										.first()
+								);
+							}
+							
+							if (game.participant_2_id) {
+								participantPromises.push(
+									knex('players as p')
+										.leftJoin('user_profiles as up', 'p.user_id', 'up.user_id')
+										.select(
+											'p.id', 'p.type', 'p.user_id', 'p.display_name',
+											'up.name as user_name', 'up.avatar'
+										)
+										.where('p.id', game.participant_2_id)
+										.first()
+								);
+							}
+
+							const participantResults = await Promise.all(participantPromises);
+							
+							gameParticipants = participantResults.filter(p => p).map(p => {
+								const name = p.type === 'user' && p.user_name ? p.user_name : p.display_name;
+								const defaultAvatar = `http://localhost:3000/public/default-avatar.png`;
+								const avatarUrl = p.avatar ? `http://localhost:3000/${p.avatar}` : defaultAvatar;
+
+								return {
+									id: p.id,
+									type: p.type,
+									user_id: p.user_id,
+									name: name,
+									display_name: name,
+									score: 0, // 게임 시작 전이므로 스코어는 0
+									avatarUrl: avatarUrl
+								};
+							});
+						}
 
 						return {
 							...game,
@@ -589,7 +596,7 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 		async getTournamentParticipants(tournamentId: number): Promise<any[]> {
 			try {
 				// 1. 토너먼트 참가자 조회 (players 테이블에서, user_profiles 조인)
-				const participants = await knex('games as g')
+				const participants = await knex('tournament_matches as g')
 					.join('game_participants as gp', 'g.id', 'gp.game_id')
 					.join('players as p', 'gp.player_id', 'p.id')
 					.leftJoin('user_profiles as up', 'p.user_id', 'up.user_id')
@@ -623,7 +630,7 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 				}
 
 				// 2. 모든 매치 조회
-				const matches = await knex('games as g')
+				const matches = await knex('tournament_matches as g')
 					.join('game_participants as gp', 'g.id', 'gp.game_id')
 					.join('players as p', 'gp.player_id', 'p.id')
 					.leftJoin('user_profiles as up', function () {
@@ -721,7 +728,7 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 			try {
 				// 1. 사용자가 참가한 모든 토너먼트 조회 (cancelled 상태 제외)
 				const tournaments = await knex('tournaments as t')
-					.join('games as g', 't.id', 'g.tournament_id')
+					.join('tournament_matches as g', 't.id', 'g.tournament_id')
 					.join('game_participants as gp', 'g.id', 'gp.game_id')
 					.join('players as p', 'gp.player_id', 'p.id')
 					.select(
@@ -746,7 +753,7 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 				const history: any[] = [];
 				for (const [tournamentId, matches] of tournamentGroups) {
 					// 토너먼트의 모든 참가자 조회
-					const allParticipants = await knex('games as g')
+					const allParticipants = await knex('tournament_matches as g')
 						.join('game_participants as gp', 'g.id', 'gp.game_id')
 						.join('players as p', 'gp.player_id', 'p.id')
 						.select('p.id', 'p.display_name', 'p.user_id')
@@ -755,7 +762,7 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 					const participantNames = allParticipants.map(p => p.display_name || `User${p.user_id}`);
 
 					// 토너먼트의 모든 매치 조회 (라운드별)
-					const allGames = await knex('games')
+					const allGames = await knex('tournament_matches')
 						.where('tournament_id', tournamentId)
 						.orderBy('round_number', 'asc')
 						.orderBy('id', 'asc');
@@ -879,7 +886,7 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 				if (!player) return [];
 
 				// 2. 내가 참가한 토너먼트 ID 목록 조회 (중복 제거, canceled 상태 제외)
-				const tournamentIdsRows = await knex('games as g')
+				const tournamentIdsRows = await knex('tournament_matches as g')
 					.join('game_participants as gp', 'g.id', 'gp.game_id')
 					.join('tournaments as t', 'g.tournament_id', 't.id') // tournaments 테이블 조인
 					.where('g.type', 'tournament')
@@ -903,7 +910,7 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 					// 참가자 목록 조회
 					const participantsRows = await knex('game_participants as gp')
 						.join('players as p', 'gp.player_id', 'p.id')
-						.join('games as g', 'gp.game_id', 'g.id')
+						.join('tournament_matches as g', 'gp.game_id', 'g.id')
 						.where('g.tournament_id', tournamentId)
 						.distinct('p.id', 'p.type', 'p.user_id', 'p.display_name');
 
@@ -932,7 +939,7 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 					});
 
 					// rounds 배열 생성 (게임별 1v1 상세)
-					const games = await knex('games as g')
+					const games = await knex('tournament_matches as g')
 						.join('game_participants as me', 'g.id', 'me.game_id')
 						.join('players as me_player', 'me.player_id', 'me_player.id')
 						.join('game_participants as op', function () {
@@ -1032,7 +1039,7 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 		// async getTournamentHistoryForProfile(userId: number): Promise<any[]> {
 		// 	try {
 		// 		// 사용자가 참가한 토너먼트 게임들 조회
-		// 		const matches = await knex('games as g')
+		// 		const matches = await knex('tournament_matches as g')
 		// 			.join('game_participants as gp', 'g.id', 'gp.game_id')
 		// 			.join('players as p', 'gp.player_id', 'p.id')
 		// 			.join('tournaments as t', 'g.tournament_id', 't.id')
@@ -1092,7 +1099,7 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 export default fp(
 	async function (fastify: FastifyInstance) {
 		const repo = createTournamentsRepository(fastify);
-		fastify.decorate('tournamentsRepository', repo);
+		(fastify as any).decorate('tournamentsRepository', repo);
 	},
 	{
 		name: 'tournaments-repository',
