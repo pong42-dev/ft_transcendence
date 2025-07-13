@@ -45,6 +45,8 @@ async function login(
 			refreshTokenCookie.expiresAt,
 			googleRefreshToken
 		)
+		console.log("refreshToken:", refreshTokenCookie.value);
+		console.log("hashed refreshToken:", hashedRefreshToken);
 		await this.userProfilesRepository.updateRowByColumn('user_id', user_id, 'status', true)
 		if (googleRefreshToken) {
 			reply.redirect(config.CLIENT_ORIGIN);

@@ -65,6 +65,8 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 					return reply.status(401).send({ msg: 'Email or password is incorrect.' });
 				}
 				const isMatch = await passwordManager.comparePassword(password, user.password);
+				console.log('password: ', password);
+				console.log('hashed password: ', user.password);
 				if (!isMatch) {
 					return reply.status(401).send({ msg: 'Email or password is incorrect.' });
 				}

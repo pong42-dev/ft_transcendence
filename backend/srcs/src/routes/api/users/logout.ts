@@ -44,8 +44,8 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 			try {
 				const { user_id } = request.user as UserData;
 				const userToken = await userTokensRepository.getRowByColumnValue("user_id", user_id);
-				console.log(userToken?.server_refresh_token);
-				console.log(request?.cookies);
+				// console.log(userToken?.server_refresh_token);
+				// console.log(request?.cookies);
 				const refreshToken = request.cookies.refresh_token;
 				if (refreshToken) {
 					const isMatch = await passwordManager.comparePassword(refreshToken, userToken.server_refresh_token);
