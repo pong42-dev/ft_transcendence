@@ -9,6 +9,7 @@ import {
 	PlayerResponseDto 
 } from '../../../schemas/games.js';
 import { UserGameStats } from '../../../schemas/profile.js'
+// import tournament from '../tournament/index.js';
 
 declare module 'fastify' {
 	interface FastifyInstance {
@@ -326,7 +327,8 @@ export function createGameRepository(fastify: FastifyInstance) {
 		 */
 		async createGameWithPlayers(
 			gameMode: GameMode, 
-			playerIds: number[]
+			playerIds: number[],
+			tournamentId?: number
 		): Promise<number> {
 			const trx = await knex.transaction();
 			
@@ -334,7 +336,7 @@ export function createGameRepository(fastify: FastifyInstance) {
 				// 1. 게임 생성
 				const [gameId] = await trx('games').insert({
 					type: gameMode,
-					tournament_id: null,
+					tournament_id: tournamentId ?? null,
 					round_number: 1,
 					status: 'waiting',
 					started_at: null,

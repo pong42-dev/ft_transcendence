@@ -48,8 +48,9 @@ export class GameManager {
   // =================================================================
 
   public async createGame(
-    mode: GameMode, 
+    mode: GameMode,
     players: PlayerResponseDto[],
+    tournamentId?: number,
     customCallbacks?: {onStateUpdate: GameStateUpdateCallback; onEvent: GameEventCallback},
     aiSettings?: { difficulty: AIDifficulty }
   ): Promise<string> {

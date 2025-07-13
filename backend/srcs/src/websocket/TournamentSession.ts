@@ -717,7 +717,7 @@ export class TournamentSession {
           }
         }
       };
-      this.currentGameSessionId = await this.gameManager.createGame('tournament', playersForNextMatch, customCallbacks);
+      this.currentGameSessionId = await this.gameManager.createGame('tournament', playersForNextMatch, Number(this.tournamentId), customCallbacks);
       for (const player of playersForNextMatch) {
         this.gameManager.handlePlayerConnection(this.currentGameSessionId, player.id);
         (this.fastify as any).log.info(`[Session ${this.tournamentId}] Auto-connected player ${player.id} to game ${this.currentGameSessionId}`);
