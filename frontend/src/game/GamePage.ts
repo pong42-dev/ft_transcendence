@@ -385,7 +385,7 @@ export class GamePage {
             console.log('beforeunload event triggered');
             if (this.isGameActive && (this.gameClient || this.tournamentClient)) {
                 // 게임이 진행 중이면 경고 메시지 표시
-                e.preventDefault();
+                // e.preventDefault();
                 
                 // 백그라운드에서 게임 취소 처리
                 this.handleUnexpectedExit();
@@ -503,6 +503,7 @@ export class GamePage {
                 this.container,
                 tournamentId,
                 Number(userId), // JWT에서 추출한 user_id를 number로 변환
+                this // GamePage 인스턴스를 전달
             );
             this.tournamentClient.start();
         } catch (error) {
@@ -527,7 +528,7 @@ export class GamePage {
     /**
      * [신규] 브라우저 이벤트 리스너들을 제거합니다.
      */
-    private removeBrowserEventListeners() {
+    public removeBrowserEventListeners() {
         if (this.beforeUnloadHandler) {
             window.removeEventListener('beforeunload', this.beforeUnloadHandler);
             this.beforeUnloadHandler = undefined;

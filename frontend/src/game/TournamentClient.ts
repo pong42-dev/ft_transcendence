@@ -59,6 +59,7 @@ export class TournamentClient {
   private container: HTMLElement;
   private tournamentId: number;
   private currentUserId: number | null;
+  private gamePage?: { removeBrowserEventListeners: () => void };
   // 현재 활성화된 게임 클라이언트 추적
   private currentGameClient: GameClient | null = null;
   private webSocketService: WebSocketService | null = null;
@@ -82,11 +83,13 @@ export class TournamentClient {
   constructor(
     container: HTMLElement,
     tournamentId: number,
-    currentUserId: number | null
+    currentUserId: number | null,
+    gamePage?: { removeBrowserEventListeners: () => void }
   ) {
     this.container = container;
     this.tournamentId = tournamentId;
     this.currentUserId = currentUserId;
+    this.gamePage = gamePage;
     this.modalManager = ModalManager.getInstance();
     this.renderer = new TournamentRenderer(currentUserId, this.bracketResults);
     this.errorHandler = new TournamentErrorHandler();
@@ -413,6 +416,7 @@ export class TournamentClient {
     const cancelBtn = this.container.querySelector('#cancel-tournament-btn');
     if (cancelBtn) {
       cancelBtn.addEventListener('click', () => {
+        this.gamePage?.removeBrowserEventListeners();
         this.errorHandler.setManualExit(true);
         this.destroy();
         window.location.href = '/';
@@ -484,16 +488,6 @@ export class TournamentClient {
       'cancel',
       result.matchId
     );
-    
-    // 취소 버튼 이벤트 리스너 추가
-    const cancelBtn = this.container.querySelector('#cancel-tournament-btn');
-    if (cancelBtn) {
-      cancelBtn.addEventListener('click', () => {
-        this.errorHandler.setManualExit(true);
-        this.destroy();
-        window.location.href = '/';
-      });
-    }
     
     // 카운트다운 요소 참조
     const countdownElement = this.container.querySelector('#countdown-number');
@@ -633,6 +627,7 @@ export class TournamentClient {
     const homeBtn = this.container.querySelector('#home-btn');
     if (homeBtn) {
       homeBtn.addEventListener('click', () => {
+        this.gamePage?.removeBrowserEventListeners();
         window.location.href = '/';
       });
     }
