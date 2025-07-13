@@ -122,14 +122,6 @@ export class GamePage {
                 
                 console.log('Requesting to create a tournament...');
                 
-                // 사용자 ID를 JWT에서 직접 추출 및 검증
-                const userId = this.decodeUserIdFromAccessToken();
-                console.log('Decoded user ID:', userId);
-                if (!this.validateUserId(userId)) {
-                    this.showTournamentError('토너먼트에 참가하려면 유효한 로그인이 필요합니다.');
-                    return;
-                }
-                
                 // Sanitize opponent names before sending to server
                 const sanitizedSettings = {
                     ...gameSettings,
