@@ -47,7 +47,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 			const { user_id } = request.user as UserData;
 			const { name: newName } = request.body as UserData;
 			const validNameMsg = isValidName(newName) 
-			if (!validNameMsg) {
+			if (validNameMsg) {
 				return reply.send({
 					success: false,
 					msg: validNameMsg

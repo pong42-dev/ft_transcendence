@@ -150,7 +150,6 @@ Logs out an authenticated user. Validates refresh token cookie, revokes tokens, 
 * **Authentication required** (`authenticate`)
 * **Required cookie**: `refresh_token`
 * **Authorization header** required: `Bearer <access-token>`
-
 ### ✅ Response
 
 * **200 OK**
@@ -162,11 +161,19 @@ Logs out an authenticated user. Validates refresh token cookie, revokes tokens, 
 }
 ```
 
+* **401 Unauthorized**
+
+```json
+{
+  "msg": "Invalid or expired token."
+}
+```
+
 * **404 Not Found**
 
 ```json
 {
-  "msg": "user not found"
+  "msg": "User not found."
 }
 ```
 
@@ -177,6 +184,7 @@ Logs out an authenticated user. Validates refresh token cookie, revokes tokens, 
   "msg": "An internal server error occurred during logout."
 }
 ```
+
 
 ### 🧩 Notes
 

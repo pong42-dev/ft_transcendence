@@ -29,6 +29,9 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 						success: Type.Literal(true),
 						msg: Type.String()
 					}),
+					401: Type.Object({
+						msg: Type.String()
+					}),
 					404: Type.Object({
 						msg: Type.String()
 					}),
@@ -43,29 +46,28 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 		async function (request, reply) {
 			try {
 				const { user_id } = request.user as UserData;
-				const userToken = await userTokensRepository.getRowByColumnValue("user_id", user_id);
-				// console.log(userToken?.server_refresh_token);
-				// console.log(request?.cookies);
 				const refreshToken = request.cookies.refresh_token;
-				if (refreshToken) {
-					const isMatch = await passwordManager.comparePassword(refreshToken, userToken.server_refresh_token);
-					if (isMatch) {
-						console.log("user_id: ", user_id);
-						if (userToken && userToken.google_refresh_token) {
-							await googleOAuth2Manager.revokeGoogleToken(userToken.google_refresh_token);
-						}
-						await userTokensRepository.deleteRowByColumnValue("user_id", user_id);
-						await tmpTokenRepository.deleteRowByColumnValue("user_id", user_id);
-						reply.clearCookie('refresh_token', { path: '/' });
-						await userProfilesRepository.updateRowByColumn("user_id", user_id, "status", false);
-						return reply.send({ 
-							success: true,
-							msg: "Successfully logged out." 
-						});
-					}
+				if (!refreshToken) {
+					return reply.status(401).send({ msg: "Invalid or expired token." });
 				}
-				return reply.status(404).send({ 
-					msg: "user not found" 
+				const userToken = await userTokensRepository.getRowByColumnValue("user_id", user_id);
+				if (!userToken) {
+					return reply.status(404).send({ msg: "User not found." });
+				}
+				const isMatch = await passwordManager.comparePassword(refreshToken, userToken.server_refresh_token);
+				if (!isMatch) {
+					return reply.status(401).send({ msg: "Invalid or expired token." });
+				}
+				if (userToken.google_refresh_token) {
+					await googleOAuth2Manager.revokeGoogleToken(userToken.google_refresh_token);
+				}
+				await userTokensRepository.deleteRowByColumnValue("user_id", user_id);
+				await tmpTokenRepository.deleteRowByColumnValue("user_id", user_id);
+				reply.clearCookie('refresh_token', { path: '/' });
+				await userProfilesRepository.updateRowByColumn("user_id", user_id, "status", false);
+				return reply.send({
+					success: true,
+					msg: "Successfully logged out.",
 				});
 			} catch (err) {
 				fastify.log.error(err);
