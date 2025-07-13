@@ -105,6 +105,10 @@ export class GameWebSocketHandler {
 
     switch (message.type) {
       case 'player_input':
+        if (!isPlayerInputMessageValid(message)) {
+          this.sendError(socket, 'Invalid player_input data structure', 'INVALID_PAYLOAD')
+          return
+        }
         this.handlePlayerInput(gameId, message as WSPlayerInputMessage)
         break
       
@@ -212,4 +216,46 @@ export class GameWebSocketHandler {
       socket.send(JSON.stringify(error))
     }
   }
+}
+
+function isPlayerInputMessageValid(message: any): boolean {
+  // 1. 최상위 객체와 type 필드 검사
+  if (!message || typeof message !== 'object' || message.type !== 'player_input') {
+    return false;
+  }
+
+  // 2. data 필드 검사
+  const data = message.data;
+  if (!data || typeof data !== 'object') {
+    return false;
+  }
+
+  // 3. playerId 필드 검사
+  if (typeof data.playerId !== 'number' || data.playerId < 0) {
+    return false;
+  }
+
+  // 4. input 필드 검사
+  const input = data.input;
+  if (!input || typeof input !== 'object') {
+    return false;
+  }
+
+  // 5. input.direction 필드 검사
+  const { action } = input;
+
+  // 5-1. action 키가 존재하고, 문자열인지 먼저 확인
+  if (typeof action !== 'string') {
+    return false;
+  }
+  
+  // 5-2. 값을 소문자로 변환하여 비교
+  const lowercasedAction = action.toLowerCase();
+  if (lowercasedAction !== 'up' && lowercasedAction !== 'down' && lowercasedAction !== 'none') {
+    return false;
+  }
+
+
+  // 모든 검사를 통과하면 유효한 메시지
+  return true;
 }
