@@ -930,7 +930,7 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 						this.where('tm.participant_1_id', player.id)
 							.orWhere('tm.participant_2_id', player.id);
 					})
-					.whereNot('t.status', 'canceled') // canceled 상태 토너먼트 제외
+					.where('t.status', 'ended') // ended 인 토너먼트만 포함
 					.distinct('tm.tournament_id');
 
 				console.log(`[DEBUG] Found tournament IDs for player ${player.id}:`, tournamentIdsRows);
