@@ -16,11 +16,11 @@ async function login(
 	googleRefreshToken: string | ''
 ): Promise<void> {
 	const { config } = this;
-	const userData = { user_id: user_id }
-	const isNotLoggedIn = await this.tokenManager.isNotLoggedIn(user_id)
+	const userData = { user_id: user_id };
+	const isNotLoggedIn = await this.tokenManager.isNotLoggedIn(user_id);
 	if (!isNotLoggedIn) {
 		if (googleRefreshToken) {
-				const errorParams = new URLSearchParams({
+			const errorParams = new URLSearchParams({
 				error: 'account_in_use',
 				message: 'This account is already in use. Please log out and try again.'
 			});
