@@ -43,16 +43,16 @@ export const OneOnOneHistorySchema = Type.Array(OneOnOneHistoryItemSchema)
 export interface OneOnOneHistory extends Static<typeof OneOnOneHistorySchema> {}
 
 // Match History: Tournament
-// Rounds are structured as one-on-one game units with additional player1/player2 fields
+// Rounds are structured with player1/player2 fields
 export const RoundSchema = Type.Object({
   endedAt: DateTimeSchema,
-  opponent: OpponentSchema,
-  myScore: Type.Integer({ minimum: 0 }),
-  opponentScore: Type.Integer({ minimum: 0 }),
   winnerId: IdSchema,
   player1: Type.Optional(OpponentSchema),
   player2: Type.Optional(OpponentSchema),
   round_number: Type.Optional(Type.Integer({ minimum: 1 })),
+  player1_score: Type.Optional(Type.Integer({ minimum: 0 })),
+  player2_score: Type.Optional(Type.Integer({ minimum: 0 })),
+  isMyGame: Type.Optional(BooleanSchema),
 })
 
 // Schema for each tournament record item

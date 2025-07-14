@@ -1098,14 +1098,6 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 							player2: player2,
 							player1_score: game.player1_score,
 							player2_score: game.player2_score,
-							// 기존 구조 유지 (호환성을 위해)
-							opponent: {
-								id: opponentPlayer.id,
-								type: opponentPlayer.type,
-								name: opponentPlayer.name,
-							},
-							myScore: myPlayer.id === game.player1_id ? game.player1_score : game.player2_score,
-							opponentScore: myPlayer.id === game.player1_id ? game.player2_score : game.player1_score,
 							winnerId: game.winner_id,
 							my_player_id: myPlayer.id,
 							// 사용자가 이 게임에 참여했는지 여부
@@ -1120,20 +1112,33 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 				console.log('[DEBUG] Final game data:', {
 					winnerId: finalGame.winnerId,
 					my_player_id: finalGame.my_player_id,
+					isMyGame: finalGame.isMyGame,
+					player1: finalGame.player1,
+					player2: finalGame.player2,
 					winnerId_type: typeof finalGame.winnerId,
-					my_player_id_type: typeof finalGame.my_player_id,
-					comparison_result: finalGame.winnerId === finalGame.my_player_id
+					my_player_id_type: typeof finalGame.my_player_id
 				});
 				
-				// null 체크 후 안전한 비교
-				if (finalGame.winnerId != null && finalGame.my_player_id != null) {
-					// 안전한 비교를 위해 둘 다 숫자로 변환해서 비교
-					const winnerId = parseInt(finalGame.winnerId.toString());
-					const myPlayerId = parseInt(finalGame.my_player_id.toString());
-					final_rank = winnerId === myPlayerId ? 1 : 2;
+				// 내가 결승에 참여했는지 확인
+				if (finalGame.isMyGame) {
+					// null 체크 후 안전한 비교
+					if (finalGame.winnerId != null && finalGame.my_player_id != null) {
+						// 안전한 비교를 위해 둘 다 숫자로 변환해서 비교
+						const winnerId = parseInt(finalGame.winnerId.toString());
+						const myPlayerId = parseInt(finalGame.my_player_id.toString());
+						final_rank = winnerId === myPlayerId ? 1 : 2;
+						console.log('[DEBUG] Final rank calculation:', { winnerId, myPlayerId, final_rank });
+					} else {
+						console.log('[DEBUG] Warning: winnerId or my_player_id is null in final game');
+						final_rank = 2; // 결승 진출했지만 데이터 오류로 2등 처리
+					}
 				} else {
-					console.log('[DEBUG] Warning: winnerId or my_player_id is null, keeping default rank 3');
+					// 결승에 참여하지 않았다면 3등 이하
+					console.log('[DEBUG] User did not participate in final game');
+					final_rank = 3;
 				}
+			} else {
+				console.log('[DEBUG] No final game (round_number=2) found');
 			}
 			console.log('[DEBUG] Calculated final_rank:', final_rank);
 
