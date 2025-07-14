@@ -106,7 +106,6 @@ export class TournamentRenderer {
             : this.renderPlayerCard(null, false, false, '-', 'waiting', i18next.t('tournament.client.renderer.tbd'))
           }
         </div>
-        ${hasValidMatch ? `<div class="text-center text-xs text-terminal-gray mt-2">${i18next.t('tournament.client.renderer.match_number', { matchId: match.id })}</div>` : ''}
       </div>
     `;
     return semifinalHTML;
@@ -141,7 +140,6 @@ export class TournamentRenderer {
             : this.renderPlayerCard(null, false, false, '-', 'waiting', '?')
           }
         </div>
-        ${hasValidMatch ? `<div class="text-center text-xs text-terminal-gray mt-2">${i18next.t('tournament.client.renderer.match_number', { matchId: match.id })}</div>` : ''}
       </div>
     `;
     return finalHTML;
@@ -215,12 +213,11 @@ export class TournamentRenderer {
   /**
    * 제목 섹션 컨테이너 렌더링
    */
-  renderTitleSection(title: string, subtitle: string, matchId?: number): string {
+  renderTitleSection(title: string, subtitle: string): string {
     return `
       <div class="text-center mb-8">
         <h2 class="text-2xl font-bold text-terminal-green">${title}</h2>
         <div class="text-lg text-terminal-yellow mt-2">${subtitle}</div>
-        ${matchId ? `<div class="text-sm text-terminal-gray mt-1">매치 #${matchId}</div>` : ''}
       </div>
     `;
   }
@@ -273,11 +270,10 @@ export class TournamentRenderer {
     bracketHTML: string, 
     countdown?: { seconds: number, message: string }, 
     buttonType?: 'cancel' | 'home', 
-    matchId?: number
   ): string {
     return this.createTournamentContainer(`
       <!-- Title -->
-      ${this.renderTitleSection(title, subtitle, matchId)}
+      ${this.renderTitleSection(title, subtitle)}
       
       <!-- Bracket -->
         ${bracketHTML}

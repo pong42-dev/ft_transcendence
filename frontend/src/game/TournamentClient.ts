@@ -240,7 +240,7 @@ export class TournamentClient {
     }
     
     // 토너먼트 시작 시 브라켓을 5초간 표시
-    this.showBracketWithCountdown(0, 5, '토너먼트 시작');
+    this.showBracketWithCountdown(5, '토너먼트 시작');
   }
 
   private handleBracketUpdate(data: any): void {
@@ -313,7 +313,7 @@ export class TournamentClient {
     console.log('Current match set to:', this.currentMatch);
     
     // 1. 브라켓과 함께 5초 카운트다운 표시
-    this.showBracketWithCountdown(matchId, 5, '매치 시작');
+    this.showBracketWithCountdown(5, '매치 시작');
     
     // 2. 5초 후 게임 시작
     this.currentTimeout = window.setTimeout(() => {
@@ -393,7 +393,7 @@ export class TournamentClient {
   /**
    * 브라켓과 함께 카운트다운을 표시하는 메서드
    */
-  private showBracketWithCountdown(matchId: number, seconds: number, message: string): void {
+  private showBracketWithCountdown(seconds: number, message: string): void {
     // 브라켓 HTML 생성
     let bracketHTML: string;
     if (this.bracketMatches) {
@@ -411,7 +411,6 @@ export class TournamentClient {
       bracketHTML,
       { seconds, message: i18next.t('tournament.client.renderer.game_starts_in') },
       'cancel',
-      matchId
     );
     
     // 취소 버튼 이벤트 리스너 추가
@@ -488,7 +487,6 @@ export class TournamentClient {
       bracketHTML,
       { seconds: 5, message: i18next.t('tournament.client.renderer.next_match_in') },
       'cancel',
-      result.matchId
     );
     
     // 카운트다운 요소 참조
