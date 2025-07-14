@@ -7,7 +7,7 @@ services:
     # 포트 노출하지 않음 (nginx 프록시를 통해서만 접근)
     volumes:
       - fastify_data:/app/database
-      - ./backend/srcs/public:/app/public
+      - ./backend/public:/app/public
     env_file:
       - ./backend/.env
     networks:
