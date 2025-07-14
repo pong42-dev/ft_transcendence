@@ -16,7 +16,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 			},
 			schema: {
 			  	headers: Type.Object({
-					cookie: Type.String({
+					cookies: Type.String({
 						description: 'refresh_token=abc123;'
 					}),
 				}),
