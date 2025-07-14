@@ -1,5 +1,4 @@
 import { ModalManager, ModalContent } from '../managers/ModalManager.js';
-import { UIUtils } from '../utils/UIUtils.js';
 import i18next from '../services/i18n.js';
 
 /**
