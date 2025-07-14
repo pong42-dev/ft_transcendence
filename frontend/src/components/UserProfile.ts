@@ -232,6 +232,12 @@ export class UserProfile {
     // 실제 토너먼트 히스토리 데이터 사용
     if (this.user.tournamentHistory && this.user.tournamentHistory.length > 0) {
       this.user.tournamentHistory.forEach((tournament: any) => {
+        // 안전한 데이터 체크
+        if (!tournament || !tournament.rounds || !Array.isArray(tournament.rounds)) {
+          console.warn('Invalid tournament data:', tournament);
+          return;
+        }
+
         const card = document.createElement('div');
         card.className = 'bg-terminal-gray bg-opacity-5 rounded-lg p-4 flex flex-col gap-2';
         
@@ -240,7 +246,7 @@ export class UserProfile {
         top.className = 'flex items-center justify-between mb-2';
         const dateInfo = document.createElement('div');
         dateInfo.className = 'text-xs text-terminal-green font-mono';
-        dateInfo.textContent = new Date(tournament.tournament_date).toISOString().split('T')[0];
+        dateInfo.textContent = tournament.tournament_date ? new Date(tournament.tournament_date).toISOString().split('T')[0] : 'Unknown Date';
         
         // 등수 뱃지
         const rankBadgeText = tournament.final_rank === 1
@@ -266,48 +272,77 @@ export class UserProfile {
         matchList.className = 'flex flex-col gap-2';
         
         tournament.rounds.forEach((round: any) => {
+          console.log(`[DEBUG Frontend] Round data:`, JSON.stringify(round, null, 2));
+          console.log(`[DEBUG Frontend] isMyGame value:`, round.isMyGame, typeof round.isMyGame);
+          
           const row = document.createElement('div');
           row.className = 'flex items-center gap-2';
           
-          // 단계 태그
+          // 단계 태그 - round_number로 구분
           const stageTag = document.createElement('span');
           stageTag.className = 'text-xs font-bold text-terminal-green min-w-[60px]';
-          stageTag.textContent = round.round_number === 1 ? '1라운드' : '결승';
+          
+          if (round.round_number === 1) {
+            // 준결승 - 같은 라운드에서 여러 경기가 있을 수 있으므로 인덱스 기반으로 구분
+            const semiIndex = tournament.rounds.filter((r: any) => r.round_number === 1).indexOf(round) + 1;
+            stageTag.textContent = i18n.t('userProfile.tournament_semifinal', { num: semiIndex });
+          } else if (round.round_number === 2) {
+            stageTag.textContent = i18n.t('userProfile.tournament_final');
+          } else {
+            stageTag.textContent = `Round ${round.round_number}`;
+          }
           row.appendChild(stageTag);
           
-          // 사용자 참여 여부에 따른 스타일
-          const isMyGame = round.isMyGame;
-          const gameStyle = isMyGame ? 'text-terminal-green' : 'text-terminal-gray opacity-60';
+          // 플레이어 1 - 안전하게 처리
+          const p1 = round.player1 || {};
+          const p1Name = p1.name || 'Unknown Player';
+          const p1Span = document.createElement('span');
+          p1Span.textContent = p1Name;
           
-          // 상대방 이름
-          const opponentSpan = document.createElement('span');
-          opponentSpan.textContent = round.opponent.name;
-          opponentSpan.className = gameStyle;
-          row.appendChild(opponentSpan);
+          // 승자 강조 스타일 - Mock UI와 맞게
+          const isP1Winner = round.winnerId === p1.id;
+          p1Span.className = isP1Winner 
+            ? 'font-bold text-terminal-green' 
+            : 'text-terminal-gray opacity-60';
           
-          // 스코어 (내 게임인 경우에만 표시)
-          if (isMyGame && round.myScore !== undefined && round.opponentScore !== undefined) {
-            const scoreSpan = document.createElement('span');
-            scoreSpan.className = 'ml-2 text-xs text-terminal-gray';
-            scoreSpan.textContent = `(${round.myScore} - ${round.opponentScore})`;
-            row.appendChild(scoreSpan);
-            
-            // 승리 표시
-            if (round.winnerId === round.my_player_id) {
-              const winBadge = document.createElement('span');
-              winBadge.className = 'ml-1 px-1 py-0.5 rounded bg-terminal-green bg-opacity-20 text-xs text-terminal-green font-bold';
-              winBadge.textContent = 'WIN';
-              row.appendChild(winBadge);
-            }
+          row.appendChild(p1Span);
+          
+          // Player 1 YOU 배지 (현재 사용자인 경우)
+          if (p1.type === 'user') {
+            const youBadge = document.createElement('span');
+            youBadge.className = 'ml-1 px-1 py-0.5 rounded bg-terminal-blue bg-opacity-20 text-xs text-terminal-blue font-bold';
+            youBadge.textContent = 'YOU';
+            row.appendChild(youBadge);
           }
+
+          // vs
+          const vs = document.createElement('span');
+          vs.className = 'mx-1 text-xs text-terminal-gray opacity-70';
+          vs.textContent = 'vs';
+          row.appendChild(vs);
+
+          // 플레이어 2 - 안전하게 처리
+          const p2 = round.player2 || {};
+          const p2Name = p2.name || 'Unknown Player';
+          const p2Span = document.createElement('span');
+          p2Span.textContent = p2Name;
           
-          // 관전 경기 표시
-          if (!isMyGame) {
-            const spectatorBadge = document.createElement('span');
-            spectatorBadge.className = 'ml-1 px-1 py-0.5 rounded bg-terminal-gray bg-opacity-20 text-xs text-terminal-gray';
-            spectatorBadge.textContent = '관전';
-            row.appendChild(spectatorBadge);
+          // 승자 강조 스타일 - Mock UI와 맞게
+          const isP2Winner = round.winnerId === p2.id;
+          p2Span.className = isP2Winner 
+            ? 'font-bold text-terminal-green' 
+            : 'text-terminal-gray opacity-60';
+          
+          row.appendChild(p2Span);
+          
+          // Player 2 YOU 배지 (현재 사용자인 경우)
+          if (p2.type === 'user') {
+            const youBadge = document.createElement('span');
+            youBadge.className = 'ml-1 px-1 py-0.5 rounded bg-terminal-blue bg-opacity-20 text-xs text-terminal-blue font-bold';
+            youBadge.textContent = 'YOU';
+            row.appendChild(youBadge);
           }
+
           
           matchList.appendChild(row);
         });
@@ -325,94 +360,6 @@ export class UserProfile {
     
     return wrapper;
   }
-
-  // private renderMockTournamentHistory(tournamentCards: any[]): HTMLElement {
-  //   const wrapper = document.createElement('div');
-  //   wrapper.className = 'flex flex-col gap-4';
-    
-  //   tournamentCards.forEach(cardData => {
-  //     // 등수 텍스트/색상
-  //     const rankBadgeText = cardData.userRank === 1
-  //       ? i18n.t('userProfile.champion')
-  //       : cardData.userRank === 2
-  //       ? i18n.t('userProfile.runner_up')
-  //       : i18n.t('userProfile.semi_finalist');
-  //     const rankBadgeClass = cardData.userRank === 1
-  //       ? 'bg-terminal-green text-terminal-green'
-  //       : cardData.userRank === 2
-  //       ? 'bg-terminal-blue text-terminal-blue'
-  //       : 'bg-terminal-gray text-terminal-gray';
-      
-  //     // 카드
-  //     const card = document.createElement('div');
-  //     card.className = 'bg-terminal-gray bg-opacity-5 rounded-lg p-4 flex flex-col gap-2';
-      
-  //     // 상단: 날짜 + 등수 뱃지
-  //     const top = document.createElement('div');
-  //     top.className = 'flex items-center justify-between mb-2';
-  //     const dateInfo = document.createElement('div');
-  //     dateInfo.className = 'text-xs text-terminal-green font-mono';
-  //     dateInfo.textContent = cardData.date;
-  //     const rankBadge = document.createElement('span');
-  //     rankBadge.className = `px-3 py-1 rounded-full font-bold text-xs ${rankBadgeClass} bg-opacity-20 border border-terminal-gray`;
-  //     rankBadge.textContent = rankBadgeText;
-  //     top.appendChild(dateInfo);
-  //     top.appendChild(rankBadge);
-  //     card.appendChild(top);
-      
-  //     // 하단: 경기 정보
-  //     const matchList = document.createElement('div');
-  //     matchList.className = 'flex flex-col gap-2';
-  //     cardData.matches.forEach(match => {
-  //       const row = document.createElement('div');
-  //       row.className = 'flex items-center gap-2';
-        
-  //       // 단계 태그
-  //       const stageTag = document.createElement('span');
-  //       stageTag.className = 'text-xs font-bold text-terminal-green min-w-[60px]';
-  //       stageTag.textContent = match.stage;
-  //       row.appendChild(stageTag);
-        
-  //       // 닉네임1
-  //       const p1 = match.players[0];
-  //       const p1Span = document.createElement('span');
-  //       p1Span.textContent = p1.nickname;
-  //       p1Span.className = p1.isWinner ? 'font-bold text-terminal-green' : 'text-terminal-gray opacity-60';
-  //       row.appendChild(p1Span);
-  //       if (p1.isWinner) {
-  //         const winBadge = document.createElement('span');
-  //         winBadge.className = 'ml-1 px-1 py-0.5 rounded bg-terminal-green bg-opacity-20 text-xs text-terminal-green font-bold';
-  //         winBadge.textContent = 'WIN';
-  //         row.appendChild(winBadge);
-  //       }
-        
-  //       // vs
-  //       const vs = document.createElement('span');
-  //       vs.className = 'mx-1 text-xs text-terminal-gray opacity-70';
-  //       vs.textContent = 'vs';
-  //       row.appendChild(vs);
-        
-  //       // 닉네임2
-  //       const p2 = match.players[1];
-  //       const p2Span = document.createElement('span');
-  //       p2Span.textContent = p2.nickname;
-  //       p2Span.className = p2.isWinner ? 'font-bold text-terminal-green' : 'text-terminal-gray opacity-60';
-  //       row.appendChild(p2Span);
-  //       if (p2.isWinner) {
-  //         const winBadge = document.createElement('span');
-  //         winBadge.className = 'ml-1 px-1 py-0.5 rounded bg-terminal-green bg-opacity-20 text-xs text-terminal-green font-bold';
-  //         winBadge.textContent = 'WIN';
-  //         row.appendChild(winBadge);
-  //       }
-        
-  //       matchList.appendChild(row);
-  //     });
-  //     card.appendChild(matchList);
-  //     wrapper.appendChild(card);
-  //   });
-    
-  //   return wrapper;
-  // }
 
   private renderMatchHistoryItem(match: MatchHistory): HTMLElement {
     const item = document.createElement('div');
@@ -510,8 +457,24 @@ export class UserProfile {
       console.log('Refreshed user data:', { 
         gamesPlayed: this.user.gamesPlayed,
         gamesWon: this.user.gamesWon,
-        matchHistoryCount: this.user.matchHistory.length
+        matchHistoryCount: this.user.matchHistory.length,
+        tournamentHistory: this.user.tournamentHistory
       });
+      
+      // 토너먼트 히스토리 상세 로깅
+      if (this.user.tournamentHistory && this.user.tournamentHistory.length > 0) {
+        console.log('Tournament History Details:');
+        this.user.tournamentHistory.forEach((tournament, index) => {
+          console.log(`Tournament ${index}:`, tournament);
+          if (tournament.rounds) {
+            tournament.rounds.forEach((round, roundIndex) => {
+              console.log(`  Round ${roundIndex}:`, round);
+              console.log(`    player1:`, round.player1);
+              console.log(`    player2:`, round.player2);
+            });
+          }
+        });
+      }
     } catch (error) {
       console.warn('Failed to refresh user data, using existing data:', error);
       // Keep using existing user data as fallback

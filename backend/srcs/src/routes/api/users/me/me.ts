@@ -66,6 +66,28 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				console.log("oneOnOneHistory: ", oneOnOneHistory);
 				const tournHistory = await tournamentsRepository.getTournamentHistoryForProfile(userId);
 				console.log("tournHistory: ", tournHistory);
+				
+				// HTTP 응답 직전 tournHistory의 rounds 상세 로깅
+				if (tournHistory && tournHistory.length > 0) {
+					console.log("[HTTP Response] tournHistory rounds details:");
+					tournHistory.forEach((tournament, tIndex) => {
+						console.log(`[HTTP Response] Tournament ${tIndex}:`, {
+							tournament_id: tournament.tournament_id,
+							rounds_count: tournament.rounds ? tournament.rounds.length : 0
+						});
+						if (tournament.rounds) {
+							tournament.rounds.forEach((round, rIndex) => {
+								console.log(`[HTTP Response] Tournament ${tIndex}, Round ${rIndex}:`, {
+									round_number: round.round_number,
+									has_player1: !!round.player1,
+									has_player2: !!round.player2,
+									player1: round.player1,
+									player2: round.player2
+								});
+							});
+						}
+					});
+				}
 
 				reply.status(200).send({
 					success: true,

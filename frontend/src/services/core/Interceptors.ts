@@ -191,6 +191,29 @@ export const createInterceptors = (options?: {
     response: {
       onResponse: async (response: Response, data: any) => {
         console.group(`✅ API Response: ${response.status} ${response.url}`);
+        
+        // /api/users/me 응답에 대해서만 상세 로깅
+        if (response.url.includes('/api/users/me')) {
+          console.log('Response data:', data);
+          if (data?.data?.tournHistory) {
+            console.log('Tournament History from response:', data.data.tournHistory);
+            data.data.tournHistory.forEach((tournament: any, index: number) => {
+              console.log(`Response Tournament ${index}:`, tournament);
+              if (tournament.rounds) {
+                tournament.rounds.forEach((round: any, roundIndex: number) => {
+                  console.log(`Response Round ${roundIndex}:`, {
+                    round_number: round.round_number,
+                    has_player1: !!round.player1,
+                    has_player2: !!round.player2,
+                    player1: round.player1,
+                    player2: round.player2
+                  });
+                });
+              }
+            });
+          }
+        }
+        
         console.groupEnd();
         return data;
       },

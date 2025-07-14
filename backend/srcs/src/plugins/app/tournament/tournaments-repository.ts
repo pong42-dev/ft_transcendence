@@ -911,20 +911,31 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 			try {
 				const knex = fastify.knex;
 
+				console.log(`[DEBUG] Getting tournament history for userId: ${userId}`);
+
 				// 1. userId로 player_id 조회
 				const player = await knex('players').where('user_id', userId).first('id');
-				if (!player) return [];
+				console.log(`[DEBUG] Found player for userId ${userId}:`, player);
+				if (!player) {
+					console.log(`[DEBUG] No player found for userId ${userId}`);
+					return [];
+				}
 
-				// 2. 내가 참가한 토너먼트 ID 목록 조회 (중복 제거, canceled 상태 제외)
-				const tournamentIdsRows = await knex('tournament_matches as g')
-					.join('game_participants as gp', 'g.id', 'gp.game_id')
-					.join('tournaments as t', 'g.tournament_id', 't.id') // tournaments 테이블 조인
-					.where('g.type', 'tournament')
-					.where('gp.player_id', player.id)
+				// 2. 내가 참가한 토너먼트 ID 목록 조회 (직접 participant_1_id, participant_2_id로 조회)
+				const tournamentIdsRows = await knex('tournament_matches as tm')
+					.join('tournaments as t', 'tm.tournament_id', 't.id')
+					.where('tm.type', 'tournament')
+					.where(function() {
+						this.where('tm.participant_1_id', player.id)
+							.orWhere('tm.participant_2_id', player.id);
+					})
 					.whereNot('t.status', 'canceled') // canceled 상태 토너먼트 제외
-					.distinct('g.tournament_id');
+					.distinct('tm.tournament_id');
+
+				console.log(`[DEBUG] Found tournament IDs for player ${player.id}:`, tournamentIdsRows);
 
 				const tournamentIds = tournamentIdsRows.map(r => r.tournament_id);
+				console.log(`[DEBUG] Tournament IDs array:`, tournamentIds);
 
 				// 3. 토너먼트별 참가자 정보와 게임 기록 조회
 				const tournHistories = [];
@@ -937,21 +948,29 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 						.first('id', 'created_at', 'winner_player_id', 'status');
 					if (!tournamentInfo) continue;
 
-					// 참가자 목록 조회
-					const participantsRows = await knex('game_participants as gp')
-						.join('players as p', 'gp.player_id', 'p.id')
-						.join('tournament_matches as g', 'gp.game_id', 'g.id')
-						.where('g.tournament_id', tournamentId)
-						.distinct('p.id', 'p.type', 'p.user_id', 'p.display_name');
+					// 참가자 목록 조회 (tournament_matches에서 직접)
+					const participantsRows = await knex('tournament_matches as tm')
+						.leftJoin('players as p1', 'tm.participant_1_id', 'p1.id')
+						.leftJoin('players as p2', 'tm.participant_2_id', 'p2.id')
+						.where('tm.tournament_id', tournamentId)
+						.select(
+							'p1.id as p1_id', 'p1.type as p1_type', 'p1.user_id as p1_user_id', 'p1.display_name as p1_display_name',
+							'p2.id as p2_id', 'p2.type as p2_type', 'p2.user_id as p2_user_id', 'p2.display_name as p2_display_name'
+						);
 
-					// 1. user_id만 모아서
-					const userIds = participantsRows
-						.filter(p => p.type === 'user')
-						.map(p => p.user_id);
+					// 참가자들의 user_id 수집
+					const userIds = [];
+					participantsRows.forEach(row => {
+						if (row.p1_type === 'user' && row.p1_user_id) userIds.push(row.p1_user_id);
+						if (row.p2_type === 'user' && row.p2_user_id) userIds.push(row.p2_user_id);
+					});
+
+					// 중복 제거
+					const uniqueUserIds = [...new Set(userIds)];
 
 					// 2. 한 번에 이름들을 가져옴
 					const userProfiles = await knex('user_profiles')
-						.whereIn('user_id', userIds)
+						.whereIn('user_id', uniqueUserIds)
 						.select('user_id', 'name');
 
 					// 3. user_id → name 맵으로 변환
@@ -961,105 +980,136 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 					});
 
 					// 4. participants 이름 변환
-					const participants = participantsRows.map(p => {
-						if (p.type === 'user') {
-							return userIdToName[p.user_id] || 'Unknown User';
+					const participantNames = new Set();
+					participantsRows.forEach(row => {
+						// participant 1
+						if (row.p1_type === 'user') {
+							participantNames.add(userIdToName[row.p1_user_id] || 'Unknown User');
+						} else {
+							participantNames.add(row.p1_display_name || 'Unknown');
 						}
-						return p.display_name || 'Unknown';
+						// participant 2
+						if (row.p2_type === 'user') {
+							participantNames.add(userIdToName[row.p2_user_id] || 'Unknown User');
+						} else {
+							participantNames.add(row.p2_display_name || 'Unknown');
+						}
 					});
+					
+					const participants = Array.from(participantNames);
 
 					// 토너먼트의 모든 라운드 게임 조회 (사용자가 참여한 토너먼트의 전체 대진표)
+					// tournament_matches 테이블에서 직접 참가자 정보를 가져오도록 수정
 					const allGames = await knex('tournament_matches as g')
-						.join('game_participants as gp1', 'g.id', 'gp1.game_id')
-						.join('players as p1', 'gp1.player_id', 'p1.id')
-						.join('game_participants as gp2', 'g.id', 'gp2.game_id')
-						.join('players as p2', 'gp2.player_id', 'p2.id')
 						.select(
 							'g.id as game_id',
 							'g.round_number',
 							'g.ended_at',
 							'g.winner_id',
-							'p1.id as player1_id',
-							'p1.type as player1_type',
-							'p1.user_id as player1_user_id',
-							'p1.display_name as player1_display_name',
-							'p2.id as player2_id',
-							'p2.type as player2_type',
-							'p2.user_id as player2_user_id',
-							'p2.display_name as player2_display_name',
-							'gp1.score as player1_score',
-							'gp2.score as player2_score'
+							'g.participant_1_id',
+							'g.participant_2_id'
 						)
 						.where('g.tournament_id', tournamentId)
-						.where('p1.id', '!=', 'p2.id') // 같은 플레이어 제외
+						.whereNotNull('g.participant_1_id')
+						.whereNotNull('g.participant_2_id')
 						.orderBy('g.round_number', 'asc');
 
-					// 게임별로 중복 제거 (p1 vs p2와 p2 vs p1 중복 방지)
-					const uniqueGames = [];
-					const processedPairs = new Set();
-					
-					for (const game of allGames) {
-						const pairKey = [game.player1_id, game.player2_id].sort().join('-');
-						if (!processedPairs.has(pairKey)) {
-							processedPairs.add(pairKey);
-							uniqueGames.push(game);
-						}
-					}
+					// 각 게임의 참가자 정보를 별도로 조회
+					const gamesWithParticipants = await Promise.all(
+						allGames.map(async (game) => {
+							// participant_1 정보 조회
+							const p1 = await knex('players as p')
+								.leftJoin('user_profiles as up', 'p.user_id', 'up.user_id')
+								.select('p.id', 'p.type', 'p.user_id', 'p.display_name', 'up.name as user_name')
+								.where('p.id', game.participant_1_id)
+								.first();
+
+							// participant_2 정보 조회
+							const p2 = await knex('players as p')
+								.leftJoin('user_profiles as up', 'p.user_id', 'up.user_id')
+								.select('p.id', 'p.type', 'p.user_id', 'p.display_name', 'up.name as user_name')
+								.where('p.id', game.participant_2_id)
+								.first();
+
+							return {
+								game_id: game.game_id,
+								round_number: game.round_number,
+								ended_at: game.ended_at,
+								winner_id: game.winner_id,
+								player1_id: p1?.id,
+								player1_type: p1?.type,
+								player1_user_id: p1?.user_id,
+								player1_display_name: p1?.display_name,
+								player1_user_name: p1?.user_name,
+								player2_id: p2?.id,
+								player2_type: p2?.type,
+								player2_user_id: p2?.user_id,
+								player2_display_name: p2?.display_name,
+								player2_user_name: p2?.user_name,
+								player1_score: 0, // 스코어는 별도로 관리되므로 기본값
+								player2_score: 0
+							};
+						})
+					);
+
+					// 중복 제거 로직 제거 (이미 tournament_matches에서 직접 가져오므로 중복 없음)
+					const uniqueGames = gamesWithParticipants;
 
 					// 사용자 정보를 포함한 라운드 정보 구성
 					const rounds = uniqueGames.map(game => {
 						// 사용자가 player1인지 player2인지 확인
 						const isPlayer1 = game.player1_user_id === userId;
-						const myPlayer = isPlayer1 ? {
+						const isPlayer2 = game.player2_user_id === userId;
+						const isMyGame = isPlayer1 || isPlayer2;
+
+						// player1 정보 구성
+						const player1Name = game.player1_type === 'user' 
+							? (userIdToName[game.player1_user_id] || 'Unknown User')
+							: (game.player1_display_name || 'Unknown');
+						
+						const player1 = {
 							id: game.player1_id,
 							type: game.player1_type,
-							user_id: game.player1_user_id,
-							display_name: game.player1_display_name,
-							score: game.player1_score
-						} : {
-							id: game.player2_id,
-							type: game.player2_type,
-							user_id: game.player2_user_id,
-							display_name: game.player2_display_name,
-							score: game.player2_score
+							name: player1Name,
+							is_winner: game.winner_id === game.player1_id
 						};
 
-						const opponentPlayer = isPlayer1 ? {
+						// player2 정보 구성
+						const player2Name = game.player2_type === 'user' 
+							? (userIdToName[game.player2_user_id] || 'Unknown User')
+							: (game.player2_display_name || 'Unknown');
+						
+						const player2 = {
 							id: game.player2_id,
 							type: game.player2_type,
-							user_id: game.player2_user_id,
-							display_name: game.player2_display_name,
-							score: game.player2_score
-						} : {
-							id: game.player1_id,
-							type: game.player1_type,
-							user_id: game.player1_user_id,
-							display_name: game.player1_display_name,
-							score: game.player1_score
+							name: player2Name,
+							is_winner: game.winner_id === game.player2_id
 						};
 
-						// 상대방 이름 결정
-						let opponentName = 'Unknown';
-						if (opponentPlayer.type === 'user' && opponentPlayer.user_id) {
-							opponentName = userIdToName[opponentPlayer.user_id] || 'Unknown User';
-						} else {
-							opponentName = opponentPlayer.display_name || 'Unknown';
-						}
+						// 내 정보와 상대방 정보 구분 (기존 호환성을 위해 유지)
+						const myPlayer = isPlayer1 ? player1 : player2;
+						const opponentPlayer = isPlayer1 ? player2 : player1;
 
 						return {
 							round_number: game.round_number,
 							endedAt: game.ended_at,
+							// 새로운 player1, player2 구조 추가
+							player1: player1,
+							player2: player2,
+							player1_score: game.player1_score,
+							player2_score: game.player2_score,
+							// 기존 구조 유지 (호환성을 위해)
 							opponent: {
 								id: opponentPlayer.id,
 								type: opponentPlayer.type,
-								name: opponentName,
+								name: opponentPlayer.name,
 							},
-							myScore: myPlayer.score,
-							opponentScore: opponentPlayer.score,
+							myScore: myPlayer.id === game.player1_id ? game.player1_score : game.player2_score,
+							opponentScore: myPlayer.id === game.player1_id ? game.player2_score : game.player1_score,
 							winnerId: game.winner_id,
 							my_player_id: myPlayer.id,
 							// 사용자가 이 게임에 참여했는지 여부
-							isMyGame: myPlayer.user_id === userId
+							isMyGame: isMyGame
 						};
 					});
 
@@ -1089,6 +1139,8 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 
 					// my_player_id는 반환할 필요 없으니 rounds에서 삭제, isMyGame은 유지
 					const cleanRounds = rounds.map(({ my_player_id, ...rest }) => rest);
+
+			console.log('[DEBUG] Clean rounds after my_player_id removal:', JSON.stringify(cleanRounds, null, 2));
 
 			const tournamentHistory = {
 				tournament_id: tournamentInfo.id,

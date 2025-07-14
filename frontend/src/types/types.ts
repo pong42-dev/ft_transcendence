@@ -482,9 +482,30 @@ export interface GameEventDto {
 
 export interface TournamentRound {
   round_number: number;
-  players: string[];
-  winner?: string;
-  result?: string;
+  endedAt: string;
+  player1: {
+    id: number;
+    type: string;
+    name: string;
+    is_winner: boolean;
+  };
+  player2: {
+    id: number;
+    type: string;
+    name: string;
+    is_winner: boolean;
+  };
+  player1_score: number;
+  player2_score: number;
+  opponent: {
+    id: number;
+    type: string;
+    name: string;
+  };
+  myScore: number;
+  opponentScore: number;
+  winnerId: number;
+  isMyGame: boolean;
 }
 
 export interface UserTournamentHistory {

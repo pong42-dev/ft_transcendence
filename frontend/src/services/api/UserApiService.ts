@@ -57,13 +57,25 @@ export class UserApiService extends BaseApiService {
     ];
 
     // 토너먼트 히스토리는 별도로 저장 (상세 정보 유지)
-    const tournamentHistory = tournHistory.map((tournament: any) => ({
-      tournament_id: tournament.tournament_id,
-      tournament_date: tournament.tournament_date,
-      participants: tournament.participants,
-      rounds: tournament.rounds,
-      final_rank: tournament.final_rank
-    }));
+    const tournamentHistory = tournHistory.map((tournament: any) => {
+      console.log('Processing tournament:', tournament);
+      console.log('Tournament rounds:', tournament.rounds);
+      if (tournament.rounds && tournament.rounds.length > 0) {
+        tournament.rounds.forEach((round: any, index: number) => {
+          console.log(`Round ${index} raw data:`, round);
+          console.log(`Round ${index} player1:`, round.player1);
+          console.log(`Round ${index} player2:`, round.player2);
+        });
+      }
+      
+      return {
+        tournament_id: tournament.tournament_id,
+        tournament_date: tournament.tournament_date,
+        participants: tournament.participants,
+        rounds: tournament.rounds,
+        final_rank: tournament.final_rank
+      };
+    });
 
     // User 객체로 변환
     const user: Types.User = {
