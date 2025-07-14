@@ -726,6 +726,24 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 		},
 
 		/**
+		 * 특정 토너먼트의 모든 매치를 'canceled' 상태로 업데이트합니다.
+		 * (플레이어 이탈 등으로 인한 비정상 종료 시 사용)
+		 */
+		async cancelAllMatchesForTournament(tournamentId: number): Promise<void> {
+			try {
+				const updatedCount = await knex('tournament_matches')
+					.where('tournament_id', tournamentId)
+					.whereNot('status', 'canceled')
+					.update({
+						status: 'canceled',
+						ended_at: new Date().toISOString()
+					});
+			} catch (error) {
+				throw error;
+			}
+		},
+
+		/**
 		 * 사용자의 토너먼트 기록 조회
 		 */
 		async getUserTournamentHistory(userId: number): Promise<any[]> {

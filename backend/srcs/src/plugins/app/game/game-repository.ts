@@ -352,6 +352,24 @@ export function createGameRepository(fastify: FastifyInstance) {
 		},
 
 		/**
+		 * 특정 토너먼트에 속한 모든 게임의 상태를 'canceled'로 변경
+		 * (과거에 진행된 게임 포함)
+		 */
+		async cancelAllGamesForTournament(tournamentId: number): Promise<void> {
+			try {
+				const updatedCount = await knex('games')
+					.where('tournament_id', tournamentId)
+					.whereNot('status', 'canceled') // 이미 취소된 게임은 제외
+					.update({
+						status: 'canceled',
+						ended_at: knex.fn.now()
+					});
+			} catch (error) {
+				throw error; // 에러를 다시 던져서 호출한 쪽에서 처리할 수 있도록 함
+			}
+		},
+
+		/**
 		 * 게임 상태 업데이트
 		 */
 		async updateGameStatus(gameId: number, status: GameStatus): Promise<void> {

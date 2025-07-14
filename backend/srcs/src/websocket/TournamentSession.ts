@@ -33,6 +33,7 @@ export class TournamentSession {
   
   // 플레이어 연결 해제 처리 중복 방지
   private isDisconnecting: boolean = false;
+  private normalShutdown: boolean = false;
 
   // [추가] 매치별로 결과를 임시 저장할 곳
   private resultBuffers = new Map<number, Map<number, PlayerResult>>();
@@ -120,39 +121,57 @@ export class TournamentSession {
   /**
    * 세션에서 플레이어를 제거합니다.
    */
-  removePlayer(playerId: number) {
-    // 중복 호출 방지
+  async removePlayer(playerId: number) {
+    // 중복 실행 방지
     if (this.isDisconnecting) {
-      (this.fastify as any).log.info(`[Session ${this.tournamentId}] Player ${playerId} disconnect already in progress, skipping.`);
       return;
     }
-    
     this.isDisconnecting = true;
-    (this.fastify as any).log.info(`[Session ${this.tournamentId}] Player ${playerId} being removed from session.`);
     
-    // 토너먼트 상태를 즉시 종료로 변경
-    this.status = 'finished';
-    
-    // 현재 진행 중인 게임이 있다면 종료 처리
+    // 현재 진행 중인 게임이 있다면 GameManager에서 제거
     if (this.currentGameSessionId) {
-      (this.fastify as any).log.info(`[Session ${this.tournamentId}] Terminating current game session: ${this.currentGameSessionId}`);
+      (this.fastify as any).log.info(`[Session ${this.tournamentId}] Cleaning up game session: ${this.currentGameSessionId}`);
       try {
         this.gameManager.removeGame(this.currentGameSessionId);
         this.currentGameSessionId = null;
-        (this.fastify as any).log.info(`[Session ${this.tournamentId}] Game session terminated successfully.`);
       } catch (error) {
-        (this.fastify as any).log.error(`[Session ${this.tournamentId}] Error ending game session:`, error);
+        (this.fastify as any).log.error(`[Session ${this.tournamentId}] Error cleaning up game session:`, error);
       }
     }
     
-    // 토너먼트의 모든 매치를 취소 상태로 업데이트
-    this.cancelAllRemainingMatches();
-    
-    // 토너먼트가 중간에 중단되었는지 확인하고 적절한 상태로 업데이트
-    this.updateTournamentStatusOnDisconnect();
-    
+    // 소켓 참조 제거
     this.socket = null;
-    (this.fastify as any).log.info(`[Session ${this.tournamentId}] Player ${playerId} disconnected and session cleaned up.`);
+
+    // --- ▲ 공통 정리 로직 종료 ▲ ---
+
+
+    // --- ▼ 2. 조건부 취소 로직 ▼ ---
+
+    // 정상 종료였다면, 여기서 모든 작업을 마칩니다.
+    if (this.normalShutdown) {
+      (this.fastify as any).log.info(`[Session ${this.tournamentId}] Normal disconnect cleanup complete for player ${playerId}.`);
+      return;
+    }
+
+    // 이 코드가 실행된다면, 비정상적인 연결 끊김이 발생한 것입니다.
+    (this.fastify as any).log.info(`[Session ${this.tournamentId}] Abnormal disconnect detected for player ${playerId}. Initiating cancellation.`);
+    
+    // DB의 모든 관련 데이터를 'canceled'로 변경합니다.
+    try {
+        const tournamentIdNum = Number(this.tournamentId);
+        const gameRepository = this.fastify.gameRepository;
+        const tournamentsRepository = (this.fastify as any).tournamentsRepository;
+
+        await Promise.all([
+            gameRepository.cancelAllGamesForTournament(tournamentIdNum),
+            tournamentsRepository.cancelAllMatchesForTournament(tournamentIdNum),
+            tournamentsRepository.updateTournamentStatus(tournamentIdNum, 'canceled')
+        ]);
+        (this.fastify as any).log.info(`[Session ${this.tournamentId}] Tournament successfully canceled in DB.`);
+      
+    } catch(error) {
+        (this.fastify as any).log.error(`[Session ${this.tournamentId}] A critical error occurred during the tournament cancellation process:`, error);
+    }
   }
 
   /**
@@ -771,6 +790,7 @@ export class TournamentSession {
    * 토너먼트를 종료하고 최종 결과를 모든 참가자에게 알립니다.
    */
   private async endTournament() {
+    this.normalShutdown = true; // 정상 종료임을 표시
     this.status = 'finished';
 
     // 결승전(nextMatchId가 null 또는 undefined인 경기)을 찾아 최종 우승자를 확인
