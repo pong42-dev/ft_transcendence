@@ -19,10 +19,16 @@ function validateCreateGameRequest(
 
 	switch (type) {
 		case 'local_1v1':
-			if (opponents.length !== 1) {
+			if (!opponents || opponents.length !== 1) {
 				return { valid: false, message: 'local_1v1 mode requires exactly one opponent (guest player).' }
 			}
-			const guestDisplayName = opponents[0]
+
+			const guestDisplayName = fastify.sanitizeHtml(opponents[0]);
+
+			if (guestDisplayName === null) {
+				return { valid: false, message: 'Guest player name cannot be empty.' }
+			}
+
 			const invalidNameMessage = fastify.isValidName(guestDisplayName);
 			if (invalidNameMessage) {
 				return {
@@ -38,8 +44,8 @@ function validateCreateGameRequest(
 			}
 			break
 
-		case 'tournament':
-			return { valid: false, message: 'Tournament mode is not implemented yet.' }
+		default:
+			return { valid: false, message: 'Invalid Mode' }
 	}
 
 	// 모든 검증을 통과한 경우
