@@ -19,6 +19,7 @@ declare module 'fastify' {
 
 export function createGameRepository(fastify: FastifyInstance) {
 	const knex = fastify.knex;
+	const BASE_URL = fastify.config.BASE_URL;
 
 	return {
 		// =================================================================
@@ -270,14 +271,14 @@ export function createGameRepository(fastify: FastifyInstance) {
 				
 				// 아바타 URL 생성
 				if (userProfile?.avatar) {
-					avatarUrl = `http://localhost:3000/${userProfile.avatar}`;
+					avatarUrl = `${BASE_URL}/${userProfile.avatar}`;
 				} else {
-					avatarUrl = `http://localhost:3000/${fastify.config.PUBLIC_DIRNAME}/default-avatar.png`;
+					avatarUrl = `${BASE_URL}/${fastify.config.PUBLIC_DIRNAME}/default-avatar.png`;
 				}
 			} else {
 				name = dbPlayer.display_name || 'Unknown';
 				// AI나 게스트는 기본 아바타 사용
-				avatarUrl = `http://localhost:3000/${fastify.config.PUBLIC_DIRNAME}/default-avatar.png`;
+				avatarUrl = `${BASE_URL}/${fastify.config.PUBLIC_DIRNAME}/default-avatar.png`;
 			}
 
 			return {

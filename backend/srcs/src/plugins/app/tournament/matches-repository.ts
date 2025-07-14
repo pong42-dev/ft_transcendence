@@ -33,6 +33,7 @@ export interface MatchResult {
 
 export function createMatchesRepository(fastify: FastifyInstance) {
 	const knex: Knex = fastify.knex;
+	const BASE_URL = fastify.config.BASE_URL;
 
 	const updateNextMatchPlayers = async (tournamentId: number, winnerId: number, trx?: Knex.Transaction): Promise<void> => {
 		try {
@@ -116,8 +117,8 @@ export function createMatchesRepository(fastify: FastifyInstance) {
 				
 				if (p1) {
 					const name = p1.type === 'user' && p1.user_name ? p1.user_name : p1.display_name;
-					const defaultAvatar = `http://localhost:3000/public/default-avatar.png`;
-					const avatarUrl = p1.avatar ? `http://localhost:3000/${p1.avatar}` : defaultAvatar;
+					const defaultAvatar = `${BASE_URL}/public/default-avatar.png`;
+					const avatarUrl = p1.avatar ? `${BASE_URL}/${p1.avatar}` : defaultAvatar;
 					
 					participants.push({
 						id: p1.id,
@@ -140,8 +141,8 @@ export function createMatchesRepository(fastify: FastifyInstance) {
 				
 				if (p2) {
 					const name = p2.type === 'user' && p2.user_name ? p2.user_name : p2.display_name;
-					const defaultAvatar = `http://localhost:3000/public/default-avatar.png`;
-					const avatarUrl = p2.avatar ? `http://localhost:3000/${p2.avatar}` : defaultAvatar;
+					const defaultAvatar = `${BASE_URL}/public/default-avatar.png`;
+					const avatarUrl = p2.avatar ? `${BASE_URL}/${p2.avatar}` : defaultAvatar;
 					
 					participants.push({
 						id: p2.id,
@@ -197,8 +198,8 @@ export function createMatchesRepository(fastify: FastifyInstance) {
 							
 							if (p1) {
 								const name = p1.type === 'user' && p1.user_name ? p1.user_name : p1.display_name;
-								const defaultAvatar = `http://localhost:3000/public/default-avatar.png`;
-								const avatarUrl = p1.avatar ? `http://localhost:3000/${p1.avatar}` : defaultAvatar;
+								const defaultAvatar = `${BASE_URL}/public/default-avatar.png`;
+								const avatarUrl = p1.avatar ? `${BASE_URL}/${p1.avatar}` : defaultAvatar;
 								
 								participants.push({
 									id: p1.id,
@@ -221,8 +222,8 @@ export function createMatchesRepository(fastify: FastifyInstance) {
 							
 							if (p2) {
 								const name = p2.type === 'user' && p2.user_name ? p2.user_name : p2.display_name;
-								const defaultAvatar = `http://localhost:3000/public/default-avatar.png`;
-								const avatarUrl = p2.avatar ? `http://localhost:3000/${p2.avatar}` : defaultAvatar;
+								const defaultAvatar = `${BASE_URL}/public/default-avatar.png`;
+								const avatarUrl = p2.avatar ? `${BASE_URL}/${p2.avatar}` : defaultAvatar;
 								
 								participants.push({
 									id: p2.id,
@@ -276,8 +277,8 @@ export function createMatchesRepository(fastify: FastifyInstance) {
 							
 							if (p1) {
 								const name = p1.type === 'user' && p1.user_name ? p1.user_name : p1.display_name;
-								const defaultAvatar = `http://localhost:3000/public/default-avatar.png`;
-								const avatarUrl = p1.avatar ? `http://localhost:3000/${p1.avatar}` : defaultAvatar;
+								const defaultAvatar = `${BASE_URL}/public/default-avatar.png`;
+								const avatarUrl = p1.avatar ? `${BASE_URL}/${p1.avatar}` : defaultAvatar;
 								
 								participants.push({
 									id: p1.id,
@@ -300,8 +301,8 @@ export function createMatchesRepository(fastify: FastifyInstance) {
 							
 							if (p2) {
 								const name = p2.type === 'user' && p2.user_name ? p2.user_name : p2.display_name;
-								const defaultAvatar = `http://localhost:3000/public/default-avatar.png`;
-								const avatarUrl = p2.avatar ? `http://localhost:3000/${p2.avatar}` : defaultAvatar;
+								const defaultAvatar = `${BASE_URL}/public/default-avatar.png`;
+								const avatarUrl = p2.avatar ? `${BASE_URL}/${p2.avatar}` : defaultAvatar;
 								
 								participants.push({
 									id: p2.id,

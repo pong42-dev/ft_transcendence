@@ -62,6 +62,7 @@ export interface UserTournamentHistory {
 
 export function createTournamentsRepository(fastify: FastifyInstance) {
 	const knex: Knex = fastify.knex;
+	const BASE_URL = fastify.config.BASE_URL;
 
 	return {
 		/**
@@ -514,8 +515,8 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 
 							gameParticipants = gameParticipantsData.map(p => {
 								const name = p.type === 'user' && p.user_name ? p.user_name : p.display_name;
-								const defaultAvatar = `http://localhost:3000/public/default-avatar.png`;
-								const avatarUrl = p.avatar ? `http://localhost:3000/${p.avatar}` : defaultAvatar;
+								const defaultAvatar = `${BASE_URL}/public/default-avatar.png`;
+								const avatarUrl = p.avatar ? `${BASE_URL}/${p.avatar}` : defaultAvatar;
 
 								return {
 									id: p.id,
@@ -561,8 +562,8 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 							
 							gameParticipants = participantResults.filter(p => p).map(p => {
 								const name = p.type === 'user' && p.user_name ? p.user_name : p.display_name;
-								const defaultAvatar = `http://localhost:3000/public/default-avatar.png`;
-								const avatarUrl = p.avatar ? `http://localhost:3000/${p.avatar}` : defaultAvatar;
+								const defaultAvatar = `${BASE_URL}/public/default-avatar.png`;
+								const avatarUrl = p.avatar ? `${BASE_URL}/${p.avatar}` : defaultAvatar;
 
 								return {
 									id: p.id,
@@ -653,7 +654,7 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 					})));
 
 				// 3. 매치별로 그룹화
-				const matchGroups = new Map<number, any[]>();
+				const matchGroups = new Map<number, any>();
 				matches.forEach(match => {
 					if (!matchGroups.has(match.id)) {
 						matchGroups.set(match.id, []);
