@@ -15,7 +15,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 		{
 			schema: {
 				params: Type.Object({
-					gameId: Type.String({ pattern: '^\\d+$' })
+					gameId: Type.String()
 				}),
 				body: Type.Object({
 					reason: Type.Optional(Type.Union([

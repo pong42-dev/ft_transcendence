@@ -44,12 +44,6 @@ export class GameWebSocketHandler {
   public handleConnection(socket: WebSocket, request: FastifyRequest): void {
     const { gameId } = request.params as { gameId: string }
     
-    if (!/^\\d+$/.test(gameId)) {
-      this.sendError(socket, 'Invalid Game ID format', 'INVALID_ID_FORMAT');
-      socket.close();
-      return;
-    }
-    
     console.log(`[WebSocket] Connection attempt - gameId: ${gameId}`)
     
     const gameSession = this.gameManager.getSession(gameId)

@@ -5,7 +5,7 @@ import { GameResponseDto, GameResult } from '../types/types.js';
 import { GameStateDto, GameEventDto, WSPlayerInputMessage } from '../types/game-websocket.js';
 import { ModalManager } from '../managers/ModalManager.js';
 import { getConfig } from '../config/environment.js';
-import i18next from '../services/i18n.js';
+import i18next from 'i18next';
 
 export interface GameClientCallbacks {
   onPreGameCountdown: (remainingTime: number) => void;
@@ -352,7 +352,7 @@ export class GameClient {
         },
         onGameFinish: () => {
           // onGameFinish - 이제 onProfileClick에 통합됨
-          this.callbacks.onFinish(gameResult);
+          this.callbacks.onFinish();
         },
         gameMode: this.gameMode,
         aiDifficulty: this.aiDifficulty
@@ -366,9 +366,6 @@ export class GameClient {
 
   private handleConnectionClose = () => {
     console.warn('WebSocket connection closed.');
-    if (!this.gameEnded) {
-      this.callbacks.onFinish();
-    }
   }
 
   public destroy(): void {
