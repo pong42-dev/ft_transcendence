@@ -14,7 +14,7 @@ import { GameState, AIDifficulty } from '../schemas/AITypes.js';
 export class GameEngine {
   private config: GameConfig;
   private aiPlayer: AIPlayer;
-  
+
   // Game state
   private ballX: number = 0;
   private ballY: number = 0;
@@ -24,7 +24,7 @@ export class GameEngine {
   private rightPaddleY: number = 0;
   private currentRound: number = 1;
   private roundWins: { left: number; right: number } = { left: 0, right: 0 };
-  
+
   // Dynamic canvas size (updated every frame like in original)
   private canvasWidth: number = 600;
   private canvasHeight: number = 400;
@@ -57,50 +57,86 @@ export class GameEngine {
     // Update dynamic canvas size (like in original)
     this.canvasWidth = canvasWidth;
     this.canvasHeight = canvasHeight;
-    
+
     this.ballX += this.ballSpeedX;
     this.ballY += this.ballSpeedY;
-    
+
     // Ball collision with top/bottom walls (use dynamic height)
     if (this.ballY <= 0 || this.ballY + this.config.ballSize >= this.canvasHeight) {
       this.ballSpeedY = -this.ballSpeedY;
     }
-    
+
     // Check for goals (use dynamic width)
     if (this.ballX <= 0) {
       return 'right'; // Right player scores
     } else if (this.ballX + this.config.ballSize >= this.canvasWidth) {
       return 'left'; // Left player scores
     }
-    
+
     // Ball collision with paddles
     this.checkPaddleCollision();
-    
+
     return null; // No goal
   }
 
   private checkPaddleCollision(): void {
-    // Left paddle collision - 원본과 동일한 하드코딩 방식
-    if (
-      this.ballX <= 40 + this.config.paddleWidth &&
-      this.ballY + this.config.ballSize >= this.leftPaddleY &&
-      this.ballY <= this.leftPaddleY + this.config.paddleHeight
-    ) {
-      this.ballSpeedX = Math.abs(this.ballSpeedX);
-      this.ballSpeedY += (Math.random() * 2 - 1);
-      this.ballX = 40 + this.config.paddleWidth;
+    const leftPaddleX = this.config.paddleOffset;
+    const rightPaddleX = this.canvasWidth - this.config.paddleOffset - this.config.paddleWidth;
+
+    // 왼쪽 패들 충돌 감지
+    if (this.ballSpeedX < 0) {
+      const ballHitsLeftPaddle =
+        this.ballX < leftPaddleX + this.config.paddleWidth &&
+        this.ballX + this.config.ballSize > leftPaddleX &&
+        this.ballY < this.leftPaddleY + this.config.paddleHeight &&
+        this.ballY + this.config.ballSize > this.leftPaddleY;
+
+      if (ballHitsLeftPaddle) {
+        // 1. 패들 중심으로부터 공이 부딪힌 상대적 위치 계산
+        const paddleCenterY = this.leftPaddleY + (this.config.paddleHeight / 2);
+        const ballCenterY = this.ballY + (this.config.ballSize / 2);
+        const relativeIntersectY = (paddleCenterY - ballCenterY) / (this.config.paddleHeight / 2);
+
+        // 2. 상대 위치에 따라 새로운 Y축 속도 결정 (스킬 기반 각도)
+        const maxBallSpeedY = 10;
+        this.ballSpeedY = -(relativeIntersectY * maxBallSpeedY);
+
+        // 3. X축 방향 반전 및 속도 약간 증가 (무한 루프 방지)
+        const currentSpeedX = Math.abs(this.ballSpeedX);
+        const speedIncrease = 0.5;
+        this.ballSpeedX = (currentSpeedX + speedIncrease);
+
+        // 4. 공이 패들 안에 갇히지 않도록 위치 보정
+        this.ballX = leftPaddleX + this.config.paddleWidth;
+      }
     }
-    
-    // Right paddle collision - 원본과 동일하게 동적 캔버스 크기 사용
-    const rightPaddleX = this.canvasWidth - 40 - this.config.paddleWidth;
-    if (
-      this.ballX + this.config.ballSize >= rightPaddleX &&
-      this.ballY + this.config.ballSize >= this.rightPaddleY &&
-      this.ballY <= this.rightPaddleY + this.config.paddleHeight
-    ) {
-      this.ballSpeedX = -Math.abs(this.ballSpeedX);
-      this.ballSpeedY += (Math.random() * 2 - 1);
-      this.ballX = rightPaddleX - this.config.ballSize;
+
+    // 오른쪽 패들 충돌 감지
+    if (this.ballSpeedX > 0) {
+      const ballHitsRightPaddle =
+        this.ballX < rightPaddleX + this.config.paddleWidth &&
+        this.ballX + this.config.ballSize > rightPaddleX &&
+        this.ballY < this.rightPaddleY + this.config.paddleHeight &&
+        this.ballY + this.config.ballSize > this.rightPaddleY;
+
+      if (ballHitsRightPaddle) {
+        // 1. 패들 중심으로부터 공이 부딪힌 상대적 위치 계산
+        const paddleCenterY = this.rightPaddleY + (this.config.paddleHeight / 2);
+        const ballCenterY = this.ballY + (this.config.ballSize / 2);
+        const relativeIntersectY = (paddleCenterY - ballCenterY) / (this.config.paddleHeight / 2);
+
+        // 2. 상대 위치에 따라 새로운 Y축 속도 결정 (스킬 기반 각도)
+        const maxBallSpeedY = 10;
+        this.ballSpeedY = -(relativeIntersectY * maxBallSpeedY);
+
+        // 3. X축 방향 반전 및 속도 약간 증가 (무한 루프 방지)
+        const currentSpeedX = Math.abs(this.ballSpeedX);
+        const speedIncrease = 0.5;
+        this.ballSpeedX = -(currentSpeedX + speedIncrease);
+
+        // 4. 공이 패들 안에 갇히지 않도록 위치 보정
+        this.ballX = rightPaddleX - this.config.ballSize;
+      }
     }
   }
 
@@ -127,7 +163,7 @@ export class GameEngine {
     if (rightInput === 'DOWN') {
       this.rightPaddleY = Math.min(this.canvasHeight - this.config.paddleHeight, this.rightPaddleY + this.config.paddleSpeed);
     }
-    
+
   }
 
   private updateAI(): void {
@@ -151,7 +187,7 @@ export class GameEngine {
 
     // AI 결정 생성
     const decision = this.aiPlayer.update(gameState, Date.now());
-    
+
     // 패들 위치 업데이트
     this.leftPaddleY = this.aiPlayer.calculatePaddleMovement(
       this.leftPaddleY,
