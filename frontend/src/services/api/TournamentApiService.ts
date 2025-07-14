@@ -4,7 +4,7 @@ import type { UserTournamentHistory } from '../../types/types.js';
 
 export class TournamentApiService extends BaseApiService {
   constructor() {
-    super('http://localhost:3000', 'TournamentApiService');
+    super('https://localhost', 'TournamentApiService');
   }
 
   async createTournament(data: { type: GameMode; opponents?: string[] }): Promise<any> {

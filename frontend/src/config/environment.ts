@@ -6,17 +6,34 @@ export interface Config {
   enableLogging: boolean;
 }
 
+// 빌드 시점에 생성된 환경변수 - 기본값 설정
+let envConfig: { [key: string]: string } = {
+  API_URL: 'https://localhost',
+  WS_URL: 'wss://localhost',
+  USE_MOCK_DATA: 'false',
+  ENABLE_LOGGING: 'true',
+  MODE: 'development'
+};
+
+// env-config.js가 존재하면 import (빌드 시점에 생성됨)
+try {
+  // @ts-ignore
+  if (typeof ENV_CONFIG !== 'undefined') {
+    // @ts-ignore
+    envConfig = ENV_CONFIG;
+  }
+} catch (e) {
+  console.log('Using default environment config');
+}
+
 const getEnvVar = (key: string, fallback?: string): string => {
-  // 브라우저 환경에서는 window 객체를 통해 환경 변수에 접근
-  // Docker 컨테이너에서 환경 변수가 주입될 예정
-  const windowEnv = (window as any).__ENV__ || {};
-  
+  // 빌드 시점에 주입된 환경변수 사용
   const envVars: { [key: string]: string } = {
-    'API_URL': windowEnv.API_URL || 'http://localhost:3000',
-    'WS_URL': windowEnv.WS_URL || 'ws://localhost:3000',
-    'USE_MOCK_DATA': windowEnv.USE_MOCK_DATA || 'false',
-    'ENABLE_LOGGING': windowEnv.ENABLE_LOGGING || 'true',
-    'MODE': windowEnv.MODE || 'development'
+    'API_URL': envConfig.API_URL || 'https://localhost',
+    'WS_URL': envConfig.WS_URL || 'wss://localhost',
+    'USE_MOCK_DATA': envConfig.USE_MOCK_DATA || 'false',
+    'ENABLE_LOGGING': envConfig.ENABLE_LOGGING || 'true',
+    'MODE': envConfig.MODE || 'development'
   };
   
   return envVars[key] || fallback || '';
@@ -30,8 +47,8 @@ const getBooleanEnvVar = (key: string, fallback: boolean = false): boolean => {
 
 const getConfigByEnv = (env: string): Config => {
   return {
-    apiUrl: getEnvVar('API_URL', 'http://localhost:3000'),
-    wsUrl: getEnvVar('WS_URL', 'ws://localhost:3000'),
+    apiUrl: getEnvVar('API_URL', 'https://localhost'),
+    wsUrl: getEnvVar('WS_URL', 'wss://localhost'),
     useMockData: getBooleanEnvVar('USE_MOCK_DATA', false),
     enableLogging: getBooleanEnvVar('ENABLE_LOGGING', env === 'development'),
   };

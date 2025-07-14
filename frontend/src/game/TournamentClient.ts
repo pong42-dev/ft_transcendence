@@ -144,7 +144,7 @@ export class TournamentClient {
 
     // WebSocketService 인스턴스 생성 및 연결
     this.webSocketService = new WebSocketService();
-    const wsUrl = `ws://localhost:3000/ws/tournament/${this.tournamentId}?userId=${this.currentUserId}`;
+    const wsUrl = `wss://localhost/ws/tournament/${this.tournamentId}?userId=${this.currentUserId}`;
     this.webSocketService.connect(wsUrl);
 
     this.webSocketService.on('open', () => {

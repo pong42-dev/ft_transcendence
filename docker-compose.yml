@@ -4,8 +4,7 @@ services:
     build: ./backend
     image: backend
     container_name: backend
-    ports:
-      - "${BACKEND_PORT}:3000"
+    # 포트 노출하지 않음 (nginx 프록시를 통해서만 접근)
     volumes:
       - fastify_data:/app/database
       - ./backend/srcs/public:/app/public
@@ -22,16 +21,14 @@ services:
     build: ./frontend
     image: frontend
     ports:
-      - "${FRONTEND_PORT}:8080"
+      - "80:80"
+      - "443:443"
     depends_on:
       - backend
     networks:
       - ft_transcendence
     env_file:
       - ./frontend/.env
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
     restart: always
     init: true
 
