@@ -45,6 +45,11 @@ export default async function serviceApp (
     prefix: '/public/',                        // URL 접두사 (/public/...)
   });
 
+  fastify.addHook('onSend', async (request, reply, payload) => {
+    reply.header('Content-Security-Policy', "default-src 'self'");
+    return payload;
+  });
+
   // await fastify.register(chatWsPlugin)
   // await fastify.register(gameWsPlugin)
   // await fastify.register(notificationWsPlugin)
