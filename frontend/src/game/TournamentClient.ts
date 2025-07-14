@@ -7,6 +7,7 @@ import { TournamentRenderer } from './TournamentRenderer.js';
 import { TournamentErrorHandler } from './TournamentErrorHandler.js';
 import { UIUtils } from '../utils/UIUtils.js';
 import i18next from '../services/i18n.js';
+import { getConfig } from '../config/environment.js';
 
 
 
@@ -144,7 +145,8 @@ export class TournamentClient {
 
     // WebSocketService 인스턴스 생성 및 연결
     this.webSocketService = new WebSocketService();
-    const wsUrl = `wss://localhost/ws/tournament/${this.tournamentId}?userId=${this.currentUserId}`;
+    const config = getConfig();
+    const wsUrl = `${config.wsUrl}/ws/tournament/${this.tournamentId}?userId=${this.currentUserId}`;
     this.webSocketService.connect(wsUrl);
 
     this.webSocketService.on('open', () => {

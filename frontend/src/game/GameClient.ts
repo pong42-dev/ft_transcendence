@@ -4,6 +4,7 @@ import { InputHandler } from './InputHandler.js';
 import { GameResponseDto, GameResult } from '../types/types.js';
 import { GameStateDto, GameEventDto, WSPlayerInputMessage } from '../types/game-websocket.js';
 import { ModalManager } from '../managers/ModalManager.js';
+import { getConfig } from '../config/environment.js';
 import i18next from 'i18next';
 
 export interface GameClientCallbacks {
@@ -70,9 +71,9 @@ export class GameClient {
 
     // [수정] 토너먼트 모드가 아닐 때만 직접 연결합니다.
     if (!this.isTournament) {
-      const backendHost = 'localhost';
+      const config = getConfig();
       // [수정] URL에서 playerId 쿼리 파라미터를 제거합니다. gameId로 충분합니다.
-      const wsUrl = `wss://${backendHost}/ws/game/${this.gameId}`;
+      const wsUrl = `${config.wsUrl}/ws/game/${this.gameId}`;
       this.webSocketService.connect(wsUrl);
     }
     // 토너먼트 모드에서는 TournamentClient가 연결을 관리하므로 아무것도 하지 않습니다.
