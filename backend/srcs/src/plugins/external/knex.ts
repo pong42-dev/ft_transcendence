@@ -23,7 +23,7 @@ export const autoConfig = (fastify: FastifyInstance): Knex.Config => {
 		acquireConnectionTimeout: 60000, // 60초
 		pool: {
 			min: 2,
-			max: 10,
+			max: 5,
 			acquireTimeoutMillis: 60000, // 60초
 			createTimeoutMillis: 30000, // 30초
 			destroyTimeoutMillis: 5000, // 5초
