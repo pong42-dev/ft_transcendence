@@ -8,8 +8,8 @@ export interface Config {
 
 // 빌드 시점에 생성된 환경변수 - 기본값 설정
 let envConfig: { [key: string]: string } = {
-  API_URL: 'https://localhost',
-  WS_URL: 'wss://localhost',
+  API_URL: 'https://localhost:8443',
+  WS_URL: 'wss://localhost:8443',
   USE_MOCK_DATA: 'false',
   ENABLE_LOGGING: 'true',
   MODE: 'development'
@@ -29,8 +29,8 @@ try {
 const getEnvVar = (key: string, fallback?: string): string => {
   // 빌드 시점에 주입된 환경변수 사용
   const envVars: { [key: string]: string } = {
-    'API_URL': envConfig.API_URL || 'https://localhost',
-    'WS_URL': envConfig.WS_URL || 'wss://localhost',
+    'API_URL': envConfig.API_URL || 'https://localhost:8443',
+    'WS_URL': envConfig.WS_URL || 'wss://localhost:8443',
     'USE_MOCK_DATA': envConfig.USE_MOCK_DATA || 'false',
     'ENABLE_LOGGING': envConfig.ENABLE_LOGGING || 'true',
     'MODE': envConfig.MODE || 'development'
@@ -47,8 +47,8 @@ const getBooleanEnvVar = (key: string, fallback: boolean = false): boolean => {
 
 const getConfigByEnv = (env: string): Config => {
   return {
-    apiUrl: getEnvVar('API_URL', 'https://localhost'),
-    wsUrl: getEnvVar('WS_URL', 'wss://localhost'),
+    apiUrl: getEnvVar('API_URL', 'https://localhost:8443'),
+    wsUrl: getEnvVar('WS_URL', 'wss://localhost:8443'),
     useMockData: getBooleanEnvVar('USE_MOCK_DATA', false),
     enableLogging: getBooleanEnvVar('ENABLE_LOGGING', env === 'development'),
   };

@@ -4,7 +4,7 @@ import type { UserTournamentHistory } from '../../types/types.js';
 
 export class TournamentApiService extends BaseApiService {
   constructor() {
-    super('https://localhost', 'TournamentApiService');
+    super(undefined, 'TournamentApiService'); // baseUrl을 undefined로 전달하여 환경 설정 사용
   }
 
   async createTournament(data: { type: GameMode; opponents?: string[] }): Promise<any> {

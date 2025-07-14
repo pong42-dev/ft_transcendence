@@ -11,7 +11,8 @@ export default fp(async (fastify) => {
     // 허용할 origin 목록 (HTTPS만)
     const allowedOrigins = [
       'https://localhost',
-      'https://localhost:443'
+      'https://localhost:443',
+      'https://localhost:8443'
     ]
     
     // 개발 환경에서는 HTTPS localhost만 허용

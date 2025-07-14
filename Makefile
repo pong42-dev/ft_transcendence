@@ -118,7 +118,7 @@ dev-guide:
 	@echo "     - 프론트엔드: http://localhost:5173"
 	@echo "     - 백엔드: http://localhost:3000"
 	@echo "   Docker 모드:"
-	@echo "     - 프론트엔드: http://localhost:${FRONTEND_PORT}"
+	@echo "     - 프론트엔드: http://localhost:${FRONTEND_PORT} (HTTP), https://localhost:${FRONTEND_SSL_PORT} (HTTPS)"
 	@echo "     - 백엔드: http://localhost:${BACKEND_PORT}"
 
 # 도움말
