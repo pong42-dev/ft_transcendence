@@ -146,16 +146,6 @@ export class UIUtils {
       return false;
     }
     
-    // 승자 검증을 더 관대하게 수정 (동점인 경우도 허용)
-    if (winner === 'left' && leftScore < rightScore) {
-      console.log('Invalid: left winner but right score is higher');
-      return false;
-    }
-    if (winner === 'right' && rightScore < leftScore) {
-      console.log('Invalid: right winner but left score is higher');
-      return false;
-    }
-    
     console.log('Game result validation passed');
     return true;
   }

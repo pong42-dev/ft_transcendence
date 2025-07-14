@@ -91,12 +91,15 @@ export function createMatchesRepository(fastify: FastifyInstance) {
 	};
 
 	const getMatchById = async (matchId: number): Promise<TournamentMatch | null> => {
+		const trx = await knex.transaction();
+		
 		try {
-			const match = await knex('tournament_matches')
+			const match = await trx('tournament_matches')
 				.where('id', matchId)
 				.first();
 
 			if (!match) {
+				await trx.rollback();
 				return null;
 			}
 
@@ -105,7 +108,7 @@ export function createMatchesRepository(fastify: FastifyInstance) {
 			
 			// participant_1_id가 있으면 조회
 			if (match.participant_1_id) {
-				const p1 = await knex('players as p')
+				const p1 = await trx('players as p')
 					.leftJoin('user_profiles as up', 'p.user_id', 'up.user_id')
 					.select('p.id', 'p.type', 'p.user_id', 'p.display_name', 'up.name as user_name', 'up.avatar')
 					.where('p.id', match.participant_1_id)
@@ -129,7 +132,7 @@ export function createMatchesRepository(fastify: FastifyInstance) {
 			
 			// participant_2_id가 있으면 조회
 			if (match.participant_2_id) {
-				const p2 = await knex('players as p')
+				const p2 = await trx('players as p')
 					.leftJoin('user_profiles as up', 'p.user_id', 'up.user_id')
 					.select('p.id', 'p.type', 'p.user_id', 'p.display_name', 'up.name as user_name', 'up.avatar')
 					.where('p.id', match.participant_2_id)
@@ -151,11 +154,13 @@ export function createMatchesRepository(fastify: FastifyInstance) {
 				}
 			}
 
+			await trx.commit();
 			return {
 				...match,
 				participants
 			} as TournamentMatch;
 		} catch (err: any) {
+			await trx.rollback();
 			console.error('Error getting match by ID:', err.message);
 			throw err;
 		}
@@ -331,6 +336,8 @@ export function createMatchesRepository(fastify: FastifyInstance) {
 			status: 'waiting' | 'countdown' | 'playing' | 'finished' | 'canceled',
 			winnerId?: number
 		): Promise<void> {
+			const trx = await knex.transaction();
+			
 			try {
 				const updateData: any = { status };
 				
@@ -346,13 +353,15 @@ export function createMatchesRepository(fastify: FastifyInstance) {
 
 				console.log(`[DEBUG updateMatchStatus] Final updateData:`, JSON.stringify(updateData));
 
-				const result = await knex('tournament_matches')
+				const result = await trx('tournament_matches')
 					.where('id', matchId)
 					.update(updateData);
 
+				await trx.commit();
 				console.log(`[DEBUG updateMatchStatus] Update result: ${result} rows affected`);
 				console.log(`Match ${matchId} status updated to: ${status}`);
 			} catch (err: any) {
+				await trx.rollback();
 				console.error('Error updating match status:', err.message);
 				throw err;
 			}
@@ -530,8 +539,10 @@ export function createMatchesRepository(fastify: FastifyInstance) {
 			tournamentId: number, 
 			winnerPlayerId: number
 		): Promise<void> {
+			const trx = await knex.transaction();
+			
 			try {
-				await knex('tournaments')
+				await trx('tournaments')
 					.where('id', tournamentId)
 					.update({
 						winner_player_id: winnerPlayerId,
@@ -539,8 +550,10 @@ export function createMatchesRepository(fastify: FastifyInstance) {
 						ended_at: new Date().toISOString()
 					});
 
+				await trx.commit();
 				console.log(`Tournament ${tournamentId} winner set to player ${winnerPlayerId}`);
 			} catch (err: any) {
+				await trx.rollback();
 				console.error('Error setting tournament winner:', err.message);
 				throw err;
 			}
@@ -600,16 +613,20 @@ export function createMatchesRepository(fastify: FastifyInstance) {
 		 * 매치 시작 (countdown 상태로 변경)
 		 */
 		async startMatch(matchId: number): Promise<void> {
+			const trx = await knex.transaction();
+			
 			try {
-				await knex('tournament_matches')
+				await trx('tournament_matches')
 					.where('id', matchId)
 					.update({
 						status: 'countdown',
 						started_at: new Date().toISOString()
 					});
 
+				await trx.commit();
 				console.log(`Match ${matchId} started (countdown)`);
 			} catch (err: any) {
+				await trx.rollback();
 				console.error('Error starting match:', err.message);
 				throw err;
 			}
@@ -624,8 +641,10 @@ export function createMatchesRepository(fastify: FastifyInstance) {
 		 * 토너먼트 매치에 게임 세션 ID 연결
 		 */
 		async linkGameSession(matchId: number, gameSessionId: string): Promise<void> {
+			const trx = await knex.transaction();
+			
 			try {
-				await knex('tournament_matches')
+				await trx('tournament_matches')
 					.where('id', matchId)
 					.update({
 						game_session_id: gameSessionId,
@@ -633,8 +652,10 @@ export function createMatchesRepository(fastify: FastifyInstance) {
 						started_at: new Date().toISOString()
 					});
 				
+				await trx.commit();
 				(fastify as any).log.info(`Game session ${gameSessionId} linked to match ${matchId}`);
 			} catch (error: any) {
+				await trx.rollback();
 				(fastify as any).log.error(`Error linking game session to match ${matchId}:`, error);
 				throw error;
 			}

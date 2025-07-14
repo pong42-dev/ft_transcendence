@@ -182,20 +182,14 @@ export class UserProfile {
       emptyState.textContent = i18n.t('userProfile.no_1v1_matches');
       oneVsOneList.appendChild(emptyState);
     }
-    // 토너먼트 매치 카드형 mock 렌더링
+    // 토너먼트 매치 카드형 렌더링 (실제 데이터 사용)
     const tournamentList = document.createElement('div');
     tournamentList.className = 'space-y-2 max-h-[300px] overflow-y-auto scrollbar-hide hidden';
     tournamentList.setAttribute('data-content', 'tournament');
-    // --- 실제 데이터 연동 시 참고 ---
-    // const tournamentMatches = this.user.matchHistory.filter(match => match.type === 'tournament');
-    // 1. tournamentMatches를 날짜/토너먼트별로 그룹화(예: tournamentId, date 등 기준)
-    // 2. 각 토너먼트별로 { date, userRank, matches: [ { stage, players: [...] } ] } 형태로 가공
-    // 3. 위에서 가공한 배열을 getMockTournamentCards와 동일한 구조로 만들어서 렌더링 함수에 전달
-    // 예시:
-    // const tournamentCards = groupAndFormatTournamentMatches(tournamentMatches);
-    // tournamentCards.forEach(cardData => { ...카드 렌더링... });
-    // ---
+    
+    // 실제 토너먼트 데이터가 있으면 사용, 없으면 mock 데이터 사용
     tournamentList.appendChild(this.renderTournamentHistorySection());
+
     
     // Add tab event listeners
     const handleTabClick = (e: Event) => {
@@ -227,85 +221,198 @@ export class UserProfile {
   }
 
   private renderTournamentHistorySection(): HTMLElement {
-    // Mock 데이터
-    const tournamentCards = getMockTournamentCards(i18n);
-    // 여러 카드 렌더링
+    // 실제 토너먼트 히스토리 데이터가 있으면 사용, 없으면 mock 데이터 사용
+      return this.renderRealTournamentHistory();
+  }
+
+  private renderRealTournamentHistory(): HTMLElement {
     const wrapper = document.createElement('div');
     wrapper.className = 'flex flex-col gap-4';
-    tournamentCards.forEach(cardData => {
-      // 등수 텍스트/색상
-      const rankBadgeText = cardData.userRank === 1
-        ? i18n.t('userProfile.champion')
-        : cardData.userRank === 2
-        ? i18n.t('userProfile.runner_up')
-        : i18n.t('userProfile.semi_finalist');
-      const rankBadgeClass = cardData.userRank === 1
-        ? 'bg-terminal-green text-terminal-green'
-        : cardData.userRank === 2
-        ? 'bg-terminal-blue text-terminal-blue'
-        : 'bg-terminal-gray text-terminal-gray';
-      // 카드
-      const card = document.createElement('div');
-      card.className = 'bg-terminal-gray bg-opacity-5 rounded-lg p-4 flex flex-col gap-2';
-      // 상단: 날짜 + 등수 뱃지
-      const top = document.createElement('div');
-      top.className = 'flex items-center justify-between mb-2';
-      const dateInfo = document.createElement('div');
-      dateInfo.className = 'text-xs text-terminal-green font-mono';
-      dateInfo.textContent = cardData.date;
-      const rankBadge = document.createElement('span');
-      rankBadge.className = `px-3 py-1 rounded-full font-bold text-xs ${rankBadgeClass} bg-opacity-20 border border-terminal-gray`;
-      rankBadge.textContent = rankBadgeText;
-      top.appendChild(dateInfo);
-      top.appendChild(rankBadge);
-      card.appendChild(top);
-      // 하단: 경기 정보
-      const matchList = document.createElement('div');
-      matchList.className = 'flex flex-col gap-2';
-      cardData.matches.forEach(match => {
-        const row = document.createElement('div');
-        row.className = 'flex items-center gap-2';
-        // 단계 태그
-        const stageTag = document.createElement('span');
-        stageTag.className = 'text-xs font-bold text-terminal-green min-w-[60px]';
-        stageTag.textContent = match.stage;
-        row.appendChild(stageTag);
-        // 닉네임1
-        const p1 = match.players[0];
-        const p1Span = document.createElement('span');
-        p1Span.textContent = p1.nickname;
-        p1Span.className = p1.isWinner ? 'font-bold text-terminal-green' : 'text-terminal-gray opacity-60';
-        row.appendChild(p1Span);
-        if (p1.isWinner) {
-          const winBadge = document.createElement('span');
-          winBadge.className = 'ml-1 px-1 py-0.5 rounded bg-terminal-green bg-opacity-20 text-xs text-terminal-green font-bold';
-          winBadge.textContent = 'WIN';
-          row.appendChild(winBadge);
-        }
-        // vs
-        const vs = document.createElement('span');
-        vs.className = 'mx-1 text-xs text-terminal-gray opacity-70';
-        vs.textContent = 'vs';
-        row.appendChild(vs);
-        // 닉네임2
-        const p2 = match.players[1];
-        const p2Span = document.createElement('span');
-        p2Span.textContent = p2.nickname;
-        p2Span.className = p2.isWinner ? 'font-bold text-terminal-green' : 'text-terminal-gray opacity-60';
-        row.appendChild(p2Span);
-        if (p2.isWinner) {
-          const winBadge = document.createElement('span');
-          winBadge.className = 'ml-1 px-1 py-0.5 rounded bg-terminal-green bg-opacity-20 text-xs text-terminal-green font-bold';
-          winBadge.textContent = 'WIN';
-          row.appendChild(winBadge);
-        }
-        matchList.appendChild(row);
+    
+    // 실제 토너먼트 히스토리 데이터 사용
+    if (this.user.tournamentHistory && this.user.tournamentHistory.length > 0) {
+      this.user.tournamentHistory.forEach((tournament: any) => {
+        const card = document.createElement('div');
+        card.className = 'bg-terminal-gray bg-opacity-5 rounded-lg p-4 flex flex-col gap-2';
+        
+        // 상단: 날짜 + 등수 뱃지
+        const top = document.createElement('div');
+        top.className = 'flex items-center justify-between mb-2';
+        const dateInfo = document.createElement('div');
+        dateInfo.className = 'text-xs text-terminal-green font-mono';
+        dateInfo.textContent = new Date(tournament.tournament_date).toISOString().split('T')[0];
+        
+        // 등수 뱃지
+        const rankBadgeText = tournament.final_rank === 1
+          ? i18n.t('userProfile.champion')
+          : tournament.final_rank === 2
+          ? i18n.t('userProfile.runner_up')
+          : i18n.t('userProfile.semi_finalist');
+        const rankBadgeClass = tournament.final_rank === 1
+          ? 'bg-terminal-green text-terminal-green'
+          : tournament.final_rank === 2
+          ? 'bg-terminal-blue text-terminal-blue'
+          : 'bg-terminal-gray text-terminal-gray';
+        
+        const rankBadge = document.createElement('span');
+        rankBadge.className = `px-3 py-1 rounded-full font-bold text-xs ${rankBadgeClass} bg-opacity-20 border border-terminal-gray`;
+        rankBadge.textContent = rankBadgeText;
+        top.appendChild(dateInfo);
+        top.appendChild(rankBadge);
+        card.appendChild(top);
+        
+        // 하단: 라운드별 경기 정보
+        const matchList = document.createElement('div');
+        matchList.className = 'flex flex-col gap-2';
+        
+        tournament.rounds.forEach((round: any) => {
+          const row = document.createElement('div');
+          row.className = 'flex items-center gap-2';
+          
+          // 단계 태그
+          const stageTag = document.createElement('span');
+          stageTag.className = 'text-xs font-bold text-terminal-green min-w-[60px]';
+          stageTag.textContent = round.round_number === 1 ? '1라운드' : '결승';
+          row.appendChild(stageTag);
+          
+          // 사용자 참여 여부에 따른 스타일
+          const isMyGame = round.isMyGame;
+          const gameStyle = isMyGame ? 'text-terminal-green' : 'text-terminal-gray opacity-60';
+          
+          // 상대방 이름
+          const opponentSpan = document.createElement('span');
+          opponentSpan.textContent = round.opponent.name;
+          opponentSpan.className = gameStyle;
+          row.appendChild(opponentSpan);
+          
+          // 스코어 (내 게임인 경우에만 표시)
+          if (isMyGame && round.myScore !== undefined && round.opponentScore !== undefined) {
+            const scoreSpan = document.createElement('span');
+            scoreSpan.className = 'ml-2 text-xs text-terminal-gray';
+            scoreSpan.textContent = `(${round.myScore} - ${round.opponentScore})`;
+            row.appendChild(scoreSpan);
+            
+            // 승리 표시
+            if (round.winnerId === round.my_player_id) {
+              const winBadge = document.createElement('span');
+              winBadge.className = 'ml-1 px-1 py-0.5 rounded bg-terminal-green bg-opacity-20 text-xs text-terminal-green font-bold';
+              winBadge.textContent = 'WIN';
+              row.appendChild(winBadge);
+            }
+          }
+          
+          // 관전 경기 표시
+          if (!isMyGame) {
+            const spectatorBadge = document.createElement('span');
+            spectatorBadge.className = 'ml-1 px-1 py-0.5 rounded bg-terminal-gray bg-opacity-20 text-xs text-terminal-gray';
+            spectatorBadge.textContent = '관전';
+            row.appendChild(spectatorBadge);
+          }
+          
+          matchList.appendChild(row);
+        });
+        
+        card.appendChild(matchList);
+        wrapper.appendChild(card);
       });
-      card.appendChild(matchList);
-      wrapper.appendChild(card);
-    });
+    } else {
+      // 실제 데이터가 없는 경우 기본 메시지
+      const emptyState = document.createElement('div');
+      emptyState.className = 'text-center py-8 text-terminal-gray opacity-70';
+      emptyState.textContent = i18n.t('userProfile.no_tournament_matches');
+      wrapper.appendChild(emptyState);
+    }
+    
     return wrapper;
   }
+
+  // private renderMockTournamentHistory(tournamentCards: any[]): HTMLElement {
+  //   const wrapper = document.createElement('div');
+  //   wrapper.className = 'flex flex-col gap-4';
+    
+  //   tournamentCards.forEach(cardData => {
+  //     // 등수 텍스트/색상
+  //     const rankBadgeText = cardData.userRank === 1
+  //       ? i18n.t('userProfile.champion')
+  //       : cardData.userRank === 2
+  //       ? i18n.t('userProfile.runner_up')
+  //       : i18n.t('userProfile.semi_finalist');
+  //     const rankBadgeClass = cardData.userRank === 1
+  //       ? 'bg-terminal-green text-terminal-green'
+  //       : cardData.userRank === 2
+  //       ? 'bg-terminal-blue text-terminal-blue'
+  //       : 'bg-terminal-gray text-terminal-gray';
+      
+  //     // 카드
+  //     const card = document.createElement('div');
+  //     card.className = 'bg-terminal-gray bg-opacity-5 rounded-lg p-4 flex flex-col gap-2';
+      
+  //     // 상단: 날짜 + 등수 뱃지
+  //     const top = document.createElement('div');
+  //     top.className = 'flex items-center justify-between mb-2';
+  //     const dateInfo = document.createElement('div');
+  //     dateInfo.className = 'text-xs text-terminal-green font-mono';
+  //     dateInfo.textContent = cardData.date;
+  //     const rankBadge = document.createElement('span');
+  //     rankBadge.className = `px-3 py-1 rounded-full font-bold text-xs ${rankBadgeClass} bg-opacity-20 border border-terminal-gray`;
+  //     rankBadge.textContent = rankBadgeText;
+  //     top.appendChild(dateInfo);
+  //     top.appendChild(rankBadge);
+  //     card.appendChild(top);
+      
+  //     // 하단: 경기 정보
+  //     const matchList = document.createElement('div');
+  //     matchList.className = 'flex flex-col gap-2';
+  //     cardData.matches.forEach(match => {
+  //       const row = document.createElement('div');
+  //       row.className = 'flex items-center gap-2';
+        
+  //       // 단계 태그
+  //       const stageTag = document.createElement('span');
+  //       stageTag.className = 'text-xs font-bold text-terminal-green min-w-[60px]';
+  //       stageTag.textContent = match.stage;
+  //       row.appendChild(stageTag);
+        
+  //       // 닉네임1
+  //       const p1 = match.players[0];
+  //       const p1Span = document.createElement('span');
+  //       p1Span.textContent = p1.nickname;
+  //       p1Span.className = p1.isWinner ? 'font-bold text-terminal-green' : 'text-terminal-gray opacity-60';
+  //       row.appendChild(p1Span);
+  //       if (p1.isWinner) {
+  //         const winBadge = document.createElement('span');
+  //         winBadge.className = 'ml-1 px-1 py-0.5 rounded bg-terminal-green bg-opacity-20 text-xs text-terminal-green font-bold';
+  //         winBadge.textContent = 'WIN';
+  //         row.appendChild(winBadge);
+  //       }
+        
+  //       // vs
+  //       const vs = document.createElement('span');
+  //       vs.className = 'mx-1 text-xs text-terminal-gray opacity-70';
+  //       vs.textContent = 'vs';
+  //       row.appendChild(vs);
+        
+  //       // 닉네임2
+  //       const p2 = match.players[1];
+  //       const p2Span = document.createElement('span');
+  //       p2Span.textContent = p2.nickname;
+  //       p2Span.className = p2.isWinner ? 'font-bold text-terminal-green' : 'text-terminal-gray opacity-60';
+  //       row.appendChild(p2Span);
+  //       if (p2.isWinner) {
+  //         const winBadge = document.createElement('span');
+  //         winBadge.className = 'ml-1 px-1 py-0.5 rounded bg-terminal-green bg-opacity-20 text-xs text-terminal-green font-bold';
+  //         winBadge.textContent = 'WIN';
+  //         row.appendChild(winBadge);
+  //       }
+        
+  //       matchList.appendChild(row);
+  //     });
+  //     card.appendChild(matchList);
+  //     wrapper.appendChild(card);
+  //   });
+    
+  //   return wrapper;
+  // }
 
   private renderMatchHistoryItem(match: MatchHistory): HTMLElement {
     const item = document.createElement('div');
@@ -421,91 +528,91 @@ export class UserProfile {
 
 // --- MOCK DATA 분리 ---
 // [TODO: 실제 데이터 연동 시 이 부분 제거하고 getMockTournamentCards 함수 삭제]
-function getMockTournamentCards(i18n: any) {
-  return [
-    // 2등(준우승)
-    {
-      date: '2025-07-14',
-      userRank: 2,
-      matches: [
-        {
-          stage: i18n.t('userProfile.tournament_semifinal', { num: 1 }),
-          players: [
-            { nickname: 'Alice', isWinner: true },
-            { nickname: 'Bob', isWinner: false }
-          ]
-        },
-        {
-          stage: i18n.t('userProfile.tournament_semifinal', { num: 2 }),
-          players: [
-            { nickname: 'Charlie', isWinner: true },
-            { nickname: 'David', isWinner: false }
-          ]
-        },
-        {
-          stage: i18n.t('userProfile.tournament_final'),
-          players: [
-            { nickname: 'Alice', isWinner: false },
-            { nickname: 'Charlie', isWinner: true }
-          ]
-        }
-      ]
-    },
-    // 1등(챔피언)
-    {
-      date: '2025-07-07',
-      userRank: 1,
-      matches: [
-        {
-          stage: i18n.t('userProfile.tournament_semifinal', { num: 1 }),
-          players: [
-            { nickname: 'You', isWinner: true },
-            { nickname: 'Bob', isWinner: false }
-          ]
-        },
-        {
-          stage: i18n.t('userProfile.tournament_semifinal', { num: 2 }),
-          players: [
-            { nickname: 'Charlie', isWinner: true },
-            { nickname: 'David', isWinner: false }
-          ]
-        },
-        {
-          stage: i18n.t('userProfile.tournament_final'),
-          players: [
-            { nickname: 'You', isWinner: true },
-            { nickname: 'Charlie', isWinner: false }
-          ]
-        }
-      ]
-    },
-    // 3등(4강 탈락)
-    {
-      date: '2025-06-30',
-      userRank: 3,
-      matches: [
-        {
-          stage: i18n.t('userProfile.tournament_semifinal', { num: 1 }),
-          players: [
-            { nickname: 'You', isWinner: false },
-            { nickname: 'Bob', isWinner: true }
-          ]
-        },
-        {
-          stage: i18n.t('userProfile.tournament_semifinal', { num: 2 }),
-          players: [
-            { nickname: 'Charlie', isWinner: true },
-            { nickname: 'David', isWinner: false }
-          ]
-        },
-        {
-          stage: i18n.t('userProfile.tournament_final'),
-          players: [
-            { nickname: 'Bob', isWinner: true },
-            { nickname: 'Charlie', isWinner: false }
-          ]
-        }
-      ]
-    }
-  ];
-}
+// function getMockTournamentCards(i18n: any) {
+//   return [
+//     // 2등(준우승)
+//     {
+//       date: '2025-07-14',
+//       userRank: 2,
+//       matches: [
+//         {
+//           stage: i18n.t('userProfile.tournament_semifinal', { num: 1 }),
+//           players: [
+//             { nickname: 'Alice', isWinner: true },
+//             { nickname: 'Bob', isWinner: false }
+//           ]
+//         },
+//         {
+//           stage: i18n.t('userProfile.tournament_semifinal', { num: 2 }),
+//           players: [
+//             { nickname: 'Charlie', isWinner: true },
+//             { nickname: 'David', isWinner: false }
+//           ]
+//         },
+//         {
+//           stage: i18n.t('userProfile.tournament_final'),
+//           players: [
+//             { nickname: 'Alice', isWinner: false },
+//             { nickname: 'Charlie', isWinner: true }
+//           ]
+//         }
+//       ]
+//     },
+//     // 1등(챔피언)
+//     {
+//       date: '2025-07-07',
+//       userRank: 1,
+//       matches: [
+//         {
+//           stage: i18n.t('userProfile.tournament_semifinal', { num: 1 }),
+//           players: [
+//             { nickname: 'You', isWinner: true },
+//             { nickname: 'Bob', isWinner: false }
+//           ]
+//         },
+//         {
+//           stage: i18n.t('userProfile.tournament_semifinal', { num: 2 }),
+//           players: [
+//             { nickname: 'Charlie', isWinner: true },
+//             { nickname: 'David', isWinner: false }
+//           ]
+//         },
+//         {
+//           stage: i18n.t('userProfile.tournament_final'),
+//           players: [
+//             { nickname: 'You', isWinner: true },
+//             { nickname: 'Charlie', isWinner: false }
+//           ]
+//         }
+//       ]
+//     },
+//     // 3등(4강 탈락)
+//     {
+//       date: '2025-06-30',
+//       userRank: 3,
+//       matches: [
+//         {
+//           stage: i18n.t('userProfile.tournament_semifinal', { num: 1 }),
+//           players: [
+//             { nickname: 'You', isWinner: false },
+//             { nickname: 'Bob', isWinner: true }
+//           ]
+//         },
+//         {
+//           stage: i18n.t('userProfile.tournament_semifinal', { num: 2 }),
+//           players: [
+//             { nickname: 'Charlie', isWinner: true },
+//             { nickname: 'David', isWinner: false }
+//           ]
+//         },
+//         {
+//           stage: i18n.t('userProfile.tournament_final'),
+//           players: [
+//             { nickname: 'Bob', isWinner: true },
+//             { nickname: 'Charlie', isWinner: false }
+//           ]
+//         }
+//       ]
+//     }
+//   ];
+// }

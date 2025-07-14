@@ -53,14 +53,17 @@ export class UserApiService extends BaseApiService {
         type: '1v1' as const,
         myScore: match.myScore,
         opponentScore: match.opponentScore
-      })),
-      ...tournHistory.map((match: any) => ({
-        date: new Date(match.endedAt || match.tournament_date).toISOString().split('T')[0],
-        opponent: match.participants || ['Tournament'],
-        rank: match.userRank || match.final_rank || 1,
-        type: 'tournament' as const
       }))
     ];
+
+    // 토너먼트 히스토리는 별도로 저장 (상세 정보 유지)
+    const tournamentHistory = tournHistory.map((tournament: any) => ({
+      tournament_id: tournament.tournament_id,
+      tournament_date: tournament.tournament_date,
+      participants: tournament.participants,
+      rounds: tournament.rounds,
+      final_rank: tournament.final_rank
+    }));
 
     // User 객체로 변환
     const user: Types.User = {
@@ -74,7 +77,8 @@ export class UserApiService extends BaseApiService {
       gamesPlayed: gameStats.totalGames,
       gamesWon: gameStats.totalWins,
       friends: [],
-      matchHistory: matchHistory
+      matchHistory: matchHistory,
+      tournamentHistory: tournamentHistory
     };
     
     return user;

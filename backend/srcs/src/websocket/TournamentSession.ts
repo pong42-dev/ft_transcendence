@@ -159,28 +159,32 @@ export class TournamentSession {
    * 플레이어 연결 해제 시 토너먼트 상태를 DB에 업데이트합니다.
    */
   private async updateTournamentStatusOnDisconnect() {
+    const trx = await (this.fastify as any).knex.transaction();
+    
     try {
       const tournamentIdNum = Number(this.tournamentId);
       const tournamentsRepository = (this.fastify as any).tournamentsRepository;
       
       // 현재 토너먼트 상태 확인
-      const currentTournament = await (this.fastify as any).knex('tournaments')
+      const currentTournament = await trx('tournaments')
         .where('id', tournamentIdNum)
         .first();
       
       if (!currentTournament) {
         (this.fastify as any).log.error(`[Session ${this.tournamentId}] Tournament not found in database.`);
+        await trx.rollback();
         return;
       }
       
       // 토너먼트가 이미 완료된 상태라면 업데이트하지 않음
       if (currentTournament.status === 'finished' && currentTournament.winner_player_id) {
         (this.fastify as any).log.info(`[Session ${this.tournamentId}] Tournament already completed with winner, not updating status.`);
+        await trx.rollback();
         return;
       }
       
       // 토너먼트의 매치 진행 상황 확인
-      const allMatches = await (this.fastify as any).knex('tournament_matches')
+      const allMatches = await trx('tournament_matches')
         .where('tournament_id', tournamentIdNum)
         .select('id', 'status', 'round_number', 'winner_id');
       
@@ -197,14 +201,23 @@ export class TournamentSession {
         
         if (finalMatch && finalMatch.winner_id) {
           (this.fastify as any).log.info(`[Session ${this.tournamentId}] Tournament completed naturally, keeping finished status with winner ${finalMatch.winner_id}.`);
+          await trx.rollback();
           return;
         }
       }
       
       // 토너먼트가 중간에 중단되었다면 canceled로 업데이트
-      await tournamentsRepository.updateTournamentStatus(tournamentIdNum, 'canceled', null);
+      await trx('tournaments')
+        .where('id', tournamentIdNum)
+        .update({
+          status: 'canceled',
+          ended_at: new Date().toISOString()
+        });
+      
+      await trx.commit();
       (this.fastify as any).log.info(`[Session ${this.tournamentId}] Tournament status updated to canceled in database (${finishedMatches.length}/${totalMatches} matches were completed).`);
     } catch (error) {
+      await trx.rollback();
       (this.fastify as any).log.error(`[Session ${this.tournamentId}] Error updating tournament status on disconnect:`, error);
     }
   }
@@ -775,9 +788,23 @@ export class TournamentSession {
       }
     });
 
-    // DB에 토너먼트의 최종 상태를 'finished'로 업데이트
-    const tournamentsRepository = (this.fastify as any).tournamentsRepository;
-    await tournamentsRepository.updateTournamentStatus(Number(this.tournamentId), 'ended', finalWinner);
+    // DB에 토너먼트의 최종 상태를 'ended'로 업데이트 (트랜잭션 처리)
+    const trx = await (this.fastify as any).knex.transaction();
+    try {
+      await trx('tournaments')
+        .where('id', Number(this.tournamentId))
+        .update({
+          status: 'ended',
+          winner_player_id: finalWinner,
+          ended_at: new Date().toISOString()
+        });
+      
+      await trx.commit();
+      (this.fastify as any).log?.info?.(`[Session ${this.tournamentId}] Tournament status updated to ended in database`);
+    } catch (error) {
+      await trx.rollback();
+      (this.fastify as any).log?.error?.(`[Session ${this.tournamentId}] Error updating tournament status to ended:`, error);
+    }
 
     // 결과 전송 후 즉시 소켓 닫기 - 프론트엔드에서 결과 화면을 계속 표시
     (this.fastify as any).log?.info?.(`[Session ${this.tournamentId}] Tournament results sent, closing connection`);
@@ -810,11 +837,13 @@ export class TournamentSession {
    * 토너먼트의 모든 대기/진행 중인 매치를 취소합니다.
    */
   private async cancelAllRemainingMatches() {
+    const trx = await (this.fastify as any).knex.transaction();
+    
     try {
       const tournamentIdNum = Number(this.tournamentId);
       
       // DB에서 모든 진행되지 않은 매치들을 'canceled' 상태로 업데이트
-      await (this.fastify as any).knex('tournament_matches')
+      await trx('tournament_matches')
         .where('tournament_id', tournamentIdNum)
         .whereIn('status', ['waiting', 'playing', 'countdown'])
         .update({
@@ -822,8 +851,10 @@ export class TournamentSession {
           ended_at: new Date().toISOString()
         });
       
+      await trx.commit();
       (this.fastify as any).log.info(`[Session ${this.tournamentId}] All remaining matches cancelled in database.`);
     } catch (error) {
+      await trx.rollback();
       (this.fastify as any).log.error(`[Session ${this.tournamentId}] Error cancelling remaining matches:`, error);
     }
   }

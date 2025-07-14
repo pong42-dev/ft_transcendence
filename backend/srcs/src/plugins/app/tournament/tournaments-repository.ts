@@ -68,16 +68,20 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 		 * 토너먼트 생성
 		 */
 		async createTournament(): Promise<number> {
+			const trx = await knex.transaction();
+			
 			try {
-				const [tournamentId] = await knex('tournaments').insert({
+				const [tournamentId] = await trx('tournaments').insert({
 					status: 'waiting',
 					winner_player_id: null,
 					created_at: new Date().toISOString(),
 					ended_at: null
 				});
 
+				await trx.commit();
 				return tournamentId;
 			} catch (err: any) {
+				await trx.rollback();
 				console.error('Error creating tournament:', err);
 				console.error('Error stack:', err.stack);
 				console.error('Error message:', err.message);
@@ -840,6 +844,8 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 				}
 			}
 
+			const trx = await knex.transaction();
+			
 			try {
 				const updateData: any = { status };
 
@@ -848,12 +854,14 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 					updateData.ended_at = new Date().toISOString();
 				}
 
-				await knex('tournaments')
+				await trx('tournaments')
 					.where('id', tournamentId)
 					.update(updateData);
 
+				await trx.commit();
 				console.log(`Tournament ${tournamentId} status updated to: ${status}`);
 			} catch (err: any) {
+				await trx.rollback();
 				console.error('Error updating tournament status:', err.message);
 				throw err;
 			}
@@ -863,12 +871,16 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 		 * 모든 토너먼트 목록 조회
 		 */
 		async getAllTournaments(): Promise<Tournament[]> {
+			const trx = await knex.transaction();
+			
 			try {
-				const tournaments = await knex('tournaments')
+				const tournaments = await trx('tournaments')
 					.orderBy('created_at', 'desc');
 
+				await trx.commit();
 				return tournaments as Tournament[];
 			} catch (err: any) {
+				await trx.rollback();
 				console.error('Error getting all tournaments:', err.message);
 				throw err;
 			}
@@ -938,44 +950,98 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 						return p.display_name || 'Unknown';
 					});
 
-					// rounds 배열 생성 (게임별 1v1 상세)
-					const games = await knex('tournament_matches as g')
-						.join('game_participants as me', 'g.id', 'me.game_id')
-						.join('players as me_player', 'me.player_id', 'me_player.id')
-						.join('game_participants as op', function () {
-							this.on('g.id', '=', 'op.game_id').andOn('me.player_id', '!=', 'op.player_id');
-						})
-						.join('players as op_player', 'op.player_id', 'op_player.id')
+					// 토너먼트의 모든 라운드 게임 조회 (사용자가 참여한 토너먼트의 전체 대진표)
+					const allGames = await knex('tournament_matches as g')
+						.join('game_participants as gp1', 'g.id', 'gp1.game_id')
+						.join('players as p1', 'gp1.player_id', 'p1.id')
+						.join('game_participants as gp2', 'g.id', 'gp2.game_id')
+						.join('players as p2', 'gp2.player_id', 'p2.id')
 						.select(
+							'g.id as game_id',
 							'g.round_number',
 							'g.ended_at',
 							'g.winner_id',
-							'me.score as my_score',
-							'op.score as opponent_score',
-							'op_player.id as opponent_id',
-							'op_player.type as opponent_type',
-							'op_player.user_id as opponent_user_id',
-							'op_player.display_name as opponent_display_name',
-							'me_player.id as my_player_id'
+							'p1.id as player1_id',
+							'p1.type as player1_type',
+							'p1.user_id as player1_user_id',
+							'p1.display_name as player1_display_name',
+							'p2.id as player2_id',
+							'p2.type as player2_type',
+							'p2.user_id as player2_user_id',
+							'p2.display_name as player2_display_name',
+							'gp1.score as player1_score',
+							'gp2.score as player2_score'
 						)
 						.where('g.tournament_id', tournamentId)
-						.where('me_player.user_id', userId)
+						.where('p1.id', '!=', 'p2.id') // 같은 플레이어 제외
 						.orderBy('g.round_number', 'asc');
 
-					const rounds = games.map(game => {
-						const opponentName = game.opponent_display_name || 'Unknown';
+					// 게임별로 중복 제거 (p1 vs p2와 p2 vs p1 중복 방지)
+					const uniqueGames = [];
+					const processedPairs = new Set();
+					
+					for (const game of allGames) {
+						const pairKey = [game.player1_id, game.player2_id].sort().join('-');
+						if (!processedPairs.has(pairKey)) {
+							processedPairs.add(pairKey);
+							uniqueGames.push(game);
+						}
+					}
+
+					// 사용자 정보를 포함한 라운드 정보 구성
+					const rounds = uniqueGames.map(game => {
+						// 사용자가 player1인지 player2인지 확인
+						const isPlayer1 = game.player1_user_id === userId;
+						const myPlayer = isPlayer1 ? {
+							id: game.player1_id,
+							type: game.player1_type,
+							user_id: game.player1_user_id,
+							display_name: game.player1_display_name,
+							score: game.player1_score
+						} : {
+							id: game.player2_id,
+							type: game.player2_type,
+							user_id: game.player2_user_id,
+							display_name: game.player2_display_name,
+							score: game.player2_score
+						};
+
+						const opponentPlayer = isPlayer1 ? {
+							id: game.player2_id,
+							type: game.player2_type,
+							user_id: game.player2_user_id,
+							display_name: game.player2_display_name,
+							score: game.player2_score
+						} : {
+							id: game.player1_id,
+							type: game.player1_type,
+							user_id: game.player1_user_id,
+							display_name: game.player1_display_name,
+							score: game.player1_score
+						};
+
+						// 상대방 이름 결정
+						let opponentName = 'Unknown';
+						if (opponentPlayer.type === 'user' && opponentPlayer.user_id) {
+							opponentName = userIdToName[opponentPlayer.user_id] || 'Unknown User';
+						} else {
+							opponentName = opponentPlayer.display_name || 'Unknown';
+						}
+
 						return {
 							round_number: game.round_number,
 							endedAt: game.ended_at,
 							opponent: {
-								id: game.opponent_id,
-								type: game.opponent_type,
+								id: opponentPlayer.id,
+								type: opponentPlayer.type,
 								name: opponentName,
 							},
-							myScore: game.my_score,
-							opponentScore: game.opponent_score,
+							myScore: myPlayer.score,
+							opponentScore: opponentPlayer.score,
 							winnerId: game.winner_id,
-							my_player_id: game.my_player_id,
+							my_player_id: myPlayer.id,
+							// 사용자가 이 게임에 참여했는지 여부
+							isMyGame: myPlayer.user_id === userId
 						};
 					});
 
@@ -1003,7 +1069,7 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 			}
 			console.log('[DEBUG] Calculated final_rank:', final_rank);
 
-					// my_player_id는 반환할 필요 없으니 rounds에서 삭제
+					// my_player_id는 반환할 필요 없으니 rounds에서 삭제, isMyGame은 유지
 					const cleanRounds = rounds.map(({ my_player_id, ...rest }) => rest);
 
 			const tournamentHistory = {

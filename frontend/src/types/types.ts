@@ -23,6 +23,7 @@ export interface User {
   friends: Friend[];
   password?: string;
   matchHistory: MatchHistory[];
+  tournamentHistory?: UserTournamentHistory[]; // 상세한 토너먼트 히스토리
 }
 
 export interface Friend {
