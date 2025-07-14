@@ -34,7 +34,7 @@ export interface FastifyInstance {
 		RATE_LIMIT_APIKEY_MAX: number;
 		RATE_LIMIT_APIKEY_WINDOW: string
 		// Client
-		CLIENT_ORIGIN: string;
+		BASE_URL: string;
 		// Google OAuth
 		GOOGLE_CLIENT_ID: string;
 		GOOGLE_CLIENT_SECRET: string;
@@ -67,7 +67,7 @@ const schema = {
 		'COOKIE_NAME',
 		'COOKIE_SECURED',
 		// Client
-		'CLIENT_ORIGIN',
+		'BASE_URL',
 		// Google OAuth
 		'GOOGLE_CLIENT_ID',
 		'GOOGLE_CLIENT_SECRET',
@@ -131,7 +131,7 @@ const schema = {
 		RATE_LIMIT_APIKEY_WINDOW: { type: 'string', default: '1 hour' },
 
 		// Client
-		CLIENT_ORIGIN: { type: 'string', default: 'http://localhost:8080' },
+		BASE_URL: { type: 'string', default: 'http://localhost:8080' },
 		
 		// Google OAuth
 		GOOGLE_CLIENT_ID: { type: 'string' },

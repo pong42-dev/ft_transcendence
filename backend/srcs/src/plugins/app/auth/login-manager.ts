@@ -24,7 +24,7 @@ async function login(
 				error: 'account_in_use',
 				message: 'This account is already in use. Please log out and try again.'
 			});
-			reply.redirect(`${config.CLIENT_ORIGIN}?${errorParams.toString()}`);
+			reply.redirect(`${config.BASE_URL}?${errorParams.toString()}`);
 			return;
 		}
 		reply.status(409).send({
@@ -49,7 +49,7 @@ async function login(
 		console.log("hashed refreshToken:", hashedRefreshToken);
 		await this.userProfilesRepository.updateRowByColumn('user_id', user_id, 'status', true)
 		if (googleRefreshToken) {
-			reply.redirect(config.CLIENT_ORIGIN);
+			reply.redirect(config.BASE_URL);
 			return ;
 		}
 		const accessToken = await this.tokenManager.generateAccessToken(userData)
