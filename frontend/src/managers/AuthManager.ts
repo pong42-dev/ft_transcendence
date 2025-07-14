@@ -215,10 +215,12 @@ export class AuthManager {
       const hasOAuthParams = url.searchParams.has('code') || url.pathname.includes('callback');
       
       // OAuth 리다이렉트 후 쿠키 기반 로그인 시도 (구글 OAuth 콜백은 code 없이 리다이렉트됨)
-      const isOAuthRedirect = document.referrer.includes('accounts.google.com') || 
-                              sessionStorage.getItem('oauth_login_attempt') === 'true';
+      const isOAuthRedirect = sessionStorage.getItem('oauth_login_attempt') === 'true';
       
-      if (hasOAuthParams || isOAuthRedirect) {
+      // 로그아웃 상태에서만 OAuth 콜백 처리
+      const isLoggedOut = !authStore.getIsLoggedIn() && !TokenManager.hasRefreshToken();
+      
+      if ((hasOAuthParams || isOAuthRedirect) && isLoggedOut) {
         const user = await this.handleOAuthCallback();
         
         if (user) {
@@ -337,11 +339,13 @@ export class AuthManager {
         console.log('❌ No refresh token indicators, setting logged out state');
         authStore.logout();
         UserStateCache.clear();
+        this.router.navigate('/');
       }
       
     } catch (error) {
       console.error('💥 Auth check failed:', error);
       authStore.logout();
+      this.router.navigate('/');
     }
   }
 
@@ -399,6 +403,7 @@ export class AuthManager {
           // 토큰이 유효하지 않으면 모든 곳에서 정리
           TokenManager.clearTokens();
           this.apiClient.clearToken();
+          this.router.navigate('/');
         }
       } else {
         // 토큰 갱신 실패 - 기존 토큰이 있는지 확인
@@ -449,6 +454,7 @@ export class AuthManager {
         // 토큰이 없거나 유효하지 않으면 모든 곳에서 정리
         TokenManager.clearTokens();
         this.apiClient.clearToken();
+        this.router.navigate('/');
       }
     } catch (error) {
       console.error('💥 Token refresh error:', error);
@@ -481,6 +487,7 @@ export class AuthManager {
       // 에러 발생 시 모든 토큰 정리
       TokenManager.clearTokens();
       this.apiClient.clearToken();
+      this.router.navigate('/');
     }
   }
 

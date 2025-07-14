@@ -20,6 +20,10 @@ export class TwoFAModal {
   private twoFAData: TwoFAInitResponse | null = null;
   private callbacks: TwoFAModalCallbacks;
   private modalManager: ModalManager;
+  private refreshTimer: NodeJS.Timeout | null = null;
+  private isRefreshing: boolean = false;
+  private lastUsedToken: string = '';
+  private tokenUsageTimestamp: number = 0;
 
   constructor(
     apiClient: ApiClient, 
@@ -60,17 +64,122 @@ export class TwoFAModal {
    * 모달 숨기기
    */
   public hide(): void {
+    this.cleanup();
     this.modalManager.hide();
+  }
+
+  /**
+   * 리소스 정리
+   */
+  private cleanup(): void {
+    if (this.refreshTimer) {
+      clearTimeout(this.refreshTimer);
+      this.refreshTimer = null;
+    }
+    this.isRefreshing = false;
   }
 
   private async initializeTwoFA(): Promise<void> {
     try {
       this.twoFAData = await this.apiClient.auth.initTwoFA();
+      // 4분 후에 자동으로 새로운 토큰을 요청 (만료 1분 전)
+      this.scheduleRefresh();
     } catch (error) {
       console.error('[TwoFAModal] Failed to initialize 2FA:', error);
       // 초기화 에러 시 모달을 닫지 않고 에러 상태 표시
       this.twoFAData = null;
     }
+  }
+
+  /**
+   * 토큰 갱신 스케줄링 (4분 후)
+   */
+  private scheduleRefresh(): void {
+    if (this.refreshTimer) {
+      clearTimeout(this.refreshTimer);
+    }
+    
+    this.refreshTimer = setTimeout(async () => {
+      if (this.currentStep === 'setup' && !this.isRefreshing) {
+        await this.refreshTwoFAData();
+      }
+    }, 4 * 60 * 1000); // 4분
+  }
+
+  /**
+   * 2FA 데이터 새로고침
+   */
+  private async refreshTwoFAData(): Promise<void> {
+    if (this.isRefreshing) return;
+    
+    this.isRefreshing = true;
+    try {
+      const newData = await this.apiClient.auth.initTwoFA();
+      this.twoFAData = newData;
+      
+      // UI 업데이트
+      this.updateQRCodeAndSecret();
+      
+      // 다음 갱신 스케줄링
+      this.scheduleRefresh();
+      
+      // 사용자에게 알림
+      this.showRefreshNotification();
+    } catch (error) {
+      console.error('[TwoFAModal] Failed to refresh 2FA data:', error);
+    } finally {
+      this.isRefreshing = false;
+    }
+  }
+
+  /**
+   * QR 코드와 시크릿 업데이트
+   */
+  private updateQRCodeAndSecret(): void {
+    if (!this.twoFAData) return;
+    
+    // QR 코드 업데이트
+    const qrCodeContainer = document.querySelector('#qr-code-container');
+    if (qrCodeContainer) {
+      // 기존 이미지 제거
+      qrCodeContainer.innerHTML = '';
+      // 새 이미지 추가
+      const qrImg = document.createElement('img');
+      qrImg.src = this.twoFAData.qrCodeUrl;
+      qrImg.alt = '2FA QR Code';
+      qrImg.className = 'w-32 h-32';
+      qrCodeContainer.appendChild(qrImg);
+    }
+    
+    // 시크릿 코드 업데이트
+    const secretCodeContainer = document.querySelector('#secret-code-container');
+    if (secretCodeContainer) {
+      secretCodeContainer.textContent = this.twoFAData.secret;
+    }
+  }
+
+  /**
+   * 갱신 알림 표시
+   */
+  private showRefreshNotification(): void {
+    const container = document.querySelector('.space-y-4');
+    if (!container) return;
+    
+    const notification = document.createElement('div');
+    notification.className = 'bg-terminal-green bg-opacity-10 border border-terminal-green rounded-lg p-3 text-sm text-terminal-green';
+    notification.innerHTML = `
+      <div class="flex items-center space-x-2">
+        <span>🔄</span>
+        <span>${i18n.t('twoFAModal.qr_code_refreshed')}</span>
+      </div>
+    `;
+    
+    container.prepend(notification);
+    
+    // 3초 후 알림 제거
+    setTimeout(() => {
+      notification.remove();
+    }, 3000);
   }
 
   /**
@@ -383,6 +492,12 @@ export class TwoFAModal {
       this.showVerificationError(i18n.t('twoFAModal.setup_data_not_found_error'));
       return;
     }
+
+    // 토큰 재사용 방지 체크
+    if (this.isTokenRecentlyUsed(code)) {
+      this.showTokenReuseWarning();
+      return;
+    }
     
     DOMUpdater.toggleLoading('#enable-btn', true, i18n.t('twoFAModal.enabling_2fa'));
 
@@ -397,9 +512,20 @@ export class TwoFAModal {
     } catch (error) {
       console.error('[TwoFAModal] Failed to enable 2FA:', error);
       
-      // 에러 메시지 추출 (타입 안전)
-      const errorMessage = error instanceof Error ? error.message : i18n.t('common.error_occurred_try_again');
+      // 토큰 사용 기록 (실패해도 기록하여 재사용 방지)
+      this.recordTokenUsage(code);
+      
+      // 에러 메시지 추출 및 특별 처리
+      let errorMessage: string;
+      if (error instanceof Error && error.message.includes('Invalid 2FA token')) {
+        errorMessage = i18n.t('twoFAModal.invalid_token_wait_new');
+      } else {
+        errorMessage = error instanceof Error ? error.message : i18n.t('common.error_occurred_try_again');
+      }
       this.showVerificationError(errorMessage);
+      
+      // 입력 필드 클리어하여 새 토큰 입력 유도
+      codeInput.value = '';
     } finally {
       DOMUpdater.toggleLoading('#enable-btn', false);
     }
@@ -439,6 +565,12 @@ export class TwoFAModal {
       return;
     }
 
+    // 토큰 재사용 방지 체크
+    if (this.isTokenRecentlyUsed(code)) {
+      this.showTokenReuseWarning();
+      return;
+    }
+
     DOMUpdater.toggleLoading('#disable-btn', true, i18n.t('twoFAModal.disabling_2fa'));
 
     try {
@@ -449,15 +581,31 @@ export class TwoFAModal {
     } catch (error) {
       console.error('[TwoFAModal] Failed to disable 2FA:', error);
       
-      // 에러 메시지 추출 (타입 안전)
-      const errorMessage = error instanceof Error ? error.message : i18n.t('common.error_occurred_try_again');
+      // 토큰 사용 기록 (실패해도 기록하여 재사용 방지)
+      this.recordTokenUsage(code);
+      
+      // 에러 메시지 추출 및 특별 처리
+      let errorMessage: string;
+      if (error instanceof Error && error.message.includes('Invalid 2FA token')) {
+        errorMessage = i18n.t('twoFAModal.invalid_token_wait_new');
+      } else {
+        errorMessage = error instanceof Error ? error.message : i18n.t('common.error_occurred_try_again');
+      }
       this.showVerificationError(errorMessage);
+      
+      // 입력 필드 클리어하여 새 토큰 입력 유도
+      codeInput.value = '';
     } finally {
       DOMUpdater.toggleLoading('#disable-btn', false);
     }
   }
 
-  private handleCancel(): void {
+  private async handleCancel(): Promise<void> {
+    // 설정 중이었다면 클라이언트 데이터만 정리 (백엔드는 자동으로 만료됨)
+    if (this.currentStep === 'setup') {
+      console.info('[TwoFAModal] 2FA setup cancelled - temp data will auto-expire in 5 minutes');
+    }
+    
     this.hide();
     this.callbacks.onCancel();
   }
@@ -476,6 +624,39 @@ export class TwoFAModal {
     }
   }
 
+  /**
+   * 토큰이 최근에 사용되었는지 확인
+   */
+  private isTokenRecentlyUsed(token: string): boolean {
+    const now = Date.now();
+    const timeDiff = now - this.tokenUsageTimestamp;
+    
+    // 같은 토큰을 60초 이내에 재사용하려는 경우
+    return this.lastUsedToken === token && timeDiff < 60000;
+  }
+
+  /**
+   * 토큰 사용 기록
+   */
+  private recordTokenUsage(token: string): void {
+    this.lastUsedToken = token;
+    this.tokenUsageTimestamp = Date.now();
+  }
+
+  /**
+   * 토큰 재사용 경고 표시
+   */
+  private showTokenReuseWarning(): void {
+    this.showVerificationError(i18n.t('twoFAModal.token_already_used_wait'));
+    
+    // 입력 필드 클리어
+    const codeInput = document.getElementById('verification-code-input') as HTMLInputElement;
+    if (codeInput) {
+      codeInput.value = '';
+      codeInput.focus();
+    }
+  }
+
   private showVerificationError(message: string): void {
     const errorElement = document.querySelector('#verification-error');
     if (errorElement) {
@@ -483,7 +664,7 @@ export class TwoFAModal {
       errorElement.classList.remove('hidden');
       setTimeout(() => {
         errorElement.classList.add('hidden');
-      }, 3000);
+      }, 5000); // 에러 메시지를 더 오래 표시
     }
   }
 }

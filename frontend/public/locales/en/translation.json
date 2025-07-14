@@ -95,7 +95,10 @@
     "enabling_2fa": "Enabling...",
     "session_refreshed_error": "Session refreshed. Please scan the new QR code and try again.",
     "setup_session_expired_error": "Setup session expired. Please close and reopen 2FA setup.",
-    "disabling_2fa": "Disabling..."
+    "disabling_2fa": "Disabling...",
+    "qr_code_refreshed": "QR code refreshed for security",
+    "token_already_used_wait": "This code was already used. Please wait for a new code (30 seconds).",
+    "invalid_token_wait_new": "Invalid code. Please wait for a new code from your authenticator app."
   },
   "gameEndModal": {
     "victory": "Victory!",

@@ -95,7 +95,10 @@
     "enabling_2fa": "有効化中...",
     "session_refreshed_error": "セッションが更新されました。新しいQRコードをスキャンしてもう一度お試しください。",
     "setup_session_expired_error": "設定セッションの有効期限が切れました。2FA設定を閉じてからもう一度開いてください。",
-    "disabling_2fa": "無効化中..."
+    "disabling_2fa": "無効化中...",
+    "qr_code_refreshed": "セキュリティのためQRコードが更新されました",
+    "token_already_used_wait": "このコードは既に使用されています。新しいコードをお待ちください（30秒）。",
+    "invalid_token_wait_new": "無効なコードです。認証アプリで新しいコードをお待ちください。"
   },
   "gameEndModal": {
     "victory": "勝利！",

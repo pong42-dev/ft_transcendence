@@ -141,8 +141,8 @@ export class AuthApiService extends BaseApiService {
           credentials: 'include',
           headers: {
             'Content-Type': 'application/json',
-            // 백엔드에서 요구하는 cookies 헤더
-            'cookies': document.cookie || 'refresh_token=placeholder;'
+            // 백엔드에서 요구하는 cookies 헤더 - 실제 쿠키 값 사용
+            'cookies': document.cookie || 'refresh_token=;'
           }
         });
         console.info('[Auth] Server logout successful');
@@ -261,10 +261,13 @@ export class AuthApiService extends BaseApiService {
     try {
       // OAuth 완료 후 토큰 갱신부터 시도 (새로운 refresh token 쿠키가 설정되었을 수 있음)
       const newToken = await TokenManager.refreshToken();
-      if (newToken) {
-        // TokenManager가 이미 새 토큰을 저장했으므로 추가 작업 불필요
-        console.info('[Auth] OAuth callback - token refreshed and synchronized');
+      if (!newToken) {
+        console.warn('[Auth] OAuth callback failed - no access token available after refresh');
+        return null;
       }
+      
+      // TokenManager가 이미 새 토큰을 저장했으므로 추가 작업 불필요
+      console.info('[Auth] OAuth callback - token refreshed and synchronized');
       
       // OAuth 완료 후 사용자 정보 가져오기 (OAuth 로그인은 일반적으로 2FA 우회하므로 기본값 사용)
       const user = await this._fetchUserProfile(false);

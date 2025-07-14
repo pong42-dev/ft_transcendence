@@ -253,11 +253,16 @@ export abstract class BaseApiService {
                 console.info('[BaseApiService] Token refreshed, retrying original request');
                 return this.request<T>(endpoint, options, cacheConfig, tokenRefreshAttempts + 1);
               } else {
-                this.handleUnauthorized();
+                // 2FA 관련 요청에서는 자동 로그아웃하지 않음
+                if (!this.is2FARequest(endpoint)) {
+                  this.handleUnauthorized();
+                }
               }
             } else {
-              // 토큰 새로고침 재시도 횟수 초과
-              this.handleUnauthorized();
+              // 토큰 새로고침 재시도 횟수 초과 - 2FA 요청이 아닌 경우에만 로그아웃
+              if (!this.is2FARequest(endpoint)) {
+                this.handleUnauthorized();
+              }
             }
           }
           
@@ -297,16 +302,21 @@ export abstract class BaseApiService {
     });
   }
 
+  // 2FA 관련 요청인지 확인
+  private is2FARequest(endpoint: string): boolean {
+    return endpoint.includes('/auth/2fa') ||
+           endpoint.includes('/2fa/init') ||
+           endpoint.includes('/2fa/enable') ||
+           endpoint.includes('/2fa/disable');
+  }
+
   // 토큰 새로고침 시도 (TokenManager에 위임, 중복 로직 제거)
   private async attemptTokenRefresh(endpoint: string): Promise<boolean> {
     // 로그인/회원가입/2FA 관련 요청에서는 토큰 새로고침 시도하지 않음
     const isAuthRequest = endpoint.includes('/login') || 
                          endpoint.includes('/register') || 
                          endpoint.includes('/refresh-token') || 
-                         endpoint.includes('/auth/2fa') ||
-                         endpoint.includes('/2fa/init') ||
-                         endpoint.includes('/2fa/enable') ||
-                         endpoint.includes('/2fa/disable');
+                         this.is2FARequest(endpoint);
     if (isAuthRequest) {
       return false;
     }

@@ -95,7 +95,10 @@
     "enabling_2fa": "활성화 중...",
     "session_refreshed_error": "세션이 새로고침되었습니다. 새로운 QR 코드를 스캔하고 다시 시도해주세요.",
     "setup_session_expired_error": "설정 세션이 만료되었습니다. 2FA 설정을 닫았다가 다시 여세요.",
-    "disabling_2fa": "비활성화 중..."
+    "disabling_2fa": "비활성화 중...",
+    "qr_code_refreshed": "보안을 위해 QR 코드가 새로고침되었습니다",
+    "token_already_used_wait": "이 코드는 이미 사용되었습니다. 새로운 코드를 기다려주세요 (30초).",
+    "invalid_token_wait_new": "잘못된 코드입니다. 인증 앱에서 새로운 코드를 기다려주세요."
   },
   "gameEndModal": {
     "victory": "승리!",
