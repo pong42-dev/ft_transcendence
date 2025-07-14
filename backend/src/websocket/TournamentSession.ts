@@ -322,20 +322,32 @@ export class TournamentSession {
   /**
    * 플레이어 입력 데이터 유효성 검증
    */
-  private validatePlayerInputData(data: any): boolean {
+  private validatePlayerInputData(data: any): data is { playerId: number; input: { action: string } } {
     if (!data || typeof data !== 'object') {
       return false;
     }
-    
+
     // 필수 필드 검증
     if (typeof data.playerId !== 'number' || data.playerId <= 0) {
       return false;
     }
-    
-    if (!data.input || typeof data.input !== 'object') {
+
+    const input = data.input;
+    if (!input || typeof input !== 'object') {
       return false;
     }
-    
+
+    // `action` 필드의 존재 및 타입 검증
+    if (typeof input.action !== 'string') {
+      return false;
+    }
+
+    // `action` 값의 유효성 검증
+    const lowercasedAction = input.action.toLowerCase();
+    if (lowercasedAction !== 'up' && lowercasedAction !== 'down' && lowercasedAction !== 'none') {
+      return false;
+    }
+
     return true;
   }
 
