@@ -3,7 +3,7 @@ import { GameManager } from '../../../game/GameManager.js'
 import { GameResponseDtoSchema } from '../../../schemas/games.js'
 
 const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
-	// const { authenticate } = fastify  // TODO: 테스트 완료 후 활성화
+	const { authenticate } = fastify  // TODO: 테스트 완료 후 활성화
 	const gameManager = GameManager.getInstance()
 	
 	// GameManager에 Repository 주입
@@ -37,7 +37,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				tags: ["Games"]
 			},
 			// TODO: 테스트 완료 후 인증 재활성화
-			// preHandler: [authenticate]
+			preHandler: [authenticate]
 		},
 		async (request, reply) => {
 			try {
