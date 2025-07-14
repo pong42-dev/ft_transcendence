@@ -61,6 +61,40 @@ export const createInterceptors = (options?: {
         
         if (!token) {
           console.error('[Interceptor] ❌ No access token available for endpoint:', endpoint);
+          
+          // 토큰이 없는데 인증이 필요한 요청인 경우 즉시 로그아웃 처리
+          try {
+            const { authStore } = await import('../../store/authStore.js');
+            const { UserStateCache } = await import('../../services/UserStateCache.js');
+            
+            const isLoggedIn = authStore.getIsLoggedIn();
+            console.log('[Interceptor] 🔍 Current auth state:', { isLoggedIn, hasCurrentUser: !!authStore.getCurrentUser() });
+            
+            // null이거나 true인 경우 로그아웃 처리 (false가 아닌 경우)
+            if (isLoggedIn !== false) {
+              console.log('[Interceptor] 🚨 Forcing logout due to missing token');
+              authStore.logout();
+              UserStateCache.clear();
+              
+              // 홈으로 리다이렉트 (페이지 새로고침 없이)
+              window.history.pushState({}, '', '/');
+              window.dispatchEvent(new PopStateEvent('popstate'));
+              
+              // 터미널 메시지 추가
+              const terminalDiv = document.querySelector('.terminal-output');
+              if (terminalDiv) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'text-terminal-red';
+                messageDiv.textContent = 'Session expired. Please login again.';
+                terminalDiv.appendChild(messageDiv);
+              }
+            } else {
+              console.log('[Interceptor] ℹ️ Already logged out, skipping logout');
+            }
+          } catch (error) {
+            console.error('[Interceptor] Failed to handle logout:', error);
+          }
+          
           throw new Error('Authentication required - no access token');
         }
         

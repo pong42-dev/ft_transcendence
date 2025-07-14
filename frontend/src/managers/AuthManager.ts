@@ -30,6 +30,28 @@ export class AuthManager {
     this.errorHandler = errorHandler;
     
     this.setupCrossTabSynchronization();
+    this.setupTokenExpiredHandler();
+  }
+
+  /**
+   * 토큰 만료 핸들러 설정
+   */
+  private setupTokenExpiredHandler(): void {
+    TokenManager.onTokenExpired(() => {
+      console.log('[AuthManager] 🚨 Token expired - forcing logout and redirect to home');
+      
+      // 로그아웃 처리
+      authStore.logout();
+      UserStateCache.clear();
+      
+      // 홈으로 리다이렉트
+      this.router.navigate('/');
+      
+      // 터미널 메시지 표시 (선택적)
+      if (this.terminal) {
+        this.terminal.appendOutput('Session expired. Please login again.');
+      }
+    });
   }
 
   /**

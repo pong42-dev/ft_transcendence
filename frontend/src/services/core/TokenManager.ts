@@ -15,6 +15,7 @@ export class TokenManager {
   private static refreshPromise: Promise<string | null> | null = null;
   private static lastRefreshAttempt = 0;
   private static readonly MIN_REFRESH_INTERVAL = 5000; // 5초 최소 간격
+  private static tokenExpiredCallbacks: (() => void)[] = [];
   
 
   /**
@@ -168,16 +169,16 @@ export class TokenManager {
           return accessToken;
         } else {
           console.info('[TokenManager] ℹ️ No access token in response data');
-          this.clearTokens();
+          this.clearTokens(true); // 토큰 만료 알림
           return null;
         }
       } else {
         const errorText = await response.text().catch(() => 'Unknown error');
         
-        // 401은 정상적인 로그아웃 상태이므로 info 레벨로 처리
-        if (response.status === 401) {
-          console.info('[TokenManager] ℹ️ No valid refresh token (user not logged in)');
-          this.clearTokens();
+        // 401, 400은 토큰 만료 상태이므로 info 레벨로 처리
+        if (response.status === 401 || response.status === 400) {
+          console.info('[TokenManager] ℹ️ No valid refresh token (user not logged in)', response.status);
+          this.clearTokens(true); // 토큰 만료 알림
           return null;
         } 
         // 429 Rate Limit은 일시적 문제이므로 토큰을 유지하고 기존 토큰 반환
@@ -206,7 +207,7 @@ export class TokenManager {
             return sessionToken;
           }
           
-          this.clearTokens();
+          this.clearTokens(true); // 토큰 만료 알림
           return null;
         }
       }
@@ -230,15 +231,46 @@ export class TokenManager {
       }
       
       // 심각한 에러인 경우만 토큰 클리어
-      this.clearTokens();
+      this.clearTokens(true); // 토큰 만료 알림
       return null;
     }
   }
   
   /**
+   * 토큰 만료 콜백 등록
+   */
+  static onTokenExpired(callback: () => void): void {
+    this.tokenExpiredCallbacks.push(callback);
+  }
+
+  /**
+   * 토큰 만료 콜백 제거
+   */
+  static removeTokenExpiredCallback(callback: () => void): void {
+    const index = this.tokenExpiredCallbacks.indexOf(callback);
+    if (index > -1) {
+      this.tokenExpiredCallbacks.splice(index, 1);
+    }
+  }
+
+  /**
+   * 토큰 만료 알림
+   */
+  private static notifyTokenExpired(): void {
+    console.log('[TokenManager] 🚨 Notifying token expiration to callbacks');
+    this.tokenExpiredCallbacks.forEach(callback => {
+      try {
+        callback();
+      } catch (error) {
+        console.error('[TokenManager] Error in token expired callback:', error);
+      }
+    });
+  }
+
+  /**
    * 모든 토큰 정리 (로그아웃 시 호출)
    */
-  static clearTokens(): void {
+  static clearTokens(notifyExpired: boolean = false): void {
     // 메모리에서 Access Token 제거
     this.accessToken = null;
     
@@ -249,6 +281,11 @@ export class TokenManager {
     
     // Refresh Token 쿠키 제거는 서버에서 처리
     console.log('[TokenManager] Refresh token cookie should be cleared by server');
+
+    // 토큰 만료로 인한 정리인 경우 콜백 호출
+    if (notifyExpired) {
+      this.notifyTokenExpired();
+    }
   }
   
   /**
