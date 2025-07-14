@@ -1,7 +1,7 @@
 // ./frontend/src/game/GameRenderer.ts
 
-import { GameStateDto } from '../types/game-websocket';
-import { PlayerResponseDto } from '../types/types';
+import { GameStateDto } from '../types/game-websocket.js';
+import { PlayerResponseDto } from '../types/types.js';
 import i18next from 'i18next';
 
 /**

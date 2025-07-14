@@ -8,7 +8,7 @@ import { User } from '../../types/types.js';
 import { validateEmail, validatePassword } from '../../utils/validators.js';
 import { ModalManager, ModalContent } from '../../managers/ModalManager.js';
 import { DOMUpdater } from '../../utils/DOMUpdater.js';
-import i18n from '../../services/i18n';
+import i18n from '../../services/i18n.js';
 
 export interface LoginModalCallbacks {
   onLoginSuccess: (user: User) => void;
@@ -361,7 +361,7 @@ export class LoginModal {
     
     const timer = setTimeout(() => {
       this.validateEmail();
-    }, 500);
+    }, 500) as unknown as number;
     
     this.debounceTimers.set('email', timer);
   }
@@ -380,7 +380,7 @@ export class LoginModal {
     
     const timer = setTimeout(() => {
       this.validatePassword();
-    }, 500);
+    }, 500) as unknown as number;
     
     this.debounceTimers.set('password', timer);
   }

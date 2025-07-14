@@ -1,6 +1,6 @@
 import { Notification } from '../types/types.js';
-import { ApiClient } from '../services/ApiClient';
-import { getConfig } from '../config/environment';
+import { ApiClient } from '../services/ApiClient.js';
+import { getConfig } from '../config/environment.js';
 import i18next from 'i18next';
 
 export class NotificationCenter {

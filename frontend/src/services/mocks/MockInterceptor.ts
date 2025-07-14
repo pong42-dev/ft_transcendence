@@ -1,7 +1,7 @@
 // src/services/mocks/MockInterceptor.ts
-import { RequestInterceptor } from '../../types/types';
-import { getConfig } from '../../config/environment';
-import { ErrorHandler, ErrorLevel } from '../../utils/ErrorHandler';
+import { RequestInterceptor } from '../../types/types.js';
+import { getConfig } from '../../config/environment.js';
+import { ErrorHandler, ErrorLevel } from '../../utils/ErrorHandler.js';
 
 export class MockInterceptor {
   private static instance: MockInterceptor | null = null;

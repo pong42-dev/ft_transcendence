@@ -1,16 +1,16 @@
-import { getConfig } from '../../config/environment';
-import { SimpleInterceptorManager } from '../core/Interceptors';
-import { TokenManager } from '../core/TokenManager';
-import { MockInterceptor } from '../mocks/MockInterceptor';
-import { log } from '../../utils/Logger';
-import { ErrorHandler, ErrorLevel } from '../../utils/ErrorHandler';
+import { getConfig } from '../../config/environment.js';
+import { SimpleInterceptorManager } from '../core/Interceptors.js';
+import { TokenManager } from '../core/TokenManager.js';
+import { MockInterceptor } from '../mocks/MockInterceptor.js';
+import { log } from '../../utils/Logger.js';
+import { ErrorHandler, ErrorLevel } from '../../utils/ErrorHandler.js';
 import { 
   ApiErrorResponse, 
   RequestInterceptor, 
   ResponseInterceptor, 
   CacheConfig, 
   CacheEntry
-} from '../../types/types';
+} from '../../types/types.js';
 import i18next from 'i18next';
 
 export class ApiError extends Error {
@@ -237,7 +237,7 @@ export abstract class BaseApiService {
           // 401 Unauthorized - 2FA 관련 엔드포인트는 토큰을 지우지 않음
           if (response.status === 401) {
             const is2FAEndpoint = endpoint.includes('/2fa/');
-            const is2FAError = errorData?.msg?.includes('2FA') || errorData?.msg?.includes('tmp token');
+            const is2FAError = errorData?.message?.includes('2FA') || errorData?.message?.includes('tmp token');
             
             if (is2FAEndpoint && is2FAError) {
               console.log('[BaseApiService] 2FA validation error - keeping access token');

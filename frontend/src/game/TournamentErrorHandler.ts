@@ -1,6 +1,6 @@
-import { ModalManager, ModalContent } from '../managers/ModalManager';
-import { UIUtils } from '../utils/UIUtils';
-import i18next from '../services/i18n';
+import { ModalManager, ModalContent } from '../managers/ModalManager.js';
+import { UIUtils } from '../utils/UIUtils.js';
+import i18next from '../services/i18n.js';
 
 /**
  * TournamentErrorHandler - 토너먼트 관련 오류 및 비정상 종료 처리 전담 클래스

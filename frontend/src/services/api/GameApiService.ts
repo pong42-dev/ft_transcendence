@@ -1,10 +1,9 @@
-import { BaseApiService, ApiError } from './BaseApiService';
-import { ErrorLevel } from '../../utils/ErrorHandler';
+import { BaseApiService } from './BaseApiService.js';
+import { ErrorLevel } from '../../utils/ErrorHandler.js';
 import {
   CreateGameRequestDto,
   GameResponseDto,
-} from '../../types/types';
-import i18next from 'i18next';
+} from '../../types/types.js';
 
 export class GameApiService extends BaseApiService {
   constructor() {

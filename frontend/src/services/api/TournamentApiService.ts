@@ -1,6 +1,6 @@
-import { BaseApiService } from './BaseApiService';
-import { GameMode } from '../../types/types';
-import type { UserTournamentHistory } from '../../types/types';
+import { BaseApiService } from './BaseApiService.js';
+import { GameMode } from '../../types/types.js';
+import type { UserTournamentHistory } from '../../types/types.js';
 
 export class TournamentApiService extends BaseApiService {
   constructor() {

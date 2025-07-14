@@ -7,13 +7,19 @@ export interface Config {
 }
 
 const getEnvVar = (key: string, fallback?: string): string => {
-  // Vite 사용 시 - 타입 안전한 방식으로 접근
-  const viteKey = `VITE_${key}` as keyof ImportMetaEnv;
-  const value = import.meta.env[viteKey];
-  return (typeof value === 'string' ? value : String(value || '')) || fallback || '';
+  // 브라우저 환경에서는 window 객체를 통해 환경 변수에 접근
+  // Docker 컨테이너에서 환경 변수가 주입될 예정
+  const windowEnv = (window as any).__ENV__ || {};
   
-  // Vite 제거 후 (Node.js 환경)
-  // return process.env[key] || fallback || '';
+  const envVars: { [key: string]: string } = {
+    'API_URL': windowEnv.API_URL || 'http://localhost:3000',
+    'WS_URL': windowEnv.WS_URL || 'ws://localhost:3000',
+    'USE_MOCK_DATA': windowEnv.USE_MOCK_DATA || 'false',
+    'ENABLE_LOGGING': windowEnv.ENABLE_LOGGING || 'true',
+    'MODE': windowEnv.MODE || 'development'
+  };
+  
+  return envVars[key] || fallback || '';
 };
 
 const getBooleanEnvVar = (key: string, fallback: boolean = false): boolean => {
@@ -32,11 +38,7 @@ const getConfigByEnv = (env: string): Config => {
 };
 
 export const getConfig = (): Config => {
-  // Vite 사용 시 - getEnvVar를 통해 MODE 읽기
   const env = getEnvVar('MODE', 'development');
-  
-  // Vite 제거 후 (Node.js 환경)
-  // const env = process.env.NODE_ENV || 'development';
   
   const config = getConfigByEnv(env);
   
@@ -44,11 +46,6 @@ export const getConfig = (): Config => {
   console.group('🔧 Environment Configuration Debug');
   console.log('Environment:', env);
   console.log('Final Config:', config);
-  console.log('All import.meta.env:', import.meta.env);
-  console.log('Specific checks:');
-  console.log('  import.meta.env.VITE_API_URL:', import.meta.env.VITE_API_URL);
-  console.log('  import.meta.env.VITE_USE_MOCK_DATA:', import.meta.env.VITE_USE_MOCK_DATA);
-  console.log('  import.meta.env.VITE_MODE:', import.meta.env.VITE_MODE);
   console.log('  getEnvVar(API_URL):', getEnvVar('API_URL'));
   console.log('  getBooleanEnvVar(USE_MOCK_DATA):', getBooleanEnvVar('USE_MOCK_DATA'));
   console.groupEnd();

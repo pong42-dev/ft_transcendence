@@ -5,10 +5,19 @@
     <link rel="icon" type="image/svg+xml" href="/pingpong.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/style.css">
+    <script type="importmap">
+    {
+      "imports": {
+        "i18next": "https://cdn.skypack.dev/i18next@23.12.2",
+        "i18next-http-backend": "https://cdn.skypack.dev/i18next-http-backend@2.5.2"
+      }
+    }
+    </script>
     <title>PONG-CLI v1.0.0</title>
   </head>
   <body class="m-0 font-jetbrains antialiased bg-terminal-black text-terminal-green">
     <div id="app" class="max-w-4xl mx-auto h-screen flex flex-col"></div>
-    <script type="module" src="/src/main.ts"></script>
+    <script type="module" src="/main.js"></script>
   </body>
 </html>

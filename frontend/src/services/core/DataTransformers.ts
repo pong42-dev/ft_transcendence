@@ -3,7 +3,7 @@
  * 백엔드 데이터를 프론트엔드 형식으로 변환
  */
 
-import * as Types from '../../types/types';
+import * as Types from '../../types/types.js';
 
 // 🧑‍💻 사용자 데이터 변환
 export const transformUser = (backendUser: Types.BackendUser): Types.User => ({

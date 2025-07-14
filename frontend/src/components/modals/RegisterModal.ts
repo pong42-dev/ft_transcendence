@@ -7,11 +7,12 @@ import { User } from '../../types/types.js';
 import { validateEmail, validatePassword, validateNickname } from '../../utils/validators.js';
 import { ModalManager, ModalContent } from '../../managers/ModalManager.js';
 import { DOMUpdater } from '../../utils/DOMUpdater.js';
-import i18n from '../../services/i18n';
+import i18n from '../../services/i18n.js';
 
 export interface RegisterModalCallbacks {
   onRegisterSuccess: (user: User, avatarFile?: File) => void;
   onSwitchToLogin: () => void;
+  on2FARequired?: (tmpToken: string) => void;
 }
 
 export class RegisterModal {
@@ -272,7 +273,7 @@ export class RegisterModal {
         if (confirmPasswordInput && confirmPasswordInput.value) {
           this.validateConfirmPassword();
         }
-      }, 500);
+      }, 500) as unknown as number;
       
       this.debounceTimers.set('password', timer);
     });
@@ -284,7 +285,7 @@ export class RegisterModal {
       
       const timer = setTimeout(() => {
         this.validateConfirmPassword();
-      }, 500);
+      }, 500) as unknown as number;
       
       this.debounceTimers.set('confirm-password', timer);
     });
@@ -500,7 +501,7 @@ export class RegisterModal {
           }
         }
       }
-    }, 500);
+    }, 500) as unknown as number;
     
     this.debounceTimers.set('name', timer);
   }
@@ -527,7 +528,7 @@ export class RegisterModal {
         }
         // 형식이 올바르면 아무것도 표시하지 않음 (중복 체크는 blur에서만)
       }
-    }, 1000); // 1초로 늘려서 사용자가 입력을 완료할 시간을 줌
+    }, 1000) as unknown as number; // 1초로 늘려서 사용자가 입력을 완료할 시간을 줌
     
     this.debounceTimers.set('email-format', timer);
   }

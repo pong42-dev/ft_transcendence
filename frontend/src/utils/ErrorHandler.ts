@@ -1,6 +1,6 @@
 // Enhanced error handler for API and application errors
 
-import { ApiError } from '../services/api/BaseApiService';
+import { ApiError } from '../services/api/BaseApiService.js';
 
 export enum ErrorLevel {
   INFO = 'info',

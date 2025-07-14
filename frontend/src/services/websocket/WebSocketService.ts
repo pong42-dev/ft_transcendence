@@ -1,4 +1,4 @@
-import { WSServerMessage, WSClientMessage } from '../../types/game-websocket';
+import { WSServerMessage, WSClientMessage } from '../../types/game-websocket.js';
 
 export type WebSocketEvent = string;
 export type EventCallback = (data: any) => void;

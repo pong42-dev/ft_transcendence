@@ -1,14 +1,14 @@
-import { AuthApiService } from './api/AuthApiService';
-import { GameApiService } from './api/GameApiService';
-import { FriendApiService } from './api/FriendApiService';
-import { UserApiService } from './api/UserApiService';
-import { TournamentApiService } from './api/TournamentApiService';
-import { BaseApiService } from './api/BaseApiService';
-import { getConfig } from '../config/environment';
-import { SimpleInterceptorManager } from './core/Interceptors';
-import { TokenManager } from './core/TokenManager';
+import { AuthApiService } from './api/AuthApiService.js';
+import { GameApiService } from './api/GameApiService.js';
+import { FriendApiService } from './api/FriendApiService.js';
+import { UserApiService } from './api/UserApiService.js';
+import { TournamentApiService } from './api/TournamentApiService.js';
+import { BaseApiService } from './api/BaseApiService.js';
+import { getConfig } from '../config/environment.js';
+import { SimpleInterceptorManager } from './core/Interceptors.js';
+import { TokenManager } from './core/TokenManager.js';
 
-export { ApiError } from './api/BaseApiService';
+export { ApiError } from './api/BaseApiService.js';
 
 /**
  * ApiClient: API 서비스들의 인스턴스화와 접근을 제공하는 팩토리 클래스

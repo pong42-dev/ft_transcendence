@@ -1,11 +1,11 @@
-import { GameClient } from '../game/GameClient';
-import { GameRenderer } from '../game/GameRenderer';
-import { InputHandler } from '../game/InputHandler';
-import { TournamentClient } from '../game/TournamentClient';
-import { ApiClient } from '../services/ApiClient'; // ApiClient를 직접 import
-import { WebSocketService } from '../services/websocket/WebSocketService';
-import { GameMode, GameSetupResult, CreateGameRequestDto, GameResponseDto } from '../types/types';
-import { Terminal } from '../components/Terminal';
+import { GameClient } from '../game/GameClient.js';
+import { GameRenderer } from '../game/GameRenderer.js';
+import { InputHandler } from '../game/InputHandler.js';
+import { TournamentClient } from '../game/TournamentClient.js';
+import { ApiClient } from '../services/ApiClient.js'; // ApiClient를 직접 import
+import { WebSocketService } from '../services/websocket/WebSocketService.js';
+import { GameMode, GameSetupResult, CreateGameRequestDto, GameResponseDto } from '../types/types.js';
+import { Terminal } from '../components/Terminal.js';
 import i18next from 'i18next';
 
 export class GamePage {
@@ -373,7 +373,7 @@ export class GamePage {
     private setupBrowserEventListeners() {
 
         // beforeunload 이벤트: 페이지를 떠나려고 할 때 (새로고침, 창 닫기 등)
-        this.beforeUnloadHandler = (e: BeforeUnloadEvent) => {
+        this.beforeUnloadHandler = (_e: BeforeUnloadEvent) => {
             console.log('beforeunload event triggered');
             if (this.isGameActive && (this.gameClient || this.tournamentClient)) {
                 // 게임이 진행 중이면 경고 메시지 표시

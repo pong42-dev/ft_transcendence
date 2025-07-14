@@ -1,5 +1,5 @@
-import { BaseApiService } from './BaseApiService';
-import * as Types from '../../types/types';
+import { BaseApiService } from './BaseApiService.js';
+import * as Types from '../../types/types.js';
 import i18next from 'i18next';
 
 export class UserApiService extends BaseApiService {

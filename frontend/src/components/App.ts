@@ -14,7 +14,7 @@ import { UIRenderer } from '../managers/UIRenderer.js';
 import { ModalManager } from '../managers/ModalManager.js';
 import { UserProfileManager } from '../managers/UserProfileManager.js';
 import { GamePage } from '../game/GamePage.js';
-import i18next from '../services/i18n.js';
+import { default as i18next } from '../services/i18n.js';
 
 export class App {
   // UI Elements References

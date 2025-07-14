@@ -1,12 +1,12 @@
-import { GameClient } from './GameClient';
-import { GameRenderer } from './GameRenderer';
-import { InputHandler } from './InputHandler';
-import { WebSocketService } from '../services/websocket/WebSocketService';
-import { ModalManager } from '../managers/ModalManager';
-import { TournamentRenderer } from './TournamentRenderer';
-import { TournamentErrorHandler } from './TournamentErrorHandler';
-import { UIUtils } from '../utils/UIUtils';
-import i18next from '../services/i18n';
+import { GameClient } from './GameClient.js';
+import { GameRenderer } from './GameRenderer.js';
+import { InputHandler } from './InputHandler.js';
+import { WebSocketService } from '../services/websocket/WebSocketService.js';
+import { ModalManager } from '../managers/ModalManager.js';
+import { TournamentRenderer } from './TournamentRenderer.js';
+import { TournamentErrorHandler } from './TournamentErrorHandler.js';
+import { UIUtils } from '../utils/UIUtils.js';
+import i18next from '../services/i18n.js';
 
 
 

@@ -1,6 +1,6 @@
-import { BaseApiService } from './BaseApiService';
-import { ErrorLevel } from '../../utils/ErrorHandler';
-import * as Types from '../../types/types';
+import { BaseApiService } from './BaseApiService.js';
+import { ErrorLevel } from '../../utils/ErrorHandler.js';
+import * as Types from '../../types/types.js';
 import i18next from 'i18next';
 
 export class FriendApiService extends BaseApiService {

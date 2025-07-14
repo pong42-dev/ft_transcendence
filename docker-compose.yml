@@ -18,11 +18,11 @@ services:
     tty: true
 
   frontend:
-    container_name: vite-dev
+    container_name: frontend
     build: ./frontend
-    image: frontend-dev
+    image: frontend
     ports:
-      - "${FRONTEND_PORT}:5173"
+      - "${FRONTEND_PORT}:8080"
     depends_on:
       - backend
     networks:

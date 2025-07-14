@@ -7,7 +7,7 @@
 
 import { GameResult, GameMode } from '../../types/types.js';
 import { ModalManager, ModalContent } from '../../managers/ModalManager.js';
-import i18n from '../../services/i18n';
+import i18n from '../../services/i18n.js';
 
 export class GameEndModal {
   private modalManager: ModalManager;

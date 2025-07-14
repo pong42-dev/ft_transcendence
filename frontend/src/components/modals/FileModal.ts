@@ -4,7 +4,7 @@
 
 import { ModalManager, ModalContent } from '../../managers/ModalManager.js';
 import { DOMUpdater } from '../../utils/DOMUpdater.js';
-import i18n from '../../services/i18n';
+import i18n from '../../services/i18n.js';
 
 export class FileModal {
   private onFileSelect: (file: File) => void;

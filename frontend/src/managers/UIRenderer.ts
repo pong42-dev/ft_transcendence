@@ -15,7 +15,6 @@ export class UIRenderer {
   // UI State
   private userProfile: UserProfile | null = null;
   private isInGame = false;
-  private lastUserProfileData: { id: string; twoFactorEnabled: boolean; username: string } | null = null;
 
   constructor(appElement: HTMLElement, mainTerminal: Terminal, apiClient: ApiClient) {
     this.appElement = appElement;
@@ -142,7 +141,6 @@ export class UIRenderer {
       } else {
         // UserProfile이 없거나 사용자 데이터가 변경된 경우 새로 생성
         // 현재 사용자 프로필로 돌아올 때는 항상 재생성하여 다른 사용자 프로필 상태 정리
-        const shouldRecreate = !this.userProfile || this.shouldRecreateUserProfile(currentUser);
         
         // 기존 UserProfile 정리 (다른 사용자 프로필일 수 있으므로 강제 정리)
         if (this.userProfile) {
@@ -169,8 +167,6 @@ export class UIRenderer {
         this.userProfile.destroy();
         this.userProfile = null;
       }
-      // 사용자 프로필 데이터 초기화
-      this.lastUserProfileData = null;
       
       // Demo content
       DOMUpdater.updateHTML(mainContent, `<div class="flex items-center justify-center h-full text-terminal-gray">${i18next.t('mainContent.welcomeMessage')}<br/>${i18next.t('mainContent.loginPrompt')}</div>`);
@@ -217,40 +213,6 @@ export class UIRenderer {
     return i18next.t('statusBar.notLoggedIn');
   }
 
-  /**
-   * UserProfile 재생성이 필요한지 확인
-   */
-  private shouldRecreateUserProfile(currentUser: User): boolean {
-
-    if (!this.lastUserProfileData) {
-      // 처음 생성하는 경우
-      this.lastUserProfileData = {
-        id: currentUser.id,
-        twoFactorEnabled: currentUser.twoFactorEnabled,
-        username: currentUser.username
-      };
-      return true;
-    }
-
-    // 중요한 사용자 데이터가 변경되었는지 확인
-    const hasChanged = 
-      this.lastUserProfileData.id !== currentUser.id ||
-      this.lastUserProfileData.twoFactorEnabled !== currentUser.twoFactorEnabled ||
-      this.lastUserProfileData.username !== currentUser.username;
-
-
-    if (hasChanged) {
-      
-      // 새로운 상태 저장
-      this.lastUserProfileData = {
-        id: currentUser.id,
-        twoFactorEnabled: currentUser.twoFactorEnabled,
-        username: currentUser.username
-      };
-    }
-
-    return hasChanged;
-  }
 
   /**
    * UserProfile을 새로운 사용자 데이터로 새로고침
@@ -337,6 +299,5 @@ export class UIRenderer {
       this.userProfile.destroy();
       this.userProfile = null;
     }
-    this.lastUserProfileData = null;
   }
 }

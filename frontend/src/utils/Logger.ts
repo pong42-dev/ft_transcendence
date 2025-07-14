@@ -3,7 +3,7 @@
  * 개발/운영 환경에 따라 다른 로깅 레벨과 출력 방식을 제공합니다.
  */
 
-import { isProduction } from '../config/environment';
+import { isProduction } from '../config/environment.js';
 
 export enum LogLevel {
   DEBUG = 0,

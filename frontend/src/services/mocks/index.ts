@@ -3,10 +3,10 @@
  * 동적 임포트를 통해 필요할 때만 로드되는 Mock 데이터
  */
 
-export { getAuthApiServiceMockResponse } from './AuthApiServiceMock';
-export { getGameApiServiceMockResponse } from './GameApiServiceMock';
-export { getFriendApiServiceMockResponse } from './FriendApiServiceMock';
-export { getUserApiServiceMockResponse } from './UserApiServiceMock';
+export { getAuthApiServiceMockResponse } from './AuthApiServiceMock.js';
+export { getGameApiServiceMockResponse } from './GameApiServiceMock.js';
+export { getFriendApiServiceMockResponse } from './FriendApiServiceMock.js';
+export { getUserApiServiceMockResponse } from './UserApiServiceMock.js';
 
 /**
  * 서비스 이름과 Mock 핸들러 매핑

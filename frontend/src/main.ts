@@ -1,6 +1,5 @@
-import './style.css';
-import { App } from './components/App';
-import { initI18n } from './services/i18n';
+import { App } from './components/App.js';
+import { initI18n } from './services/i18n.js';
 
 async function initializeApp() {
   await initI18n();
@@ -11,7 +10,6 @@ async function initializeApp() {
 
 initializeApp();
 
-if (import.meta.env.DEV) {
-  console.log(`🚀 PONG-CLI initialized`);
-  console.log(`📅 Built at: ${new Date().toISOString()}`);
-}
+// Development mode logging
+console.log(`🚀 PONG-CLI initialized`);
+console.log(`📅 Built at: ${new Date().toISOString()}`);

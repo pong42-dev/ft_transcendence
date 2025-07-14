@@ -1,9 +1,9 @@
-import { WebSocketService } from '../services/websocket/WebSocketService';
-import { GameRenderer } from './GameRenderer';
-import { InputHandler } from './InputHandler';
-import { GameResponseDto, GameResult } from '../types/types';
-import { GameStateDto, GameEventDto, WSPlayerInputMessage } from '../types/game-websocket';
-import { ModalManager } from '../managers/ModalManager';
+import { WebSocketService } from '../services/websocket/WebSocketService.js';
+import { GameRenderer } from './GameRenderer.js';
+import { InputHandler } from './InputHandler.js';
+import { GameResponseDto, GameResult } from '../types/types.js';
+import { GameStateDto, GameEventDto, WSPlayerInputMessage } from '../types/game-websocket.js';
+import { ModalManager } from '../managers/ModalManager.js';
 import i18next from 'i18next';
 
 export interface GameClientCallbacks {

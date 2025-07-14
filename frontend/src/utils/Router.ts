@@ -11,7 +11,6 @@ interface Route {
 
 export class Router {
   private routes: Route[] = [];
-  private currentPath: string = '/';
 
   constructor() {
     // Listen for hash changes instead of popstate
@@ -55,7 +54,6 @@ export class Router {
     
     // If path is empty, default to '/'
     const normalizedPath = path || '/';
-    this.currentPath = normalizedPath;
     
     for (const route of this.routes) {
       const match = normalizedPath.match(route.regex);

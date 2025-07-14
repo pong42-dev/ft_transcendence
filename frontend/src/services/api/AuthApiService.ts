@@ -1,8 +1,8 @@
-import { BaseApiService, ApiError } from './BaseApiService';
-import { TokenManager } from '../core/TokenManager';
-import { ErrorLevel } from '../../utils/ErrorHandler';
-import { getConfig } from '../../config/environment';
-import * as Types from '../../types/types';
+import { BaseApiService, ApiError } from './BaseApiService.js';
+import { TokenManager } from '../core/TokenManager.js';
+import { ErrorLevel } from '../../utils/ErrorHandler.js';
+import { getConfig } from '../../config/environment.js';
+import * as Types from '../../types/types.js';
 import i18next from 'i18next';
 
 export class AuthApiService extends BaseApiService {

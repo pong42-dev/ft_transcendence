@@ -5,7 +5,7 @@ import { User } from '../types/types.js';
 import { TwoFAModal } from '../components/modals/TwoFAModal.js';
 import { FileModal } from '../components/modals/FileModal.js';
 import { DOMUpdater } from '../utils/DOMUpdater.js';
-import i18n from '../services/i18n';
+import i18n from '../services/i18n.js';
 
 /**
  * ModalManager - 모달의 중앙 집중식 관리
@@ -387,7 +387,7 @@ export class ModalManager {
     const registerModal = new RegisterModal(this.apiClient, {
       onRegisterSuccess: callbacks?.onRegisterSuccess || (() => {}),
       onSwitchToLogin: callbacks?.onSwitchToLogin || (() => {}),
-      on2FARequired: callbacks?.on2FARequired || (() => {})
+      on2FARequired: callbacks?.on2FARequired || ((_tmpToken: string) => {})
     });
     
     registerModal.show();

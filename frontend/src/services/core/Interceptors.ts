@@ -3,16 +3,16 @@
  * 모든 인터셉터 로직을 하나의 파일에 통합
  */
 
-import { RequestInterceptor, ResponseInterceptor } from '../../types/types';
+import { RequestInterceptor, ResponseInterceptor } from '../../types/types.js';
 import { 
   transformUser, 
   transformFriend, 
   transformGame
-} from './DataTransformers';
-import { ApiError } from '../api/BaseApiService';
-import { TokenManager } from './TokenManager';
-import { MockInterceptor } from '../mocks/MockInterceptor';
-import { ErrorHandler, ErrorLevel } from '../../utils/ErrorHandler';
+} from './DataTransformers.js';
+import { ApiError } from '../api/BaseApiService.js';
+import { TokenManager } from './TokenManager.js';
+import { MockInterceptor } from '../mocks/MockInterceptor.js';
+import { ErrorHandler, ErrorLevel } from '../../utils/ErrorHandler.js';
 
 // URL 패턴 매칭을 위한 간단한 헬퍼
 const URL_PATTERNS = {

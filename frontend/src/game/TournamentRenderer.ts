@@ -1,6 +1,6 @@
-import { TournamentMatchResult } from './TournamentClient';
-import { UIUtils } from '../utils/UIUtils';
-import i18next from '../services/i18n';
+import { TournamentMatchResult } from './TournamentClient.js';
+import { UIUtils } from '../utils/UIUtils.js';
+import i18next from '../services/i18n.js';
 
 /**
  * TournamentRenderer - 토너먼트 UI 렌더링 전담 클래스

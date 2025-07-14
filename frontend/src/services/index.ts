@@ -4,18 +4,18 @@
  */
 
 // 메인 API 클라이언트
-export { ApiClient, ApiError } from './ApiClient';
+export { ApiClient, ApiError } from './ApiClient.js';
 
 // 개별 API 서비스들
-export { AuthApiService } from './api/AuthApiService';
-export { FriendApiService } from './api/FriendApiService';
-export { GameApiService } from './api/GameApiService';
-export { UserApiService } from './api/UserApiService';
-export { BaseApiService } from './api/BaseApiService';
+export { AuthApiService } from './api/AuthApiService.js';
+export { FriendApiService } from './api/FriendApiService.js';
+export { GameApiService } from './api/GameApiService.js';
+export { UserApiService } from './api/UserApiService.js';
+export { BaseApiService } from './api/BaseApiService.js';
 
 // 핵심 유틸리티들
-export { TokenManager } from './core/TokenManager';
-export { SimpleInterceptorManager } from './core/Interceptors';
+export { TokenManager } from './core/TokenManager.js';
+export { SimpleInterceptorManager } from './core/Interceptors.js';
 export { 
   transformUser, 
   transformFriend, 
@@ -23,5 +23,5 @@ export {
   transformUsers,
   transformFriends, 
   transformGames 
-} from './core/DataTransformers';
+} from './core/DataTransformers.js';
 
