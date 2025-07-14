@@ -49,6 +49,9 @@ export class DOMUpdater {
 
   /**
    * HTML 내용 업데이트
+   * @warning 이 함수는 내부적으로 `innerHTML`을 사용하므로 XSS 공격에 취약할 수 있습니다.
+   * 이 함수에 전달하는 `html` 문자열에 사용자 입력값이 포함될 경우,
+   * 해당 입력값은 반드시 사전에 안전하게 이스케이프 처리되어야 합니다.
    */
   static updateHTML(element: HTMLElement | string, html: string, options?: DOMUpdateOptions): void {
     const target = this.getElement(element);

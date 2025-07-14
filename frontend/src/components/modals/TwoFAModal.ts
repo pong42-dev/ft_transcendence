@@ -116,6 +116,7 @@ export class TwoFAModal {
       return container;
     }
 
+    // Use DOM manipulation to avoid XSS
     container.innerHTML = `
       <div class="flex items-center justify-between mb-6">
         <h3 class="text-terminal-green text-xl font-bold">${i18n.t('twoFAModal.enable_2fa_title')}</h3>
@@ -131,14 +132,14 @@ export class TwoFAModal {
               ${i18n.t('twoFAModal.scan_qr_code_instruction')}
             </p>
             <div class="flex justify-center mb-3">
-              <div class="bg-white p-2 rounded-lg">
-                <img src="${this.twoFAData.qrCodeUrl}" alt="2FA QR Code" class="w-32 h-32" />
+              <div class="bg-white p-2 rounded-lg" id="qr-code-container">
+                <!-- QR Code will be inserted here -->
               </div>
             </div>
             <div class="text-sm text-terminal-gray">
               <p class="mb-2">${i18n.t('twoFAModal.manual_entry_code')}</p>
-              <div class="bg-terminal-black border border-terminal-gray rounded px-3 py-2 font-mono text-xs">
-                ${this.twoFAData.secret}
+              <div class="bg-terminal-black border border-terminal-gray rounded px-3 py-2 font-mono text-xs" id="secret-code-container">
+                <!-- Secret code will be inserted here -->
               </div>
             </div>
           </div>
@@ -177,6 +178,22 @@ export class TwoFAModal {
         </div>
       </div>
     `;
+
+    // Safely insert QR code
+    const qrCodeContainer = container.querySelector('#qr-code-container');
+    if (qrCodeContainer) {
+      const qrImg = document.createElement('img');
+      qrImg.src = this.twoFAData.qrCodeUrl;
+      qrImg.alt = '2FA QR Code';
+      qrImg.className = 'w-32 h-32';
+      qrCodeContainer.appendChild(qrImg);
+    }
+
+    // Safely insert secret code
+    const secretCodeContainer = container.querySelector('#secret-code-container');
+    if (secretCodeContainer) {
+      secretCodeContainer.textContent = this.twoFAData.secret;
+    }
 
     this.setupEventListeners(container);
     return container;

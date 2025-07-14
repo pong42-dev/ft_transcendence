@@ -247,7 +247,13 @@ export class FileModal {
       if (file.type.startsWith('image/')) {
         const reader = new FileReader();
         reader.onload = (e) => {
-          previewImage.innerHTML = `<img src="${e.target?.result}" class="w-full h-full object-cover rounded-lg" />`;
+          // XSS 취약점 수정: innerHTML 대신 img 요소를 직접 생성하고 src 속성을 설정합니다.
+          previewImage.innerHTML = ''; // 기존 내용을 비웁니다.
+          const img = document.createElement('img');
+          img.src = e.target?.result as string;
+          img.alt = file.name;
+          img.className = 'w-full h-full object-cover rounded-lg';
+          previewImage.appendChild(img);
         };
         reader.readAsDataURL(file);
       } else {

@@ -126,16 +126,14 @@ export class GameEndModal {
         
         <div class="flex justify-between items-center mb-4">
           <div class="flex-1 flex items-center gap-2">
-            <div class="h-8 px-3 rounded-lg ${this.gameResult.winner === 'left' ? 'bg-terminal-green bg-opacity-20' : 'bg-terminal-gray bg-opacity-20'} flex items-center justify-center font-bold text-sm">
-              ${this.gameResult.leftPlayer.nickname ? this.gameResult.leftPlayer.nickname : 'L'}
+            <div id="left-player-nickname" class="h-8 px-3 rounded-lg ${this.gameResult.winner === 'left' ? 'bg-terminal-green bg-opacity-20' : 'bg-terminal-gray bg-opacity-20'} flex items-center justify-center font-bold text-sm">
             </div>
             <div class="text-xl font-bold">${this.gameResult.leftPlayer.score}</div>
           </div>
           <div class="text-xs opacity-50">${i18n.t('common.vs')}</div>
           <div class="flex-1 flex items-center gap-2 justify-end">
             <div class="text-xl font-bold">${this.gameResult.rightPlayer.score}</div>
-            <div class="h-8 px-3 rounded-lg ${this.gameResult.winner === 'right' ? 'bg-terminal-green bg-opacity-20' : 'bg-terminal-red bg-opacity-20'} flex items-center justify-center font-bold text-sm">
-              ${this.gameResult.rightPlayer.nickname ? this.gameResult.rightPlayer.nickname : 'R'}
+            <div id="right-player-nickname" class="h-8 px-3 rounded-lg ${this.gameResult.winner === 'right' ? 'bg-terminal-green bg-opacity-20' : 'bg-terminal-red bg-opacity-20'} flex items-center justify-center font-bold text-sm">
             </div>
           </div>
         </div>
@@ -158,6 +156,17 @@ export class GameEndModal {
         ${this.renderActionButtons()}
       </div>
     `;
+
+    // Safely set player nicknames
+    const leftPlayerNicknameEl = this.contentElement.querySelector('#left-player-nickname');
+    if (leftPlayerNicknameEl) {
+      leftPlayerNicknameEl.textContent = this.gameResult.leftPlayer.nickname || 'L';
+    }
+    
+    const rightPlayerNicknameEl = this.contentElement.querySelector('#right-player-nickname');
+    if (rightPlayerNicknameEl) {
+      rightPlayerNicknameEl.textContent = this.gameResult.rightPlayer.nickname || 'R';
+    }
 
     this.attachEventListeners();
   }

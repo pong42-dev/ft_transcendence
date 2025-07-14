@@ -2,7 +2,7 @@
 
 import { GameStateDto } from '../types/game-websocket.js';
 import { PlayerResponseDto } from '../types/types.js';
-import i18next from 'i18next';
+import i18next from '../services/i18n.js';
 
 /**
  * Game Renderer Module (WebSocket 기반, GameConfig 완전 제거)

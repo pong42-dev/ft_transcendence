@@ -2,44 +2,6 @@
  * UI 관련 유틸리티 함수들
  */
 export class UIUtils {
-  /**
-   * 플레이어 이름을 UI 표시용으로 안전하게 새니타이즈
-   */
-  static sanitizePlayerName(name: string): string {
-    if (typeof name !== 'string') return 'Unknown Player';
-    
-    // Remove potentially dangerous characters and limit length
-    return name
-      .replace(/[<>&"']/g, '') // Remove HTML special characters
-      .trim()
-      .substring(0, 50) || 'Unknown Player';
-  }
-
-  /**
-   * 오류 메시지를 UI 표시용으로 안전하게 새니타이즈
-   */
-  static sanitizeErrorMessage(message: string): string {
-    if (typeof message !== 'string') return 'Unknown Error';
-    
-    // Remove potentially dangerous characters and limit length for error messages
-    return message
-      .replace(/[<>&"']/g, '') // Remove HTML special characters
-      .trim()
-      .substring(0, 200) || 'Unknown Error';
-  }
-
-  /**
-   * 일반 텍스트를 UI 표시용으로 안전하게 새니타이즈
-   */
-  static sanitizeText(text: string, maxLength: number = 100): string {
-    if (typeof text !== 'string') return '';
-    
-    return text
-      .replace(/[<>&"']/g, '') // Remove HTML special characters
-      .trim()
-      .substring(0, maxLength);
-  }
-
   // ========================================
   // Validation Methods
   // ========================================
@@ -170,5 +132,22 @@ export class UIUtils {
    */
   static validateWebSocketMessage(message: any): boolean {
     return message && typeof message === 'object' && typeof message.type === 'string';
+  }
+
+  /**
+   * HTML 특수 문자를 이스케이프하여 XSS를 방지합니다.
+   * @param str 이스케이프할 문자열. 문자열이 아닌 타입이 들어오면 안전하게 빈 문자열을 반환합니다.
+   * @returns 이스케이프 처리된 안전한 HTML 문자열
+   */
+  static escapeHTML(str: any): string {
+    if (typeof str !== 'string') {
+      return '';
+    }
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
   }
 }

@@ -201,11 +201,16 @@ export class TournamentErrorHandler {
         const el = document.createElement('div');
         el.className = 'text-center p-4';
         el.innerHTML = `
-          <div class="text-terminal-red mb-4">${UIUtils.sanitizeErrorMessage(message)}</div>
+          <div class="text-terminal-red mb-4" id="error-message-content"></div>
           <button class="px-4 py-2 bg-terminal-green text-terminal-black rounded hover:bg-terminal-yellow transition-colors">
             ${i18next.t('tournament.client.errorHandler.confirm')}
           </button>
         `;
+
+        const errorMessageEl = el.querySelector('#error-message-content');
+        if (errorMessageEl) {
+          errorMessageEl.textContent = message;
+        }
         
         el.querySelector('button')?.addEventListener('click', () => {
           this.modalManager.hide();

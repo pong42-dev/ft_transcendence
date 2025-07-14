@@ -44,9 +44,11 @@ export class TournamentRenderer {
     const isLoser = (matchStatus === 'completed' || matchStatus === 'finished') && !isWinner;
     const isPlaying = matchStatus === 'playing' || matchStatus === 'in_progress' || matchStatus === 'active';
     const isEmpty = !participant;
+    const playerName = isEmpty ? emptyText : (participant.display_name || participant.name || 'Unknown');
+    const safePlayerName = UIUtils.escapeHTML(playerName);
 
     return `
-      <div class="p-4 rounded-lg border h-24 ${
+      <div class="p-4 rounded-lg border h-24 player-card ${
         isEmpty
           ? 'border-terminal-gray bg-terminal-gray bg-opacity-10'
           : isPlaying
@@ -56,12 +58,10 @@ export class TournamentRenderer {
           : isLoser
           ? 'border-gray-500 bg-gray-600 bg-opacity-10 opacity-60' // 패배자
           : 'border-terminal-gray bg-terminal-gray bg-opacity-10' // 기본
-      }" style="width: 160px;">
+      }" style="width: 160px;" data-player-name="${safePlayerName}">
         <div class="flex items-start justify-between h-full">
           <div class="flex flex-col flex-grow min-w-0">
-            <span class="font-bold truncate text-lg ${isEmpty || isLoser ? 'text-gray-500' : ''}">${
-              isEmpty ? emptyText : UIUtils.sanitizePlayerName(participant.display_name || participant.name || 'Unknown')
-            }</span>
+            <span class="font-bold truncate text-lg player-name ${isEmpty || isLoser ? 'text-gray-500' : ''}"></span>
             <div class="h-6 mt-2 flex items-center gap-2">
               ${!isEmpty && isCurrentUser ? `<span class="inline-block px-2 py-1 text-xs font-bold text-terminal-black bg-terminal-green opacity-65 rounded-full">${i18next.t('tournament.client.renderer.you')}</span>` : ''}
               ${!isEmpty && isWinner && (matchStatus === 'completed' || matchStatus === 'finished') ? '<span class="text-lg">🏆</span>' : ''}
@@ -90,7 +90,7 @@ export class TournamentRenderer {
     const player1Score = matchResult?.scores.find(s => s.playerId === player1?.id)?.score.toString() || '-';
     const player2Score = matchResult?.scores.find(s => s.playerId === player2?.id)?.score.toString() || '-';
 
-    return `
+    const semifinalHTML = `
       <div class="h-full flex flex-col">
         <div class="text-center text-sm font-bold mb-2 ${isPlaying ? 'text-blue-400' : hasValidMatch ? 'text-terminal-green' : 'text-terminal-gray'}">
           ${i18next.t('tournament.client.renderer.semifinal', { number: matchNumber })}
@@ -109,6 +109,7 @@ export class TournamentRenderer {
         ${hasValidMatch ? `<div class="text-center text-xs text-terminal-gray mt-2">${i18next.t('tournament.client.renderer.match_number', { matchId: match.id })}</div>` : ''}
       </div>
     `;
+    return semifinalHTML;
   }
 
   /**
@@ -127,7 +128,7 @@ export class TournamentRenderer {
     const player1Score = matchResult?.scores.find(s => s.playerId === player1?.id)?.score.toString() || '-';
     const player2Score = matchResult?.scores.find(s => s.playerId === player2?.id)?.score.toString() || '-';
 
-    return `
+    const finalHTML = `
       <div class="h-full flex flex-col justify-center">
         <div class="flex items-center gap-2 justify-center">
           ${hasValidMatch 
@@ -143,6 +144,7 @@ export class TournamentRenderer {
         ${hasValidMatch ? `<div class="text-center text-xs text-terminal-gray mt-2">${i18next.t('tournament.client.renderer.match_number', { matchId: match.id })}</div>` : ''}
       </div>
     `;
+    return finalHTML;
   }
 
   /**
@@ -169,7 +171,7 @@ export class TournamentRenderer {
       }
     }
 
-    return `
+    const bracketLayout = `
         <div class="tournament-bracket flex-1            /* 세로로 남는 공간 전부 차지 */
               min-h-0          /* 세로도 꽉 조이기 허용 */
               flex             /* 자식 3개를 가로 flex로 배치 */
@@ -193,6 +195,21 @@ export class TournamentRenderer {
           </div>
         </div>
     `;
+    
+    // Create a temporary div to manipulate the DOM
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = bracketLayout;
+    
+    // Safely set player names using textContent
+    tempDiv.querySelectorAll('.player-card').forEach(card => {
+      const playerNameElement = card.querySelector('.player-name');
+      const playerName = (card as HTMLElement).dataset.playerName;
+      if (playerNameElement && playerName) {
+        playerNameElement.textContent = playerName;
+      }
+    });
+
+    return tempDiv.innerHTML;
   }
 
   /**

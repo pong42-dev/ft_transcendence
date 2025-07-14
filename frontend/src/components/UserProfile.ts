@@ -384,6 +384,7 @@ export class UserProfile {
     content.className = 'flex items-center justify-between';
 
     if (match.type === '1v1') {
+      // 닉네임 부분에 data-* 속성으로 플레이스홀더를 추가합니다.
       content.innerHTML = `
         <div class="flex items-center gap-4">
           <div class="flex flex-col items-center">
@@ -393,7 +394,7 @@ export class UserProfile {
           <div class="text-sm opacity-50">${i18n.t('userProfile.versus')}</div>
           <div class="flex flex-col items-center">
             <div class="text-lg font-bold">${match.opponentScore}</div>
-            <div class="text-xs opacity-70">${match.opponent}</div>
+            <div class="text-xs opacity-70" data-opponent-name></div>
           </div>
         </div>
         <div class="flex items-center gap-2">
@@ -402,18 +403,34 @@ export class UserProfile {
           </div>
         </div>
       `;
+      // querySelector로 플레이스홀더를 찾은 뒤, textContent를 사용해 안전하게 닉네임을 설정합니다.
+      const opponentNameEl = content.querySelector('[data-opponent-name]');
+      if (opponentNameEl) {
+        // 1v1 경기에서는 opponent가 항상 string 타입이어야 합니다.
+        // typeof로 타입을 명확히 하여 타입스크립트 오류를 해결하고, 코드의 논리를 명확하게 합니다.
+        if (typeof match.opponent === 'string') {
+          opponentNameEl.textContent = match.opponent;
+        }
+      }
     } else {
       const opponents = Array.isArray(match.opponent) ? match.opponent : [match.opponent];
       const opponentsList = document.createElement('div');
       opponentsList.className = 'flex flex-col gap-1';
 
+      // innerHTML 대신 DOM 요소를 직접 생성하여 XSS를 방지합니다.
       opponents.forEach((opponent, index) => {
         const opponentItem = document.createElement('div');
         opponentItem.className = 'flex items-center gap-2 text-sm';
-        opponentItem.innerHTML = `
-          <span class="text-xs opacity-70">${i18n.t('userProfile.rank_prefix')}${index + 1}:</span>
-          <span>${opponent}</span>
-        `;
+        
+        const rankSpan = document.createElement('span');
+        rankSpan.className = 'text-xs opacity-70';
+        rankSpan.textContent = `${i18n.t('userProfile.rank_prefix')}${index + 1}:`;
+
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = opponent; // textContent를 사용해 안전하게 닉네임을 설정합니다.
+
+        opponentItem.appendChild(rankSpan);
+        opponentItem.appendChild(nameSpan);
         opponentsList.appendChild(opponentItem);
       });
 

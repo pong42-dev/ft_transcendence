@@ -763,7 +763,11 @@ export class RegisterModal {
     reader.onload = (e) => {
       const preview = document.querySelector('#avatar-preview') as HTMLElement;
       if (preview && e.target?.result) {
-        preview.innerHTML = `<img src="${e.target.result}" class="w-full h-full object-cover rounded-full" />`;
+        preview.innerHTML = ''; // 이전 미리보기(SVG 아이콘)를 지웁니다.
+        const img = document.createElement('img');
+        img.src = e.target.result as string;
+        img.className = 'w-full h-full object-cover rounded-full';
+        preview.appendChild(img);
       }
     };
     reader.readAsDataURL(file);

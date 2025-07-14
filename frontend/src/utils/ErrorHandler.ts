@@ -181,16 +181,29 @@ export class ErrorHandler {
 
     const notification = document.createElement('div');
     notification.className = `game-notification fixed top-4 right-4 ${bgColor} text-white p-3 rounded shadow-lg z-50 max-w-sm`;
-    notification.innerHTML = `
-      <div class="flex items-center gap-2">
-        <span>${icon}</span>
-        <span class="text-sm">${message}</span>
-        <button onclick="this.parentElement.parentElement.remove()" class="ml-2 text-white hover:text-gray-200">×</button>
-      </div>
-    `;
-    
+
+    const container = document.createElement('div');
+    container.className = 'flex items-center gap-2';
+
+    const iconSpan = document.createElement('span');
+    iconSpan.textContent = icon;
+
+    const messageSpan = document.createElement('span');
+    messageSpan.className = 'text-sm';
+    messageSpan.textContent = message; // Use textContent for safety
+
+    const closeButton = document.createElement('button');
+    closeButton.className = 'ml-2 text-white hover:text-gray-200';
+    closeButton.textContent = '×';
+    closeButton.onclick = () => notification.remove();
+
+    container.appendChild(iconSpan);
+    container.appendChild(messageSpan);
+    container.appendChild(closeButton);
+    notification.appendChild(container);
+
     document.body.appendChild(notification);
-    
+
     // Auto-remove after 5 seconds
     setTimeout(() => {
       if (notification.parentNode) {
