@@ -131,7 +131,7 @@ const schema = {
 		RATE_LIMIT_APIKEY_WINDOW: { type: 'string', default: '1 hour' },
 
 		// Client
-		BASE_URL: { type: 'string', default: 'http://localhost:8080' },
+		BASE_URL: { type: 'string' },
 		
 		// Google OAuth
 		GOOGLE_CLIENT_ID: { type: 'string' },
