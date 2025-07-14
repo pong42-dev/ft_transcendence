@@ -4,7 +4,7 @@ import dayjs from 'dayjs';
 
 export default fp(async function cronPlugin(fastify, opts) {
 	// Task scheduled to run every 5 minutes
-	cron.schedule('*/5 * * * *', async () => {
+	cron.schedule('*/1 * * * *', async () => {
 		try {
 			await fastify.tokenManager.cleanExpiredToken();
 			await fastify.twoFAManager.cleanExpired2FA();

@@ -87,7 +87,8 @@ export function createUserTokensRepository(fastify: FastifyInstance) {
 
 		async deleteExpiredTokenForUser(userId: number): Promise<boolean> {
 			try {
-				const now = Date.now();
+				// const now = Date.now();
+				const now = new Date();
 				const result = await knex('user_tokens')
 					.where('user_id', userId)
 					.andWhere('server_expires_at', '<', now)
@@ -107,7 +108,7 @@ export function createUserTokensRepository(fastify: FastifyInstance) {
 
 		async hasValidTokenForUser(userId: number): Promise<number> {
 			try {
-				const now = Date.now();
+				const now = new Date();
 				const result = await knex('user_tokens')
 					.where('user_id', userId)
 					.andWhere('server_expires_at', '>=', now)
@@ -124,14 +125,32 @@ export function createUserTokensRepository(fastify: FastifyInstance) {
 
 		async deleteRowsBeforeExpiry(): Promise<void> {
 			try {
+				const nowResult = await knex.raw("SELECT strftime('%s', 'now') AS now");
+				const nowUnixMillis = Number(nowResult[0].now) * 1000;
+				const nowISO = new Date(nowUnixMillis).toISOString();
+				fastify.log.info(`Current server time: ${nowISO} (${nowUnixMillis} ms)`);
+
+				const expiredRows = await knex('user_tokens')
+					.select('user_id', 'server_expires_at')
+					.where('server_expires_at', '<', nowUnixMillis);
+
+				expiredRows.forEach(row => {
+					const expiresAtISO = new Date(Number(row.server_expires_at)).toISOString();
+					fastify.log.info(
+						`user_id: ${row.user_id}, server_expires_at: ${expiresAtISO} (${row.server_expires_at} ms), now: ${nowISO}`
+					);
+				});
+
 				await knex('user_tokens')
-					.whereRaw("server_expires_at < datetime('now')")
+					.where('server_expires_at', '<', nowUnixMillis)
 					.del();
 			} catch (err: any) {
 				fastify.log.error('Error deleting expired user tokens:', err.message);
 				throw err;
 			}
 		}
+
+		
 	};
 }
 
