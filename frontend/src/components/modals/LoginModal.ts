@@ -296,6 +296,12 @@ export class LoginModal {
    */
   private validateEmail(): boolean {
     const emailInput = document.querySelector('#email-input') as HTMLInputElement;
+    
+    if (!emailInput) {
+      console.warn('[LoginModal] Email input element not found');
+      return false;
+    }
+    
     const email = emailInput.value.trim();
     
     if (!email) {
@@ -319,6 +325,12 @@ export class LoginModal {
    */
   private validatePassword(): boolean {
     const passwordInput = document.querySelector('#password-input') as HTMLInputElement;
+    
+    if (!passwordInput) {
+      console.warn('[LoginModal] Password input element not found');
+      return false;
+    }
+    
     const password = passwordInput.value.trim();
     
     if (!password) {
@@ -354,7 +366,12 @@ export class LoginModal {
     this.clearDebounceTimer('email');
     
     const emailInput = document.querySelector('#email-input') as HTMLInputElement;
-    if (!emailInput?.value.trim()) {
+    if (!emailInput) {
+      console.warn('[LoginModal] Email input element not found in debounced validation');
+      return;
+    }
+    
+    if (!emailInput.value.trim()) {
       this.clearValidationState('email-input');
       return;
     }
@@ -373,7 +390,12 @@ export class LoginModal {
     this.clearDebounceTimer('password');
     
     const passwordInput = document.querySelector('#password-input') as HTMLInputElement;
-    if (!passwordInput?.value.trim()) {
+    if (!passwordInput) {
+      console.warn('[LoginModal] Password input element not found in debounced validation');
+      return;
+    }
+    
+    if (!passwordInput.value.trim()) {
       this.clearValidationState('password-input');
       return;
     }

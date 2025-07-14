@@ -103,7 +103,7 @@
     "disabling_2fa": "비활성화 중...",
     "qr_code_refreshed": "보안을 위해 QR 코드가 새로고침되었습니다",
     "token_already_used_wait": "이 코드는 이미 사용되었습니다. 새로운 코드를 기다려주세요 (30초).",
-    "invalid_token_wait_new": "잘못된 코드입니다. 인증 앱에서 새로운 코드를 기다려주세요."
+    "invalid_token_wait_new": "잘못된 코드입니다. 인증 앱의 현재 코드를 다시 확인해주세요."
   },
   "gameEndModal": {
     "victory": "승리!",
@@ -257,11 +257,6 @@
     "username_already_taken": "사용자 이름이 이미 사용 중입니다.",
     "passwords_do_not_match": "비밀번호가 일치하지 않습니다",
     "invalid_email_format": "유효하지 않은 이메일 형식입니다.",
-    "password_too_short": "비밀번호는 8자 이상이어야 합니다.",
-    "password_no_lowercase": "비밀번호는 하나 이상의 소문자를 포함해야 합니다.",
-    "password_no_uppercase": "비밀번호는 하나 이상의 대문자를 포함해야 합니다.",
-    "password_no_number": "비밀번호는 하나 이상의 숫자를 포함해야 합니다.",
-    "password_no_special_char": "비밀번호는 하나 이상의 특수 문자(!@#$%^&*)를 포함해야 합니다.",
     "password_meets_requirements": "비밀번호가 모든 요구사항을 충족합니다",
     "nickname_too_short": "닉네임은 2자 이상이어야 합니다.",
     "nickname_too_long": "닉네임은 12자 이하여야 합니다.",

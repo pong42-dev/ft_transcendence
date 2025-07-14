@@ -103,7 +103,7 @@
     "disabling_2fa": "無効化中...",
     "qr_code_refreshed": "セキュリティのためQRコードが更新されました",
     "token_already_used_wait": "このコードは既に使用されています。新しいコードをお待ちください（30秒）。",
-    "invalid_token_wait_new": "無効なコードです。認証アプリで新しいコードをお待ちください。"
+    "invalid_token_wait_new": "無効なコードです。認証アプリの現在のコードを確認して再度お試しください。"
   },
   "gameEndModal": {
     "victory": "勝利！",
@@ -258,10 +258,7 @@
     "passwords_do_not_match": "パスワードが一致しません",
     "invalid_email_format": "無効なメールアドレス形式です",
     "password_too_short": "パスワードは8文字以上である必要があります。",
-    "password_no_lowercase": "パスワードには少なくとも1つの小文字を含める必要があります。",
-    "password_no_uppercase": "パスワードには少なくとも1つの大文字を含める必要があります。",
-    "password_no_number": "パスワードには少なくとも1つの数字を含める必要があります。",
-    "password_no_special_char": "パスワードには少なくとも1つの特殊文字（@#%&!$*）を含める必要があります",
+    "password_too_long": "パスワードは15文字以下である必要があります。",
     "password_meets_requirements": "パスワードはすべての要件を満たしています",
     "nickname_too_short": "ニックネームは2文字以上である必要があります。",
     "nickname_too_long": "ニックネームは12文字以下である必要があります。",

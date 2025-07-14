@@ -543,14 +543,30 @@ export class TwoFAModal {
     DOMUpdater.toggleLoading('#verify-btn', true, i18n.t('common.verifying'));
 
     try {
-      this.callbacks.onComplete(code);
-      this.hide();
+      // 로그인 모드에서는 onComplete 콜백에서 백엔드 검증을 수행하고
+      // 성공 시에만 모달을 닫도록 콜백에 위임
+      await this.callbacks.onComplete(code);
+      
+      // 로그인 모드가 아닌 경우에만 자동으로 모달 닫기
+      if (this.currentStep !== 'verify') {
+        this.hide();
+      }
+      // 로그인 모드(verify)에서는 성공 시 AuthManager에서 직접 hide() 호출
     } catch (error) {
       console.error('[TwoFAModal] Failed to verify 2FA code:', error);
       
-      // 에러 메시지 추출 (타입 안전)
-      const errorMessage = error instanceof Error ? error.message : i18n.t('common.error_occurred_try_again');
+      // 에러 메시지 추출 및 특별 처리
+      let errorMessage: string;
+      if (error instanceof Error && error.message.includes('Invalid 2FA token')) {
+        errorMessage = i18n.t('twoFAModal.invalid_token_wait_new');
+      } else {
+        errorMessage = error instanceof Error ? error.message : i18n.t('common.error_occurred_try_again');
+      }
       this.showVerificationError(errorMessage);
+      
+      // 입력 필드 클리어하여 재시도 유도
+      codeInput.value = '';
+      codeInput.focus();
     } finally {
       DOMUpdater.toggleLoading('#verify-btn', false);
     }

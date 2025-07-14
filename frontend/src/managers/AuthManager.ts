@@ -664,6 +664,7 @@ export class AuthManager {
           this.terminal.appendOutput(i18next.t('auth.twoFACancelled'));
           return;
         }
+        // handle2FAVerification에서 에러가 발생하면 throw되어 TwoFAModal에서 catch됨
         await this.handle2FAVerification(tmpToken, code, twoFAModal);
       },
       onCancel: () => {
@@ -705,6 +706,9 @@ export class AuthManager {
             })
           : i18next.t('auth.twoFAFailed');
       this.terminal.appendOutput(message);
+      
+      // 에러를 다시 throw하여 TwoFAModal에서 catch할 수 있도록 함
+      throw error;
     }
   }
 }

@@ -264,7 +264,6 @@ export class RegisterModal {
     // 디바운싱된 비밀번호 검증
     passwordInput?.addEventListener('input', () => {
       this.clearDebounceTimer('password');
-      this.clearValidationState('password-input');
       
       const timer = setTimeout(() => {
         this.validatePassword();
@@ -620,27 +619,12 @@ export class RegisterModal {
    * 비밀번호 검증 UI 업데이트 (코드 분리)
    */
   private updatePasswordValidationUI(result: { isValid: boolean; error?: string }): void {
-    const errorElement = document.querySelector('#password-error') as HTMLElement;
-    const inputElement = document.querySelector('#password-input') as HTMLInputElement;
-    
-    if (!errorElement || !inputElement) return;
-    
     if (!result.isValid && result.error) {
       // 에러 상태
-      errorElement.textContent = result.error;
-      errorElement.classList.remove('hidden', 'text-terminal-green', 'text-terminal-gray');
-      errorElement.classList.add('text-terminal-red');
-      
-      inputElement.classList.remove('border-terminal-gray', 'border-terminal-green');
-      inputElement.classList.add('border-terminal-red');
+      this.showValidationError('password-input', result.error);
     } else if (result.isValid) {
       // 성공 상태
-      errorElement.textContent = i18n.t('validation.password_meets_requirements');
-      errorElement.classList.remove('hidden', 'text-terminal-red', 'text-terminal-gray');
-      errorElement.classList.add('text-terminal-green');
-      
-      inputElement.classList.remove('border-terminal-red', 'border-terminal-gray');
-      inputElement.classList.add('border-terminal-green');
+      this.showValidationSuccess('password-input', i18n.t('validation.password_meets_requirements'));
     }
   }
 

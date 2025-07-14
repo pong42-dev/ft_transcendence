@@ -103,7 +103,7 @@
     "disabling_2fa": "Disabling...",
     "qr_code_refreshed": "QR code refreshed for security",
     "token_already_used_wait": "This code was already used. Please wait for a new code (30 seconds).",
-    "invalid_token_wait_new": "Invalid code. Please wait for a new code from your authenticator app."
+    "invalid_token_wait_new": "Invalid code. Please check the current code in your authenticator app and try again."
   },
   "gameEndModal": {
     "victory": "Victory!",
@@ -258,10 +258,7 @@
     "passwords_do_not_match": "Passwords do not match",
     "invalid_email_format": "Invalid email format",
     "password_too_short": "Password must be at least 8 characters long.",
-    "password_no_lowercase": "Password must contain at least one lowercase letter.",
-    "password_no_uppercase": "Password must contain at least one uppercase letter.",
-    "password_no_number": "Password must contain at least one number.",
-    "password_no_special_char": "Password must contain at least one special character (@#%&!$*)",
+    "password_too_long": "Password must be no more than 15 characters long.",
     "password_meets_requirements": "Password meets all requirements",
     "nickname_too_short": "Nickname must be at least 2 characters long.",
     "nickname_too_long": "Nickname must be at most 12 characters long.",
