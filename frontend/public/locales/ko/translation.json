@@ -482,7 +482,8 @@
         "failedToCreateGameOrTournament": "게임 또는 토너먼트 생성 실패:",
         "guestNicknameRequired": "로컬 모드에는 게스트 닉네임이 필요합니다.",
         "threeGuestNicknamesRequired": "토너먼트 모드에는 세 명의 게스트 닉네임이 필요합니다.",
-        "unsupportedGameMode": "지원되지 않는 게임 모드:"
+        "unsupportedGameMode": "지원되지 않는 게임 모드:",
+        "connectFailed": "게임 서버에 연결하지 못했습니다. 이전 화면으로 돌아갑니다."
       },
       "alert": {
         "loginRequiredForTournament": "토너먼트에 참가하려면 로그인이 필요합니다.",

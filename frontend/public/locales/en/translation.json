@@ -487,7 +487,8 @@
         "failedToCreateGameOrTournament": "Failed to create game or tournament:",
         "guestNicknameRequired": "Guest nickname is required for local mode.",
         "threeGuestNicknamesRequired": "Three guest nicknames are required for tournament mode.",
-        "unsupportedGameMode": "Unsupported game mode from setup modal:"
+        "unsupportedGameMode": "Unsupported game mode from setup modal:",
+        "connectFailed": "Failed to connect to the game server. Returning to the previous screen."
       },
       "alert": {
         "loginRequiredForTournament": "You need to be logged in to participate in a tournament.",

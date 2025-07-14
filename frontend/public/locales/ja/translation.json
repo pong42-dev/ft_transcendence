@@ -487,7 +487,8 @@
         "failedToCreateGameOrTournament": "ゲームまたはトーナメントの作成に失敗しました:",
         "guestNicknameRequired": "ローカルモードにはゲストニックネームが必要です。",
         "threeGuestNicknamesRequired": "トーナメントモードには3人のゲストニックネームが必要です。",
-        "unsupportedGameMode": "サポートされていないゲームモード:"
+        "unsupportedGameMode": "サポートされていないゲームモード:",
+        "connectFailed": "ゲームサーバーへの接続に失敗しました。前の画面に戻ります。"
       },
       "alert": {
         "loginRequiredForTournament": "トーナメントに参加するにはログインが必要です。",

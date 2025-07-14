@@ -4,7 +4,7 @@ import { InputHandler } from '../game/InputHandler.js';
 import { TournamentClient } from '../game/TournamentClient.js';
 import { ApiClient } from '../services/ApiClient.js'; // ApiClient를 직접 import
 import { WebSocketService } from '../services/websocket/WebSocketService.js';
-import { GameMode, GameSetupResult, CreateGameRequestDto, GameResponseDto } from '../types/types.js';
+import { GameMode, GameSetupResult, CreateGameRequestDto, GameResponseDto, GameResult } from '../types/types.js';
 import { Terminal } from '../components/Terminal.js';
 import i18next from 'i18next';
 
@@ -201,7 +201,7 @@ export class GamePage {
             {
                 onPreGameCountdown: (time) => this.updateWaitingScreenCountdown(time),
                 onGameStart: () => this.transitionToGameScreen(),
-                onFinish: () => this.handleGameFinish(),
+                onFinish: (result) => this.handleGameFinish(result),
             },
             this.currentSetupResult?.aiSettings?.difficulty // AI 난이도 전달
         );
@@ -507,8 +507,12 @@ export class GamePage {
     /**
      * [신규] 게임 종료를 처리하고 이벤트 리스너를 정리합니다.
      */
-    private handleGameFinish() {
+    private handleGameFinish(gameResult?: GameResult) {
         this.isGameActive = false;
+        
+        if (!gameResult && !this.isUnexpectedExit) {
+            this.terminal.appendOutput(i18next.t('game.page.error.connectFailed'));
+        }
         
         // 터미널 입력 활성화
         this.terminal.enableInput();

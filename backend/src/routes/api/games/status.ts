@@ -12,7 +12,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 		{
 			schema: {
 				params: Type.Object({
-					gameId: Type.String()
+					gameId: Type.String({ pattern: '^\\d+$' })
 				}),
 				response: {
 					200: GameResponseDtoSchema,
