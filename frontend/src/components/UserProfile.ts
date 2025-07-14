@@ -272,9 +272,6 @@ export class UserProfile {
         matchList.className = 'flex flex-col gap-2';
         
         tournament.rounds.forEach((round: any) => {
-          console.log(`[DEBUG Frontend] Round data:`, JSON.stringify(round, null, 2));
-          console.log(`[DEBUG Frontend] isMyGame value:`, round.isMyGame, typeof round.isMyGame);
-          
           const row = document.createElement('div');
           row.className = 'flex items-center gap-2';
           
@@ -478,20 +475,6 @@ export class UserProfile {
         tournamentHistory: this.user.tournamentHistory
       });
       
-      // 토너먼트 히스토리 상세 로깅
-      if (this.user.tournamentHistory && this.user.tournamentHistory.length > 0) {
-        console.log('Tournament History Details:');
-        this.user.tournamentHistory.forEach((tournament, index) => {
-          console.log(`Tournament ${index}:`, tournament);
-          if (tournament.rounds) {
-            tournament.rounds.forEach((round, roundIndex) => {
-              console.log(`  Round ${roundIndex}:`, round);
-              console.log(`    player1:`, round.player1);
-              console.log(`    player2:`, round.player2);
-            });
-          }
-        });
-      }
     } catch (error) {
       console.warn('Failed to refresh user data, using existing data:', error);
       // Keep using existing user data as fallback
