@@ -137,7 +137,7 @@ export default async function serviceApp (
     console.log('RATE_LIMIT_APIKEY_WINDOW:', fastify.config.RATE_LIMIT_APIKEY_WINDOW);
 
     // Client
-    console.log('CLIENT_ORIGIN:', fastify.config.CLIENT_ORIGIN);
+    console.log('BASE_URL:', fastify.config.BASE_URL);
 
     // Google OAuth
     console.log('GOOGLE_CLIENT_ID:', fastify.config.GOOGLE_CLIENT_ID);

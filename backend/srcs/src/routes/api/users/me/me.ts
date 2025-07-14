@@ -47,8 +47,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				console.log('profileRow.avatar:', profileRow.avatar);
 				const avatarPath = profileRow.avatar ?? `${config.PUBLIC_DIRNAME}/default-avatar.png`;
 				console.log(avatarPath);
-				// const avatarUrl = `http://localhost:3000/api/users/me/avatar/${userId}`;
-				const avatarUrl = `http://localhost:3000/${avatarPath}`;
+				const avatarUrl = `${config.BASE_URL}/${avatarPath}`;
 				const twoFARow = await user2FARepository.getRowByColumnValue('user_id', userId);
 				let is_enabled = false;
 				if (twoFARow && twoFARow.is_enabled) {
