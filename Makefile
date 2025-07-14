@@ -107,7 +107,7 @@ dev-guide:
 	@echo "   make status"
 	@echo ""
 	@echo "2️⃣ 로컬 개발 실행:"
-	@echo "   터미널 1 (백엔드): cd backend/srcs && npm run dev"
+	@echo "   터미널 1 (백엔드): cd backend && npm run dev"
 	@echo "   터미널 2 (프론트엔드): cd frontend && npm run dev"
 	@echo ""
 	@echo "3️⃣ Docker 실행:"
