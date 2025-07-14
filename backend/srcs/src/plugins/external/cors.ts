@@ -8,19 +8,16 @@ export default fp(async (fastify) => {
   fastify.addHook('onRequest', async (request, reply) => {
     const origin = request.headers.origin
     
-    // 허용할 origin 목록
+    // 허용할 origin 목록 (HTTPS만)
     const allowedOrigins = [
-      'http://localhost:5173', // Vite 개발 서버
-      'http://127.0.0.1:5173',
-      'http://localhost:3000',
-      'http://localhost',
-      'http://localhost:80'
+      'https://localhost',
+      'https://localhost:443'
     ]
     
-    // 개발 환경에서는 모든 localhost 허용
+    // 개발 환경에서는 HTTPS localhost만 허용
     const isLocalhost = origin && (
-      origin.startsWith('http://localhost') || 
-      origin.startsWith('http://127.0.0.1')
+      origin.startsWith('https://localhost') || 
+      origin.startsWith('https://127.0.0.1')
     );
     
     // Origin이 허용 목록에 있거나 localhost면 허용

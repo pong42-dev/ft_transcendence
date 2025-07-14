@@ -5,9 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "npm run build && npm run serve",
+    "start": "npm run serve",
     "build": "npm run build:prepare && npm run build:css && npm run build:js && npm run build:copy",
     "build:prepare": "rm -rf dist && mkdir -p dist",
-    "build:css": "tailwindcss -i ./src/style.css -o ./dist/style.css",
+    "build:css": "tailwindcss -i ./src/style.css -o ./dist/style.css --minify",
     "build:js": "tsc",
     "build:copy": "cp -r public/* dist/ && cp index.html dist/",
     "serve": "http-server dist -p 8080 -c-1 --cors -a 0.0.0.0",
