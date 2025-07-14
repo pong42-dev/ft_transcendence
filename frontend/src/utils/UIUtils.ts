@@ -145,7 +145,7 @@ export class UIUtils {
       console.log('Invalid: winner is not left or right');
       return false;
     }
-    
+
     console.log('Game result validation passed');
     return true;
   }
