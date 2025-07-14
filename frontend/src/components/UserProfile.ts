@@ -246,7 +246,7 @@ export class UserProfile {
         top.className = 'flex items-center justify-between mb-2';
         const dateInfo = document.createElement('div');
         dateInfo.className = 'text-xs text-terminal-green font-mono';
-        dateInfo.textContent = tournament.tournament_date ? new Date(tournament.tournament_date).toISOString().split('T')[0] : 'Unknown Date';
+        dateInfo.textContent = tournament.tournament_date ? new Date(tournament.tournament_date).toISOString().split('T')[0] : i18n.t('userProfile.unknown_date');
         
         // 등수 뱃지
         const rankBadgeText = tournament.final_rank === 1
@@ -289,13 +289,13 @@ export class UserProfile {
           } else if (round.round_number === 2) {
             stageTag.textContent = i18n.t('userProfile.tournament_final');
           } else {
-            stageTag.textContent = `Round ${round.round_number}`;
+            stageTag.textContent = i18n.t('userProfile.round', { num: round.round_number });
           }
           row.appendChild(stageTag);
           
           // 플레이어 1 - 안전하게 처리
           const p1 = round.player1 || {};
-          const p1Name = p1.name || 'Unknown Player';
+          const p1Name = p1.name || i18n.t('userProfile.unknown_player');
           const p1Span = document.createElement('span');
           p1Span.textContent = p1Name;
           
@@ -311,19 +311,19 @@ export class UserProfile {
           if (p1.type === 'user') {
             const youBadge = document.createElement('span');
             youBadge.className = 'ml-1 px-1 py-0.5 rounded bg-terminal-blue bg-opacity-20 text-xs text-terminal-blue font-bold';
-            youBadge.textContent = 'YOU';
+            youBadge.textContent = i18n.t('userProfile.you_badge');
             row.appendChild(youBadge);
           }
 
           // vs
           const vs = document.createElement('span');
           vs.className = 'mx-1 text-xs text-terminal-gray opacity-70';
-          vs.textContent = 'vs';
+          vs.textContent = i18n.t('userProfile.versus_short');
           row.appendChild(vs);
 
           // 플레이어 2 - 안전하게 처리
           const p2 = round.player2 || {};
-          const p2Name = p2.name || 'Unknown Player';
+          const p2Name = p2.name || i18n.t('userProfile.unknown_player');
           const p2Span = document.createElement('span');
           p2Span.textContent = p2Name;
           
@@ -339,7 +339,7 @@ export class UserProfile {
           if (p2.type === 'user') {
             const youBadge = document.createElement('span');
             youBadge.className = 'ml-1 px-1 py-0.5 rounded bg-terminal-blue bg-opacity-20 text-xs text-terminal-blue font-bold';
-            youBadge.textContent = 'YOU';
+            youBadge.textContent = i18n.t('userProfile.you_badge');
             row.appendChild(youBadge);
           }
 

@@ -21,7 +21,7 @@
 3. Review the file again to ensure the changes are correct.
 
 ## Reviewing for Hardcoded Text
-When files are given in the prompt, you must review them file by file to find any text strings that are not internationalized. All user-facing text should use `i18next.t('key.name')` instead of being hardcoded. This specifically applies to user-facing text, not internal messages like console logs. Do not make uninstructed changes.
+When files are given in the prompt, you must review them file by file. if all user facing text strings are already internationalized, do nothing. if there are any user-facing text strings that are not internationalized, internationalize them. All user-facing text should use `i18next.t('key.name')` instead of being hardcoded. This specifically applies to user-facing text, not internal messages like console logs. Do not make uninstructed changes.
 
 
 
