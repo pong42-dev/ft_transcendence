@@ -333,7 +333,19 @@ export class AuthApiService extends BaseApiService {
         msg: string;
       }>('/api/users/check-email', { email });
       
-      return !response.success; // success가 false면 중복(이미 존재)
+      
+      // success가 true면 사용 가능
+      if (response.success) {
+        return false;
+      }
+      
+      // success가 false인 경우 메시지를 확인해서 중복인지 형식 오류인지 구분
+      if (response.msg === 'Email already exists.') {
+        return true; // 중복
+      } else {
+        // 형식 오류 등 다른 에러는 예외로 던짐
+        throw new Error(response.msg);
+      }
     } catch (error) {
       this.errorHandler.handleError(
         error as Error,

@@ -10,7 +10,9 @@ export const validateEmail = (email: string): ValidationResult => {
     return { isValid: false, error: i18n.t('validation.email_required') };
   }
   
-  if (email.length < 6 || email.length > 50) {
+  // 백엔드와 동일한 이메일 정규식 사용
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  if (!emailRegex.test(email)) {
     return { isValid: false, error: i18n.t('validation.invalid_email_format') };
   }
   

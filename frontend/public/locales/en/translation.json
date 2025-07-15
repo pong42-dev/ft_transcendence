@@ -276,7 +276,8 @@
     "checking_availability": "Checking availability...",
     "username_available": "Username is available.",
     "email_available": "Email is available.",
-    "unable_to_check_availability": "Unable to check availability. Please try again."
+    "unable_to_check_availability": "Unable to check availability. Please try again.",
+    "Invalid email format.": "Invalid email format."
   },
   "helpCommand": {
     "api_status": "API Status",
@@ -291,7 +292,7 @@
     "unknown_section": "Unknown manual section: {{section}}",
     "controls": {
       "title": "🎮 GAME CONTROLS",
-      "content": "═══════════════════════════════════════════════════════════\n\n🕹️  PLAYER CONTROLS:\n   Player 1: W (up) / S (down)\n   Player 2: ↑ (up) / ↓ (down)\n\n⌨️  GAME SHORTCUTS:\n   ESC       - Pause/Resume game\n   SPACE     - Quick restart (when game ends)\n   TAB       - Show/Hide game stats\n\n💡 TIP: Hold keys for smooth movement, tap for precise control"
+      "content": "═══════════════════════════════════════════════════════════\n\n🕹️  PLAYER CONTROLS:\n   Player 1: W (up) / S (down)\n   Player 2: ↑ (up) / ↓ (down)\n\n⌨️  KOREAN KEYBOARD SUPPORT:\n   ㅈ (W position) / ㄴ (S position) - Player 1 controls\n\n🎯 GAME MODE CONTROLS:\n   • AI Mode: User controls right paddle (↑/↓) only\n   • Local Multiplayer: Both paddles can be controlled\n\n💡 TIP: Hold keys for smooth movement, tap for precise control"
     },
     "rules": {
       "title": "📖 GAME RULES",
@@ -648,6 +649,8 @@
     "welcome_back": "Welcome back, {{username}}!",
     "type_help_command": "Type \"help\" to see available commands.",
     "account_created_success": "Account created successfully for {{username}}!",
+    "account_created_success_with_avatar": "Account created successfully for {{username}}! Avatar uploaded.",
+    "using_default_avatar": "Using default avatar.",
     "avatar_upload_pending": "Profile picture will be uploaded after you log in.",
     "login_to_new_account": "Please use the \"login\" command to sign in to your new account."
   },

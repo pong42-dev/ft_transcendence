@@ -7,6 +7,7 @@ import { TokenManager } from '../services/core/TokenManager.js';
 import { authStore } from '../store/authStore.js';
 import { User } from '../types/types.js';
 import { UserStateCache } from '../services/UserStateCache.js';
+import { RegisterResult } from '../components/modals/RegisterModal.js';
 
 export class AuthManager {
   private apiClient: ApiClient;
@@ -541,12 +542,12 @@ export class AuthManager {
         // Show appropriate modal based on source
         const showModalPromise = sourceModal === 'register' 
           ? modalManager.showRegisterModal({
-              onRegisterSuccess: async (user) => {
+              onRegisterSuccess: async (result: RegisterResult) => {
                 // Handle successful registration
                 const { authStore } = await import('../store/authStore.js');
-                authStore.login(user);
+                authStore.login(result.user);
                 this.terminal.reset();
-                this.terminal.appendOutput(i18next.t('auth.welcomeBack', { username: user.username }));
+                this.terminal.appendOutput(i18next.t('auth.welcomeBack', { username: result.user.username }));
                 this.terminal.appendOutput(i18next.t('auth.typeHelp'));
                 
                 setTimeout(() => {

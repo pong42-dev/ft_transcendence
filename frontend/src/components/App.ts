@@ -15,6 +15,7 @@ import { ModalManager } from '../managers/ModalManager.js';
 import { UserProfileManager } from '../managers/UserProfileManager.js';
 import { GamePage } from '../game/GamePage.js';
 import { default as i18next } from '../services/i18n.js';
+import { RegisterResult } from './modals/RegisterModal.js';
 
 export class App {
   // UI Elements References
@@ -394,14 +395,20 @@ export class App {
         }, 100);
       },
       
-      onRegisterSuccess: (user: Types.User, avatarFile?: File) => {
-        if (avatarFile) {
-          this.userProfileManager.setPendingAvatarFile(avatarFile);
-          this.mainTerminal.appendOutput(i18next.t('app.account_created_success', { username: user.username }));
-          this.mainTerminal.appendOutput(i18next.t('app.avatar_upload_pending'));
+      onRegisterSuccess: (result: RegisterResult) => {
+        if (result.avatarUploaded) {
+          this.mainTerminal.appendOutput(i18next.t('app.account_created_success_with_avatar', { username: result.user.username }));
         } else {
-          this.mainTerminal.appendOutput(i18next.t('app.account_created_success', { username: user.username }));
+          this.mainTerminal.appendOutput(i18next.t('app.account_created_success', { username: result.user.username }));
+          this.mainTerminal.appendOutput(i18next.t('app.using_default_avatar'));
         }
+        
+        // 펜딩 아바타가 있는 경우 처리 (향후 확장성을 위해 유지)
+        if (result.pendingAvatarFile) {
+          this.userProfileManager.setPendingAvatarFile(result.pendingAvatarFile);
+          this.mainTerminal.appendOutput(i18next.t('app.avatar_upload_pending'));
+        }
+        
         this.mainTerminal.appendOutput(i18next.t('app.login_to_new_account'));
       },
       

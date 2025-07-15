@@ -274,7 +274,8 @@
     "checking_availability": "사용 가능 여부 확인 중...",
     "username_available": "사용자 이름은 사용 가능합니다.",
     "email_available": "이메일은 사용 가능합니다.",
-    "unable_to_check_availability": "사용 가능 여부를 확인할 수 없습니다. 다시 시도해주세요."
+    "unable_to_check_availability": "사용 가능 여부를 확인할 수 없습니다. 다시 시도해주세요.",
+    "Invalid email format.": "유효하지 않은 이메일 형식입니다."
   },
   "helpCommand": {
     "api_status": "API 상태",
@@ -289,7 +290,7 @@
     "unknown_section": "알 수 없는 매뉴얼 섹션: {{section}}",
     "controls": {
       "title": "🎮 게임 조작법",
-      "content": "═══════════════════════════════════════════════════════════\n\n🕹️  플레이어 조작:\n   플레이어 1: W (위) / S (아래)\n   플레이어 2: ↑ (위) / ↓ (아래)\n\n⌨️  게임 단축키:\n   ESC       - 게임 일시정지/재개\n   SPACE     - 빠른 재시작 (게임 종료 시)\n   TAB       - 게임 통계 표시/숨기기\n\n💡 팁: 키를 길게 눌러 부드러운 움직임, 짧게 눌러 정확한 조작"
+      "content": "═══════════════════════════════════════════════════════════\n\n🕹️  플레이어 조작:\n   플레이어 1: W (위) / S (아래)\n   플레이어 2: ↑ (위) / ↓ (아래)\n\n⌨️  한글 키보드 지원:\n   ㅈ (W키 위치) / ㄴ (S키 위치) - 플레이어 1 조작\n\n🎯 게임 모드별 조작:\n   • AI 모드: 사용자가 오른쪽 패들(↑/↓)만 조작\n   • 로컬 멀티플레이어: 양쪽 패들 모두 조작 가능\n\n💡 팁: 키를 길게 눌러 부드러운 움직임, 짧게 눌러 정확한 조작"
     },
     "rules": {
       "title": "📖 게임 규칙",
@@ -641,6 +642,8 @@
     "welcome_back": "다시 오신 것을 환영합니다, {{username}}님!",
     "type_help_command": "사용 가능한 명령을 보려면 \"help\"를 입력하세요.",
     "account_created_success": "{{username}} 계정이 성공적으로 생성되었습니다!",
+    "account_created_success_with_avatar": "{{username}} 계정이 성공적으로 생성되었습니다! 아바타가 업로드되었습니다.",
+    "using_default_avatar": "기본 아바타를 사용합니다.",
     "avatar_upload_pending": "로그인 후 프로필 사진이 업로드됩니다.",
     "login_to_new_account": "새 계정으로 로그인하려면 \"login\" 명령을 사용하십시오."
   },

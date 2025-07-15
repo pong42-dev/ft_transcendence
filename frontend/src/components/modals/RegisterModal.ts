@@ -9,8 +9,14 @@ import { ModalManager, ModalContent } from '../../managers/ModalManager.js';
 import { DOMUpdater } from '../../utils/DOMUpdater.js';
 import i18n from '../../services/i18n.js';
 
+export interface RegisterResult {
+  user: User;
+  avatarUploaded: boolean;
+  pendingAvatarFile?: File;
+}
+
 export interface RegisterModalCallbacks {
-  onRegisterSuccess: (user: User, avatarFile?: File) => void;
+  onRegisterSuccess: (result: RegisterResult) => void;
   onSwitchToLogin: () => void;
   on2FARequired?: (tmpToken: string) => void;
 }
@@ -335,11 +341,18 @@ export class RegisterModal {
       const response = await this.apiClient.auth.register(
         emailInput.value.trim(),
         passwordInput.value,
-        nameInput.value.trim()
+        nameInput.value.trim(),
+        this.selectedAvatarFile || undefined
       );
 
-      // 회원가입 성공 - 아바타 파일과 함께 콜백 호출
-      this.callbacks.onRegisterSuccess(response, this.selectedAvatarFile || undefined);
+      // 회원가입 성공 - 아바타 업로드 여부에 따라 결과 전달
+      const result: RegisterResult = {
+        user: response,
+        avatarUploaded: this.selectedAvatarFile !== null,
+        pendingAvatarFile: undefined // 서버로 직접 업로드했으므로 펜딩 없음
+      };
+      
+      this.callbacks.onRegisterSuccess(result);
       
       this.hide();
     } catch (error: any) {
@@ -441,6 +454,8 @@ export class RegisterModal {
     const emailInput = document.querySelector('#email-input') as HTMLInputElement;
     const email = emailInput.value.trim();
     
+    console.log('[validateEmailWithDuplicateCheck] Email:', email);
+    
     if (!email) {
       this.showValidationError('email-input', i18n.t('validation.email_required'));
       return false;
@@ -448,12 +463,14 @@ export class RegisterModal {
     
     // 1. 형식 검증
     const formatResult = validateEmail(email);
+    console.log('[validateEmailWithDuplicateCheck] Format result:', formatResult);
+    
     if (!formatResult.isValid) {
       this.showValidationError('email-input', i18n.t(formatResult.error || 'validation.unknown_error_format'));
       return false;
     }
     
-    // 2. 중복 체크
+    // 2. 중복 체크 (형식이 올바른 경우에만)
     this.showValidationLoading('email-input', i18n.t('validation.checking_availability'));
     
     try {
@@ -468,7 +485,9 @@ export class RegisterModal {
       }
     } catch (error) {
       console.error('Email duplicate check error:', error);
-      this.showValidationError('email-input', i18n.t('validation.unable_to_check_availability'));
+      // 서버에서 반환된 에러 메시지 사용 (이메일 형식 오류 등)
+      const errorMessage = (error as Error).message || i18n.t('validation.unable_to_check_availability');
+      this.showValidationError('email-input', errorMessage);
       return false;
     }
   }

@@ -6,6 +6,7 @@ import { TwoFAModal } from '../components/modals/TwoFAModal.js';
 import { FileModal } from '../components/modals/FileModal.js';
 import { DOMUpdater } from '../utils/DOMUpdater.js';
 import i18n from '../services/i18n.js';
+import { RegisterResult } from '../components/modals/RegisterModal.js';
 
 /**
  * ModalManager - 모달의 중앙 집중식 관리
@@ -16,7 +17,7 @@ import i18n from '../services/i18n.js';
 
 export interface ModalCallbacks {
   onLoginSuccess?: (user: User) => Promise<void>;
-  onRegisterSuccess?: (user: User, avatarFile?: File) => void;
+  onRegisterSuccess?: (result: RegisterResult) => void;
   onSwitchToRegister?: () => void;
   onSwitchToLogin?: () => void;
   on2FARequired?: (tmpToken: string) => void;
@@ -385,7 +386,7 @@ export class ModalManager {
     const { RegisterModal } = await import('../components/modals/RegisterModal.js');
     
     const registerModal = new RegisterModal(this.apiClient, {
-      onRegisterSuccess: callbacks?.onRegisterSuccess || (() => {}),
+      onRegisterSuccess: callbacks?.onRegisterSuccess || ((_result: RegisterResult) => {}),
       onSwitchToLogin: callbacks?.onSwitchToLogin || (() => {}),
       on2FARequired: callbacks?.on2FARequired || ((_tmpToken: string) => {})
     });
