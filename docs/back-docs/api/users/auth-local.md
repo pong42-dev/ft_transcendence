@@ -135,7 +135,7 @@ Authenticates a user using local credentials. If 2FA is enabled, returns a tempo
 
 * Checks for existence of user and provider type
 * Verifies password match
-* Invokes `require2FA()` to determine if 2FA is needed
+* Invokes `generateTmpTokenFor2FA()` to determine if 2FA is needed
 * Calls `loginManager.login()` if no 2FA required
 
 ---

@@ -10,7 +10,7 @@ declare module 'fastify' {
 }
 
 export function createTmpTokenRepository(fastify: FastifyInstance) {
-	const knex: Knex = fastify.knex;
+	const { log, knex } = fastify;
 	const allowedColumns = ['token', 'user_id', 'type', 'created_at', 'expires_at'];
 
 	return {
@@ -24,7 +24,7 @@ export function createTmpTokenRepository(fastify: FastifyInstance) {
 						expires_at
 					});
 			} catch (err: any) {
-				fastify.log.error('Error inserting tmp token:', err.message);
+				log.error('Error inserting tmp token:', err.message);
 				throw err;
 			}
 		},
@@ -54,7 +54,7 @@ export function createTmpTokenRepository(fastify: FastifyInstance) {
 					.where(column, value)
 					.update({ [updateColumn]: updateValue });
 			} catch (err: any) {
-				fastify.log.error('Error updating tmp token:', err.message);
+				log.error('Error updating tmp token:', err.message);
 				throw err;
 			}
 		},
@@ -68,48 +68,35 @@ export function createTmpTokenRepository(fastify: FastifyInstance) {
 					.where(column, value)
 					.del();
 				if (result > 0) {
-					fastify.log.info('Row deletion succeeded:', result);
+					log.info('Row deletion succeeded:', result);
 				}
 			} catch (err: any) {
-				fastify.log.error('Error deleting row:', err.message);
+				log.error('Error deleting row:', err.message);
 				throw err;
 			}
 		},
 
-		// async deleteRowsBeforeExpiry(): Promise<void> {
-		// 	try {
-		// 		await knex('tmp_tokens')
-		// 			.whereRaw("expires_at < datetime('now')")
-		// 			.del();
-		// 	} catch (err: any) {
-		// 		fastify.log.error('Error deleting expired tmp tokens:', err.message);
-		// 		throw err;
-		// 	}
-		// }
-
 		async deleteRowsBeforeExpiry(): Promise<void> {
-			try {
-				const nowResult = await knex.raw("SELECT strftime('%s', 'now') AS now");
-				const nowUnixMillis = Number(nowResult[0].now) * 1000;
-				const nowISO = new Date(nowUnixMillis).toISOString();
-				fastify.log.info(`Current server time: ${nowISO} (${nowUnixMillis} ms)`);
-
-				const expiredRows = await knex('tmp_tokens')
+			try {				
+				const now = new Date();
+				const row = await knex('tmp_tokens')
 					.select('user_id', 'expires_at')
-					.where('expires_at', '<', nowUnixMillis);
-
-				expiredRows.forEach(row => {
-					const expiresAtISO = new Date(Number(row.server_expires_at)).toISOString();
-					fastify.log.info(
-						`user_id: ${row.user_id}, expires_at: ${expiresAtISO} (${row.expires_at} ms), now: ${nowISO}`
-					);
-				});
-
+					.where('expires_at', '<', now)
+					.first();
 				await knex('tmp_tokens')
-					.where('expires_at', '<', nowUnixMillis)
+					.where('expires_at', '<', now)
 					.del();
+				if (row) {
+					const expiresAtISO = new Date(row.expires_at).toISOString();
+					log.info('Expired tmp tokens cleaned up.');
+					log.info(
+						`user_id: ${row.user_id}, expires_at: ${expiresAtISO} (${row.expires_at}), now: ${now.toISOString()}`
+					);
+				} else {
+					log.info('No expired tmp tokens found.');
+				}
 			} catch (err: any) {
-				fastify.log.error('Error deleting expired tmp tokens:', err.message);
+				log.error('Error deleting expired tmp tokens:', err.message);
 				throw err;
 			}
 		}

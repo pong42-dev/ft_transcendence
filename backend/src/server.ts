@@ -12,7 +12,7 @@ import serviceApp from './app.js'
 function getLoggerOptions () {
   if (process.stdout.isTTY) {
     return {
-      level: 'info',
+      level: process.env.LOG_LEVEL ?? 'info',
       transport: {
         target: 'pino-pretty',
         options: {

@@ -10,8 +10,8 @@ declare module 'fastify' {
 			verify2FAToken: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
 			verify2FAToken2: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
 			verify2FATokenWithoutTmpToken: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
-			require2FA: (request: FastifyRequest, reply: FastifyReply, userId: number, forSetup?: boolean) => Promise<string>;
-			require2FA2: (request: FastifyRequest, reply: FastifyReply, userId: number, forSetup?: boolean) => Promise<string>;
+			generateTmpTokenFor2FA: (request: FastifyRequest, reply: FastifyReply, userId: number, forSetup?: boolean) => Promise<string>;
+			generateHashedTmpTokenFor2FA: (request: FastifyRequest, reply: FastifyReply, userId: number, forSetup?: boolean) => Promise<string>;
 			cleanExpired2FA(): Promise<void>;
 		}
 	}
@@ -46,7 +46,7 @@ export function manageTwoFA(fastify: FastifyInstance) {
 			console.log(userId);
 			console.log(secret.base32);
 			await user2FARepository.insertRow(userId, secret.base32);
-			const tmpToken = await twoFAManager.require2FA2(request, reply, userId, true);
+			const tmpToken = await twoFAManager.generateHashedTmpTokenFor2FA(request, reply, userId, true);
 			console.log(tmpToken);
 			return {
 				qrCodeUrl,
@@ -60,13 +60,13 @@ export function manageTwoFA(fastify: FastifyInstance) {
 			try {
 				const { token, tmpToken } = request.body as { token:string, tmpToken: string };
 				const tokenRow = await tmpTokenRepository.getRowByColumnValue("token", tmpToken);
-				console.log('token:', token);
-				console.log('tmpToken:', tmpToken);
-				console.log('hashed tmpToken:', tokenRow?.token);
+				const userId = tokenRow?.user_id;
+				fastify.log.info(`Verifying 2FA token for user ${userId}`);
+				fastify.log.debug(`Token: ${token}`);
+				fastify.log.debug(`tmpToken: ${tmpToken}`);
 				if (!tokenRow || (tokenRow && tmpToken !== tokenRow.token)){
 					return reply.status(401).send({ msg: 'Invalid tmp token.' });
 				}
-				const userId = tokenRow.user_id;
 				request.user = { user_id: userId as number, name: ''};
 				const row = await user2FARepository.getRowByColumnValue('user_id', userId);
 				if (!row || !row.two_fa_secret) {
@@ -96,9 +96,10 @@ export function manageTwoFA(fastify: FastifyInstance) {
 				const { token, tmpToken } = request.body as { token:string, tmpToken: string };
 				const userId = request.user.user_id;
 				const tokenRow = await tmpTokenRepository.getRowByColumnValue("user_id", userId);
-				console.log('token:', token);
-				console.log('tmpToken:', tmpToken);
-				console.log('hashed tmpToken:', tokenRow?.token);
+				fastify.log.info(`Verifying 2FA token for user ${userId}`);
+				fastify.log.debug(`Token: ${token}`);
+				fastify.log.debug(`tmpToken: ${tmpToken}`);
+				fastify.log.debug(`hashed tmpToken: ${tokenRow?.token}`);
 				if (!tokenRow || !passwordManager.comparePassword(tmpToken, tokenRow.token)) {
 					return reply.status(401).send({ msg: 'Invalid tmp token.' });
 				}
@@ -148,33 +149,37 @@ export function manageTwoFA(fastify: FastifyInstance) {
 			}
 		},
 
-		async require2FA(request: FastifyRequest, reply: FastifyReply, userId: number, forSetup?: boolean): Promise<string> {
-			const { user2FARepository, tmpTokenRepository, generateUUID } = request.server;
+		async generateTmpTokenFor2FA(request: FastifyRequest, reply: FastifyReply, userId: number, forSetup?: boolean): Promise<string> {
+			const { config, user2FARepository, tmpTokenRepository, generateUUID } = request.server;
 			const user2FA = await user2FARepository.getRowByColumnValue('user_id', userId);
-			console.log('user2FA: ', user2FA);
+			fastify.log.debug(`User 2FA status for user ${userId}:`, user2FA);
 			if (user2FA && (forSetup || user2FA.is_enabled)) {
 				const token = generateUUID();
 				const createdAt = new Date();
-				const expiresAt = new Date(createdAt.getTime() + 5 * 60 * 1000); // 5m
+				const expiresAt = new Date(createdAt.getTime() + config.TMP_TOKEN_EXPIRES_IN_S * 1000);
 				await tmpTokenRepository.insertRow(token, userId, '2fa', expiresAt);
-				console.log("tmpTokn:", token );
+				fastify.log.info(`Generated tmp token for user ${userId}`);
+				fastify.log.debug(`Token: ${token}`);
+				fastify.log.debug(`Created At: ${createdAt}, Expires At: ${expiresAt}`);
 				return token;
 			}
 			return '';
 		},
 
-		async require2FA2(request: FastifyRequest, reply: FastifyReply, userId: number, forSetup?: boolean): Promise<string> {
+		async generateHashedTmpTokenFor2FA(request: FastifyRequest, reply: FastifyReply, userId: number, forSetup?: boolean): Promise<string> {
 			const { user2FARepository, tmpTokenRepository, generateUUID, passwordManager } = request.server;
 			const user2FA = await user2FARepository.getRowByColumnValue('user_id', userId);
-			console.log('user2FA: ', user2FA);
+
 			if (user2FA && (forSetup || user2FA.is_enabled)) {
 				const token = generateUUID();
-				console.log("tmpToken:", token);
 				const hashedToken = await passwordManager.hashPassword(token);
-				console.log("hashed tmpToken:", hashedToken);
 				const createdAt = new Date();
 				const expiresAt = new Date(createdAt.getTime() + 5 * 60 * 1000); // 5m
 				await tmpTokenRepository.insertRow(hashedToken, userId, '2fa', expiresAt);
+				fastify.log.info(`Generated tmp token for user ${userId}`);
+				fastify.log.debug(`Token: ${token}`);
+				fastify.log.debug(`Hashed token: ${hashedToken}`);
+				fastify.log.debug(`Created At: ${createdAt}, Expires At: ${expiresAt}`);
 				return token;
 			}
 			return '';
@@ -182,12 +187,7 @@ export function manageTwoFA(fastify: FastifyInstance) {
 
 		async cleanExpired2FA(): Promise<void> {
 			const { tmpTokenRepository } = fastify;
-			try {
-				await tmpTokenRepository.deleteRowsBeforeExpiry();
-				console.log('Expired tmp tokens cleaned up.');
-			} catch (err) {
-				console.error('Failed to clean expired tmp tokens:', err);
-			}
+			await tmpTokenRepository.deleteRowsBeforeExpiry();
 		}
 	}
 }

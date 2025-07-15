@@ -44,9 +44,9 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				if (!profileRow) {
 					return reply.status(404).send({ msg: 'User not found.' });
 				}
-				console.log('profileRow.avatar:', profileRow.avatar);
+				// fastify.log.debug('profileRow.avatar:', profileRow.avatar);
 				const avatarPath = profileRow.avatar ?? `${config.PUBLIC_DIRNAME}/default-avatar.png`;
-				console.log(avatarPath);
+				// fastify.log.debug(avatarPath);
 				const avatarUrl = `${config.BASE_URL}/${avatarPath}`;
 				const twoFARow = await user2FARepository.getRowByColumnValue('user_id', userId);
 				let is_enabled = false;
@@ -60,35 +60,34 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 					twoFA: is_enabled,
 					provider: userRow.provider
 				}
-				console.log("userInfo", userInfo);
 				const gameStats = await gameRepository.getUserGameStats(userId);
 				const oneOnOneHistory = await gameRepository.getUser1v1History(userId);
-				console.log("oneOnOneHistory: ", oneOnOneHistory);
 				const tournHistory = await tournamentsRepository.getTournamentHistoryForProfile(userId);
-				console.log("tournHistory: ", tournHistory);
-				
+				fastify.log.info('User Profile retrieved successfully');
+				// fastify.log.debug("userInfo", userInfo);
+				// fastify.log.debug("oneOnOneHistory: ", oneOnOneHistory);
+				// fastify.log.debug("tournHistory: ", tournHistory);
 				// HTTP 응답 직전 tournHistory의 rounds 상세 로깅
-				if (tournHistory && tournHistory.length > 0) {
-					console.log("[HTTP Response] tournHistory rounds details:");
-					tournHistory.forEach((tournament, tIndex) => {
-						console.log(`[HTTP Response] Tournament ${tIndex}:`, {
-							tournament_id: tournament.tournament_id,
-							rounds_count: tournament.rounds ? tournament.rounds.length : 0
-						});
-						if (tournament.rounds) {
-							tournament.rounds.forEach((round, rIndex) => {
-								console.log(`[HTTP Response] Tournament ${tIndex}, Round ${rIndex}:`, {
-									round_number: round.round_number,
-									has_player1: !!round.player1,
-									has_player2: !!round.player2,
-									player1: round.player1,
-									player2: round.player2
-								});
-							});
-						}
-					});
-				}
-
+				// if (tournHistory && tournHistory.length > 0) {
+				// 	fastify.log.debug("[HTTP Response] tournHistory rounds details:");
+				// 	tournHistory.forEach((tournament, tIndex) => {
+				// 		fastify.log.debug(`[HTTP Response] Tournament ${tIndex}:`, {
+				// 			tournament_id: tournament.tournament_id,
+				// 			rounds_count: tournament.rounds ? tournament.rounds.length : 0
+				// 		});
+				// 		if (tournament.rounds) {
+				// 			tournament.rounds.forEach((round, rIndex) => {
+				// 				fastify.log.debug(`[HTTP Response] Tournament ${tIndex}, Round ${rIndex}:`, {
+				// 					round_number: round.round_number,
+				// 					has_player1: !!round.player1,
+				// 					has_player2: !!round.player2,
+				// 					player1: round.player1,
+				// 					player2: round.player2
+				// 				});
+				// 			});
+				// 		}
+				// 	});
+				// }
 				reply.status(200).send({
 					success: true,
 					msg: 'User Profile successfully retrieved.',

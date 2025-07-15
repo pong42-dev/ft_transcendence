@@ -31,8 +31,10 @@ async function login(
 			msg: 'This account is already in use. Please log out and try again.'
 		})
 	} else {
-		const refreshTokenCookie = await this.tokenManager.generateRefreshToken(userData)
-		console.log('refreshTokenCookie:', refreshTokenCookie);
+		const refreshTokenCookie = await this.tokenManager.generateRefreshToken(userData);
+		const expiresAtISO = new Date(refreshTokenCookie.expiresAt).toISOString();
+		this.log.info(`Generated refresh token for user ${user_id}: ${refreshTokenCookie.value}`);
+		this.log.info(`Refresh token expires at: ${expiresAtISO}`);
 		reply.setCookie(
 			refreshTokenCookie.name,
 			refreshTokenCookie.value,
@@ -53,7 +55,7 @@ async function login(
 			return ;
 		}
 		const accessToken = await this.tokenManager.generateAccessToken(userData)
-		console.log("accessToken:", accessToken);
+		this.log.info(`Generated access token for user ${user_id}: ${accessToken}`);
 		reply.send({
 			success: true,
 			msg: 'Successfully logged in.',

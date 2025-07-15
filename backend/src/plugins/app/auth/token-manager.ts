@@ -17,7 +17,7 @@ expiresAt: Date;
 }
 
 export function manageTokens(fastify: FastifyInstance) {
-	const { config } = fastify;
+	const { config, log } = fastify;
 
 	return {
 		async generateToken(
@@ -25,7 +25,7 @@ export function manageTokens(fastify: FastifyInstance) {
 		expiresIn: string,
 		type: 'access' | 'refresh'
 		): Promise<string> {
-			const { jwt, log } = fastify;
+			const { jwt } = fastify;
 			try {
 				const token = jwt.sign(userData, { expiresIn });
 				return token;
@@ -36,31 +36,22 @@ export function manageTokens(fastify: FastifyInstance) {
 		},
 
 		async generateRefreshToken(userData: TokenData): Promise<CookieReturn> {
-			console.log("config.REFRESH_COOKIE_NAME: ", config.REFRESH_COOKIE_NAME);
-			console.log("config.REFRESH_COOKIE_MAX_AGE: ", config.REFRESH_COOKIE_MAX_AGE);
-			console.log("config.REFRESH_TOKEN_EXPIRES_IN: ", config.REFRESH_TOKEN_EXPIRES_IN);
-			console.log("config.COOKIE_SECURED: ", config.COOKIE_SECURED);
-			console.log("config.COOKIE_SECRET: ", config.COOKIE_SECRET);
 			const refreshToken = await this.generateToken(userData, config.REFRESH_TOKEN_EXPIRES_IN, 'refresh');
 			return this.createRefreshTokenCookie(refreshToken);
 		},
 
-		// async generateAccessToken(userData: TokenData): Promise<CookieReturn> {
-		// 	const accessToken = await this.generateToken(userData, ACCESS_TOKEN_EXPIRES_IN, 'access');
-		// 	return this.createAccessTokenCookie(accessToken);
-		// },
-
 		async generateAccessToken(userData: TokenData): Promise<string> {
-			console.log("config.ACCESS_TOKEN_EXPIRES_IN: ", config.ACCESS_TOKEN_EXPIRES_IN);
 			return this.generateToken(userData, config.ACCESS_TOKEN_EXPIRES_IN, 'access');
 		},
 
 		createCookie(name: string, token: string, maxAge: number): CookieReturn {
 			const { config } = fastify;
 			const expiresAt = new Date();
-			console.log("expiresAt: ", expiresAt);
+			log.info(`Creating cookie`);
+			log.debug(`${name} with token: ${token}`);
+			log.debug(`createAt: ${expiresAt.toISOString()}`);
 			expiresAt.setTime(expiresAt.getTime() + maxAge * 1000);
-			console.log("new expiresAt: ", expiresAt);
+			log.debug(`expiresAt: ${expiresAt.toISOString()}`);
 			return {
 				name,
 				value: token,
@@ -83,21 +74,13 @@ export function manageTokens(fastify: FastifyInstance) {
 			);
 		},
 
-		// createAccessTokenCookie(token: string): CookieReturn {
-		// 	return this.createCookie(
-		// 		ACCESS_COOKIE_NAME,
-		// 		token,
-		// 		ACCESS_COOKIE_MAX_AGE
-		// 	);
-		// },
-
 		async verifyRefreshToken(refreshToken: string): Promise<TokenData | null> {
 			const { jwt } = fastify;
 			try {
 				const decoded = await jwt.verify(refreshToken) as TokenData;
 				return decoded;
 			} catch (error) {
-				console.error('JWT verification failed:', error);
+				log.error(`JWT verification failed:`, error);
 				return null;
 			}
 		},
@@ -127,7 +110,6 @@ export function manageTokens(fastify: FastifyInstance) {
 			userId: number
 		): Promise<boolean> {
 			const { userTokensRepository } = fastify;
-			await userTokensRepository.deleteExpiredTokenForUser(userId);
 			const hasToken = await userTokensRepository.hasValidTokenForUser(userId);
 			if (hasToken) {
 				return false;
@@ -137,12 +119,7 @@ export function manageTokens(fastify: FastifyInstance) {
 
 		async cleanExpiredToken(): Promise<void> {
 			const { userTokensRepository } = fastify;
-			try {
-				await userTokensRepository.deleteRowsBeforeExpiry();
-				console.log('Expired user tokens cleaned up.');
-			} catch (err) {
-				console.error('Failed to clean expired user tokens:', err);
-			}
+			await userTokensRepository.deleteRowsBeforeExpiry();
 		}
 	};
 }

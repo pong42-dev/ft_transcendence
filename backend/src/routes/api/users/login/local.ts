@@ -70,7 +70,7 @@ fastify.post(
 		if (!isMatch) {
 		return reply.status(401).send({ msg: 'Email or password is incorrect.' });
 		}
-		const tmpToken = await twoFAManager.require2FA(request, reply, user.id);
+		const tmpToken = await twoFAManager.generateTmpTokenFor2FA(request, reply, user.id);
 		if (tmpToken) {
 		return reply.send({
 			success: true,

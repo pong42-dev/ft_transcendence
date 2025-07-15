@@ -46,6 +46,10 @@ export interface FastifyInstance {
 		REFRESH_TOKEN_EXPIRES_IN: string;
 		REFRESH_COOKIE_NAME: string;
 		REFRESH_COOKIE_MAX_AGE: number;
+		// 2FA
+		TMP_TOKEN_EXPIRES_IN_S: number;
+		// CRON
+		CRON_SCHEDULE: string;
 		};
 	}
 }
@@ -78,7 +82,11 @@ const schema = {
 		'ACCESS_TOKEN_EXPIRES_IN',
 		'REFRESH_TOKEN_EXPIRES_IN',
 		'REFRESH_COOKIE_NAME',
-		'REFRESH_COOKIE_MAX_AGE'
+		'REFRESH_COOKIE_MAX_AGE',
+		// 2FA
+		'TMP_TOKEN_EXPIRES_IN_S',
+		// CRON
+		'CRON_SCHEDULE'
 	],
 	properties: {
     	// Server
@@ -148,6 +156,12 @@ const schema = {
 		REFRESH_TOKEN_EXPIRES_IN: { type: 'string', default: '7d' },
 		REFRESH_COOKIE_NAME: { type: 'string', default: 'refresh_token' },
 		REFRESH_COOKIE_MAX_AGE: { type: 'number', default: 60 * 60 * 24 * 7 },
+
+		// 2FA
+		TMP_TOKEN_EXPIRES_IN_S: { type: 'number', default: 5 * 60 }, // 5 minutes
+
+		// CRON
+		CRON_SCHEDULE: { type: 'string', default: '*/5 * * * * *' }, // Every 5 minutes
 	}
 }
 
