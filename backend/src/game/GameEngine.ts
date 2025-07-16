@@ -81,7 +81,7 @@ export class GameEngine {
 
   private checkPaddleCollision(): void {
     const leftPaddleX = this.config.paddleOffset;
-    const rightPaddleX = this.canvasWidth - this.config.paddleOffset - this.config.paddleWidth;
+    const rightPaddleX = this.canvasWidth - this.config.paddleOffset;
 
     // 왼쪽 패들 충돌 감지
     if (this.ballSpeedX < 0) {
