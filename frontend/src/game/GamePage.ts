@@ -6,6 +6,7 @@ import { ApiClient } from '../services/ApiClient.js'; // ApiClient를 직접 imp
 import { WebSocketService } from '../services/websocket/WebSocketService.js';
 import { GameMode, GameSetupResult, CreateGameRequestDto, GameResponseDto } from '../types/types.js';
 import { Terminal } from '../components/Terminal.js';
+import { ModalManager } from '../managers/ModalManager.js';
 import i18next from 'i18next';
 
 export class GamePage {
@@ -249,6 +250,7 @@ export class GamePage {
     }
 
     public destroy(): void {
+        console.log('=== DESTROY CALLED ===');
         this.isGameActive = false;
         this.isInitializing = false;
         this.isTournamentCreating = false;
@@ -375,11 +377,7 @@ export class GamePage {
         // beforeunload 이벤트: 페이지를 떠나려고 할 때 (새로고침, 창 닫기 등)
         this.beforeUnloadHandler = (_e: BeforeUnloadEvent) => {
             console.log('beforeunload event triggered');
-            if (this.isGameActive && (this.gameClient || this.tournamentClient)) {
-                // 게임이 진행 중이면 경고 메시지 표시
-                // e.preventDefault();
-                
-                // 백그라운드에서 게임 취소 처리
+            if (this.isGameActive && (this.gameClient || this.tournamentClient)) {        
                 this.handleUnexpectedExit();
                 this.safeCallGameEndCallback();
             }
@@ -387,6 +385,9 @@ export class GamePage {
 
         // popstate 이벤트: 브라우저 뒤로가기/앞으로가기 버튼 클릭 시
         this.popStateHandler = (_event: PopStateEvent) => {
+            // 뒤로가기 시 열린 모달이 있으면 닫기
+            this.closeAnyOpenModals();
+            
             if (this.isGameActive && (this.gameClient || this.tournamentClient)) {
                 console.log('Browser back/forward button detected during active game, canceling...');
                 this.handleUnexpectedExit();
@@ -394,27 +395,22 @@ export class GamePage {
             }
         };
 
-        // pagehide 이벤트: 페이지가 숨겨질 때 (뒤로가기, 탭 닫기 등 - beforeunload보다 확실함)
-        this.pageHideHandler = () => {
-            if (this.isGameActive && (this.gameClient || this.tournamentClient)) {
-                console.log('Page hide detected during active game, canceling...');
-                this.handleUnexpectedExit();
-            }
-        };
-
         // visibilitychange 이벤트: 탭이 숨겨지거나 브라우저가 최소화될 때
         this.visibilityChangeHandler = () => {
-            if (document.hidden && this.isGameActive && (this.gameClient || this.tournamentClient)) {
-                console.log('Page became hidden during active game, canceling...');
-                this.handleUnexpectedExit();
-                this.safeCallGameEndCallback();
+            if (document.hidden) {
+                this.closeAnyOpenModals();
+                
+                if (this.isGameActive && (this.gameClient || this.tournamentClient)) {
+                    console.log('Page became hidden during active game, canceling...');
+                    this.handleUnexpectedExit();
+                    this.safeCallGameEndCallback();
+                }
             }
         };
 
         // 이벤트 리스너 등록
         window.addEventListener('beforeunload', this.beforeUnloadHandler);
         window.addEventListener('popstate', this.popStateHandler);
-        window.addEventListener('pagehide', this.pageHideHandler);
         document.addEventListener('visibilitychange', this.visibilityChangeHandler);
     }
 
@@ -673,5 +669,15 @@ export class GamePage {
         }
         
         this.safeCallGameEndCallback();
+    }
+
+    /**
+     * [신규] 열린 모달이 있으면 닫는 메서드
+     */
+    private closeAnyOpenModals(): void {
+        const modalManager = ModalManager.getInstance();
+        if (modalManager.isOpen()) {
+            modalManager.hide();
+        }
     }
 }
