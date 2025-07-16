@@ -1,6 +1,4 @@
 
----
-
 # 🔐 2FA API Summary (Fastify Plugin)
 
 This plugin provides Two-Factor Authentication (2FA) functionality for users, including:
@@ -15,7 +13,7 @@ This plugin provides Two-Factor Authentication (2FA) functionality for users, in
 ## 📌 `POST /2fa/enable/init`
 
 **Description**:
-Initializes 2FA setup by generating a QR code, a secret, and a temporary token for the authenticated user.
+Initializes 2FA setup by generating a QR code, a secret, and a hashed temporary token for the authenticated user.
 
 ### ✅ Request
 
@@ -26,39 +24,48 @@ Initializes 2FA setup by generating a QR code, a secret, and a temporary token f
 
 * **200 OK**
 
-  ```json
-  {
-    "success": true,
-    "msg": "QR code for 2FA setup has been generated.",
-    "data": {
-      "qrCodeUrl": "data:image/png;base64,...",
-      "secret": "xxxxxxxxxxxxxxxx",
-      "token": "temp-token"
-    }
+```json
+{
+  "success": true,
+  "msg": "QR code for 2FA setup has been generated.",
+  "data": {
+    "qrCodeUrl": "data:image/png;base64,...",
+    "secret": "xxxxxxxxxxxxxxxx",
+    "token": "temp-token"
   }
-  ```
+}
+```
+
 * **401 Unauthorized**
 
-  ```json
-  { "msg": "Unauthorized" }
-  ```
+```json
+{ "msg": "Unauthorized" }
+```
+
 * **404 Not Found**
 
-  ```json
-  { "msg": "User not found." }
-  ```
+```json
+{ "msg": "User not found." }
+```
+
+* **409 Conflict**
+
+```json
+{ "msg": "This account already has 2FA enabled. Please disable it before setting up again." }
+```
+
 * **500 Internal Server Error**
 
-  ```json
-  { "msg": "An internal server error occurred during 2FA setup." }
-  ```
+```json
+{ "msg": "An internal server error occurred during 2FA setup." }
+```
 
 ---
 
 ## 📌 `POST /2fa/enable`
 
 **Description**:
-Validates the OTP code and enables 2FA for the authenticated user.
+Validates the OTP code and hashed temporary token, and enables 2FA for the authenticated user.
 
 ### ✅ Request
 
@@ -76,44 +83,43 @@ Validates the OTP code and enables 2FA for the authenticated user.
 
 * **200 OK**
 
-  ```json
-  {
-    "success": true,
-    "msg": "2FA has been enabled successfully."
-  }
-  ```
+```json
+{
+  "success": true,
+  "msg": "2FA has been enabled successfully."
+}
+```
+
 * **401 Unauthorized**
 
-  ```json
-  { "msg": "Unauthorized" }
-  ```
+```json
+{ "msg": "Unauthorized" }
+```
+
 * **404 Not Found**
 
-  ```json
-  { "msg": "User not found." }
-  ```
+```json
+{ "msg": "User not found." }
+```
+
 * **409 Conflict**
 
-  ```json
-  { "msg": "This account already has 2FA enabled. Please disable it before setting up again." }
-  ```
+```json
+{ "msg": "This account already has 2FA enabled. Please disable it before setting up again." }
+```
+
 * **500 Internal Server Error**
 
-  ```json
-  { "msg": "An internal server error occurred during 2FA setup." }
-  ```
-
-### 🧩 Notes
-
-* Uses `verify2FAToken` pre-handler to validate both the OTP and the temporary token.
-* Updates the database to set `is_enabled = true`.
+```json
+{ "msg": "An internal server error occurred during 2FA setup." }
+```
 
 ---
 
 ## 📌 `POST /2fa`
 
 **Description**:
-Verifies the OTP and temporary token during login and issues an access token.
+Verifies the OTP and hashed temporary token during login and issues an access token.
 
 ### ✅ Request
 
@@ -128,47 +134,46 @@ Verifies the OTP and temporary token during login and issues an access token.
 
 * **200 OK**
 
-  ```json
-  {
-    "success": true,
-    "msg": "Successfully logged in.",
-    "data": {
-      "token": "<access-token>"
-    }
+```json
+{
+  "success": true,
+  "msg": "Successfully logged in.",
+  "data": {
+    "token": "<access-token>"
   }
-  ```
+}
+```
+
 * **401 Unauthorized**
 
-  ```json
-  { "msg": "Unauthorized" }
-  ```
+```json
+{ "msg": "Unauthorized" }
+```
+
 * **404 Not Found**
 
-  ```json
-  { "msg": "User not found." }
-  ```
+```json
+{ "msg": "User not found." }
+```
+
 * **409 Conflict**
 
-  ```json
-  { "msg": "2FA not enabled." }
-  ```
+```json
+{ "msg": "2FA not enabled." }
+```
+
 * **500 Internal Server Error**
 
-  ```json
-  { "msg": "An internal server error occurred." }
-  ```
-
-### 🧩 Notes
-
-* Uses `verify2FAToken` pre-handler.
-* Issues new JWT access token using `loginManager.login()`.
+```json
+{ "msg": "An internal server error occurred." }
+```
 
 ---
 
 ## 📌 `POST /2fa/disable`
 
 **Description**:
-Disables 2FA for the authenticated user using a real-time OTP (no temporary token allowed).
+Disables 2FA for the authenticated user using a real-time OTP (no temporary token used).
 
 ### ✅ Request
 
@@ -185,50 +190,50 @@ Disables 2FA for the authenticated user using a real-time OTP (no temporary toke
 
 * **200 OK**
 
-  ```json
-  {
-    "success": true,
-    "msg": "2FA has been disabled successfully."
-  }
-  ```
+```json
+{
+  "success": true,
+  "msg": "2FA has been disabled successfully."
+}
+```
+
 * **401 Unauthorized**
 
-  ```json
-  { "msg": "Unauthorized" }
-  ```
+```json
+{ "msg": "Unauthorized" }
+```
+
 * **404 Not Found**
 
-  ```json
-  { "msg": "User not found." }
-  ```
+```json
+{ "msg": "User not found." }
+```
+
 * **409 Conflict**
 
-  ```json
-  { "msg": "This account already has 2FA disabled. Please enable it before setting up again." }
-  ```
+```json
+{ "msg": "This account already has 2FA disabled. Please enable it before setting up again." }
+```
+
 * **500 Internal Server Error**
 
-  ```json
-  { "msg": "An internal server error occurred during 2FA setup." }
-  ```
-
-### 🧩 Notes
-
-* Uses `verify2FATokenWithoutTmpToken` pre-handler.
-* Deletes user’s 2FA data from DB (disabling 2FA).
+```json
+{ "msg": "An internal server error occurred during 2FA setup." }
+```
 
 ---
 
 ## 🔧 Internal Components Summary
 
-| Component                       | Purpose                                        |
-| ------------------------------- | ---------------------------------------------- |
-| `authenticate`                  | Validates that the user is logged in           |
-| `verify2FAToken`                | Validates OTP + temporary token                |
-| `verify2FATokenWithoutTmpToken` | Validates OTP only (no temporary token)        |
-| `twoFAManager.init2FA()`        | Generates QR code, secret, and temporary token |
-| `loginManager.login()`          | Issues access token after login                |
-| `user2FARepository`             | Access to 2FA-related DB operations            |
+| Component                                      | Purpose                                        |
+| ---------------------------------------------- | ---------------------------------------------- |
+| `authenticate`                                 | Validates that the user is logged in           |
+| `verify2FATokenWithTmpToken`                   | Validates OTP + plain temporary token          |
+| `verify2FATokenWithHashedTmpToken`             | Validates OTP + hashed temporary token         |
+| `verify2FATokenWithoutTmpToken`                | Validates OTP only (no temporary token)        |
+| `twoFAManager.init2FA()`                       | Generates QR code, secret, and temporary token |
+| `twoFAManager.cleanExpired2FA()`               | Deletes expired temporary tokens               |
+| `loginManager.login()`                         | Issues access token after login                |
+| `user2FARepository`                            | Access to 2FA-related DB operations            |
 
 ---
-

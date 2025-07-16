@@ -7,8 +7,8 @@ declare module 'fastify' {
 	interface FastifyInstance {
 		twoFAManager: {
 			init2FA: (request: FastifyRequest, reply: FastifyReply) => Promise<InitUser2FA>;
-			verify2FAToken: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
-			verify2FAToken2: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
+			verify2FATokenWithTmpToken: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
+			verify2FATokenWithHashedTmpToken: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
 			verify2FATokenWithoutTmpToken: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
 			generateTmpTokenFor2FA: (request: FastifyRequest, reply: FastifyReply, userId: number, forSetup?: boolean) => Promise<string>;
 			generateHashedTmpTokenFor2FA: (request: FastifyRequest, reply: FastifyReply, userId: number, forSetup?: boolean) => Promise<string>;
@@ -55,7 +55,7 @@ export function manageTwoFA(fastify: FastifyInstance) {
 			};
 		},
 
-		async verify2FAToken(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+		async verify2FATokenWithTmpToken(request: FastifyRequest, reply: FastifyReply): Promise<void> {
 			const { user2FARepository, tmpTokenRepository, speakeasy } = request.server;
 			try {
 				const { token, tmpToken } = request.body as { token:string, tmpToken: string };
@@ -90,7 +90,7 @@ export function manageTwoFA(fastify: FastifyInstance) {
 			}
 		},
 
-		async verify2FAToken2(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+		async verify2FATokenWithHashedTmpToken(request: FastifyRequest, reply: FastifyReply): Promise<void> {
 			const { user2FARepository, tmpTokenRepository, speakeasy, passwordManager } = request.server;
 			try {
 				const { token, tmpToken } = request.body as { token:string, tmpToken: string };

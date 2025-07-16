@@ -90,7 +90,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 			},
 			tags: ["Users"]
 			},
-			preHandler: [authenticate, twoFAManager.verify2FAToken2]
+			preHandler: [authenticate, twoFAManager.verify2FATokenWithHashedTmpToken]
 		},
 		async (request, reply): Promise<void> => {
 			try {
@@ -206,7 +206,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 			},
 			tags: ["Users"]
 			},
-			preHandler: [twoFAManager.verify2FAToken]
+			preHandler: [twoFAManager.verify2FATokenWithTmpToken]
 		},
 		async (request, reply): Promise<void> => {
 			const { user_id:userId } = request.user;

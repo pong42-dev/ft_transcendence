@@ -70,6 +70,13 @@ fastify.post(
 		if (!isMatch) {
 		return reply.status(401).send({ msg: 'Email or password is incorrect.' });
 		}
+
+		const isNotLoggedIn = await fastify.tokenManager.isNotLoggedIn(user.id);
+		if (!isNotLoggedIn) {
+			reply.status(409).send({
+				msg: 'This account is already in use. Please log out and try again.'
+			})
+		} 
 		const tmpToken = await twoFAManager.generateTmpTokenFor2FA(request, reply, user.id);
 		if (tmpToken) {
 		return reply.send({
