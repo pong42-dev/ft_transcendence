@@ -11,14 +11,15 @@ declare module 'fastify' {
 
 export function createUserTokensRepository(fastify: FastifyInstance) {
 	const knex: Knex = fastify.knex;
-	const allowedColumns = ['user_id', 'server_refresh_token', 'server_expires_at', 'google_refresh_token'];
+	const allowedColumns = ['user_id', 'token_version', 'server_refresh_token', 'server_expires_at', 'google_refresh_token'];
 
 	return {
-		async insertRow(user_id: number, server_refresh_token: string, server_expires_at: Date, google_refresh_token: string) {
+		async insertRow(user_id: number, token_version:string, server_refresh_token: string, server_expires_at: Date, google_refresh_token: string) {
 			try {
 				await knex('user_tokens')
 				.insert({
 					user_id,
+					token_version,
 					server_refresh_token,
 					server_expires_at,
 					google_refresh_token,
@@ -65,7 +66,7 @@ export function createUserTokensRepository(fastify: FastifyInstance) {
 				}
 			} catch (err: any) {
 				fastify.log.error('Error deleting row:', err.message);
-				throw err;
+				// throw err;
 			}
 		},
 

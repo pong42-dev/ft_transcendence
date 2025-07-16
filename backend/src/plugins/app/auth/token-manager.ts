@@ -36,6 +36,7 @@ export function manageTokens(fastify: FastifyInstance) {
 		},
 
 		async generateRefreshToken(userData: TokenData): Promise<CookieReturn> {
+			log.debug(`userData: ${userData}`)
 			const refreshToken = await this.generateToken(userData, config.REFRESH_TOKEN_EXPIRES_IN, 'refresh');
 			return this.createRefreshTokenCookie(refreshToken);
 		},

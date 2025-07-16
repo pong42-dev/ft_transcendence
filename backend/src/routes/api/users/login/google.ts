@@ -83,14 +83,14 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 				await userProfilesRepository.insertRow(userId, uniqueName, picturePath, 'false');
 				console.log('google register complete');
 				console.log(userProfilesRepository.getRowByColumnValue('user_id', userId));
-				return await loginManager.login(userId, reply, tokenData.refresh_token);
+				return await loginManager.login(fastify, userId, reply, tokenData.refresh_token);
 			} else {
 				if (userByEmail && userByEmail.provider != 'google')
 					return reply.send({ 
 						success: false,
 						msg: 'This email is already registered.' 
 					});
-				return await loginManager.login(userByEmail.id, reply, tokenData.refresh_token);
+				return await loginManager.login(fastify, userByEmail.id, reply, tokenData.refresh_token);
 			}
 		} catch (err) {
 			fastify.log.error(err);

@@ -1,6 +1,6 @@
 import { FastifyPluginAsyncTypebox, Type } from '@fastify/type-provider-typebox'
 import { FastifyRequest, FastifyReply } from 'fastify'
-import { TokenData } from '../../../schemas/auth.js'
+import { TokenData } from '../../../schemas/users/refresh-token.js';
 
 const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 	const { config } = fastify;
@@ -46,13 +46,16 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 			}
 			try {
 				console.log("decoded:", decoded);
-				const row = await userTokensRepository.getRowByColumnValue('user_id', decoded.user_id)
+				const row = await userTokensRepository.getRowByColumnValue('user_id', decoded.user_id);
+				if (row.token_version != decoded.token_version) {
+					return reply.status(401).send({ msg: '11Invalid or expired token.' });
+				}
 				const hashedRefreshToken = row?.server_refresh_token
 				// console.log("hashedRefreshToken:", hashedRefreshToken);
 				if (!hashedRefreshToken || !passwordManager.comparePassword(refreshToken, hashedRefreshToken)) {
 					return reply.status(401).send({ msg: 'Invalid or expired token.'});
 				}
-				const newAccessToken = await tokenManager.generateAccessToken({ user_id: decoded.user_id });
+				const newAccessToken = await tokenManager.generateAccessToken({ user_id: decoded.user_id, token_version: row.token_version });
 				return reply.send({
 					success: true,
 					msg: "Token refreshed successfully.",

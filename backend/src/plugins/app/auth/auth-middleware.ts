@@ -12,9 +12,8 @@ declare module 'fastify' {
 	}
 }
 
-
 async function authenticate(request: FastifyRequest, reply: FastifyReply) {
-	const { userProfilesRepository } = request.server;
+	const { log, userProfilesRepository, userTokensRepository } = request.server;
 	const authHeader = request.headers.authorization;
 	if (!authHeader || !authHeader.startsWith('Bearer ')) {
 		return reply.status(401).send({ msg: 'Authorization header is missing or improperly formatted.' });
@@ -30,6 +29,11 @@ async function authenticate(request: FastifyRequest, reply: FastifyReply) {
 	}
 	try {
 		console.log("decoded:", decoded);
+		const userTokenRow = await userTokensRepository.getRowByColumnValue('user_id', Number(decoded.user_id));
+		log.debug(`userTokenRow: ${userTokenRow.token_version}`);
+		if (userTokenRow.token_version != decoded.token_version) {
+			return reply.status(401).send({ msg: '111Invalid or expired token.' });
+		}
 		const userProfileRow = await userProfilesRepository.getRowByColumnValue("user_id", Number(decoded.user_id));			
 		if (!userProfileRow) {
 			return reply.status(404).send({ msg: 'User not found.' });

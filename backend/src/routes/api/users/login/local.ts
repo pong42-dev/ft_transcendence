@@ -71,12 +71,12 @@ fastify.post(
 		return reply.status(401).send({ msg: 'Email or password is incorrect.' });
 		}
 
-		const isNotLoggedIn = await fastify.tokenManager.isNotLoggedIn(user.id);
-		if (!isNotLoggedIn) {
-			reply.status(409).send({
-				msg: 'This account is already in use. Please log out and try again.'
-			})
-		} 
+		// const isNotLoggedIn = await fastify.tokenManager.isNotLoggedIn(user.id);
+		// if (!isNotLoggedIn) {
+		// 	reply.status(409).send({
+		// 		msg: 'This account is already in use. Please log out and try again.'
+		// 	})
+		// } 
 		const tmpToken = await twoFAManager.generateTmpTokenFor2FA(request, reply, user.id);
 		if (tmpToken) {
 		return reply.send({
@@ -86,7 +86,7 @@ fastify.post(
 			data: { token: tmpToken }
 		});
 		}
-		await loginManager.login(user.id, reply, '');
+		await loginManager.login(fastify, user.id, reply, '');
 	} catch (err) {
 		fastify.log.error(err);
 		return reply.status(500).send({ msg: 'An internal server error occurred during login.' });
