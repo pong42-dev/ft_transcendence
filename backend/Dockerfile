@@ -11,8 +11,6 @@ RUN npm install
 COPY ./ .
 COPY ./.env ./
 
-RUN npm run db:reset
-
 # 3000 포트 오픈
 EXPOSE 3000
 
