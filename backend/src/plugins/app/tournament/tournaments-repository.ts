@@ -747,97 +747,97 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 		/**
 		 * 사용자의 토너먼트 기록 조회
 		 */
-		async getUserTournamentHistory(userId: number): Promise<any[]> {
-			try {
-				// 1. 사용자가 참가한 모든 토너먼트 조회 (cancelled 상태 제외)
-				const tournaments = await knex('tournaments as t')
-					.join('tournament_matches as g', 't.id', 'g.tournament_id')
-					.join('game_participants as gp', 'g.id', 'gp.game_id')
-					.join('players as p', 'gp.player_id', 'p.id')
-					.select(
-						't.id as tournament_id', 't.created_at', 't.winner_player_id', 't.status',
-						'g.id as game_id', 'g.round_number', 'g.winner_id',
-						'p.id as player_id', 'p.display_name', 'p.user_id'
-					)
-					.where('p.user_id', userId)
-					.whereNot('t.status', 'canceled') // canceled 상태 토너먼트 제외
-					.orderBy('t.created_at', 'desc');
+		// async getUserTournamentHistory(userId: number): Promise<any[]> {
+		// 	try {
+		// 		// 1. 사용자가 참가한 모든 토너먼트 조회 (cancelled 상태 제외)
+		// 		const tournaments = await knex('tournaments as t')
+		// 			.join('tournament_matches as g', 't.id', 'g.tournament_id')
+		// 			.join('game_participants as gp', 'g.id', 'gp.game_id')
+		// 			.join('players as p', 'gp.player_id', 'p.id')
+		// 			.select(
+		// 				't.id as tournament_id', 't.created_at', 't.winner_player_id', 't.status',
+		// 				'g.id as game_id', 'g.round_number', 'g.winner_id',
+		// 				'p.id as player_id', 'p.display_name', 'p.user_id'
+		// 			)
+		// 			.where('p.user_id', userId)
+		// 			.whereNot('t.status', 'canceled') // canceled 상태 토너먼트 제외
+		// 			.orderBy('t.created_at', 'desc');
 
-				// 2. 토너먼트별로 그룹화
-				const tournamentGroups = new Map<number, any[]>();
-				tournaments.forEach(t => {
-					if (!tournamentGroups.has(t.tournament_id)) {
-						tournamentGroups.set(t.tournament_id, []);
-					}
-					tournamentGroups.get(t.tournament_id)!.push(t);
-				});
+		// 		// 2. 토너먼트별로 그룹화
+		// 		const tournamentGroups = new Map<number, any[]>();
+		// 		tournaments.forEach(t => {
+		// 			if (!tournamentGroups.has(t.tournament_id)) {
+		// 				tournamentGroups.set(t.tournament_id, []);
+		// 			}
+		// 			tournamentGroups.get(t.tournament_id)!.push(t);
+		// 		});
 
-				// 3. 각 토너먼트의 기록 구성
-				const history: any[] = [];
-				for (const [tournamentId, matches] of tournamentGroups) {
-					// 토너먼트의 모든 참가자 조회
-					const allParticipants = await knex('tournament_matches as g')
-						.join('game_participants as gp', 'g.id', 'gp.game_id')
-						.join('players as p', 'gp.player_id', 'p.id')
-						.select('p.id', 'p.display_name', 'p.user_id')
-						.where('g.tournament_id', tournamentId)
-						.groupBy('p.id');
-					const participantNames = allParticipants.map(p => p.display_name || `User${p.user_id}`);
+		// 		// 3. 각 토너먼트의 기록 구성
+		// 		const history: any[] = [];
+		// 		for (const [tournamentId, matches] of tournamentGroups) {
+		// 			// 토너먼트의 모든 참가자 조회
+		// 			const allParticipants = await knex('tournament_matches as g')
+		// 				.join('game_participants as gp', 'g.id', 'gp.game_id')
+		// 				.join('players as p', 'gp.player_id', 'p.id')
+		// 				.select('p.id', 'p.display_name', 'p.user_id')
+		// 				.where('g.tournament_id', tournamentId)
+		// 				.groupBy('p.id');
+		// 			const participantNames = allParticipants.map(p => p.display_name || `User${p.user_id}`);
 
-					// 토너먼트의 모든 매치 조회 (라운드별)
-					const allGames = await knex('tournament_matches')
-						.where('tournament_id', tournamentId)
-						.orderBy('round_number', 'asc')
-						.orderBy('id', 'asc');
+		// 			// 토너먼트의 모든 매치 조회 (라운드별)
+		// 			const allGames = await knex('tournament_matches')
+		// 				.where('tournament_id', tournamentId)
+		// 				.orderBy('round_number', 'asc')
+		// 				.orderBy('id', 'asc');
 
-					// 각 매치의 참가자, 승자 정보 조회
-					const rounds = await Promise.all(
-						allGames.map(async (game) => {
-							const participants = await knex('game_participants as gp')
-								.join('players as p', 'gp.player_id', 'p.id')
-								.select('p.display_name', 'p.user_id', 'p.id')
-								.where('gp.game_id', game.id);
-							const playerNames = participants.map(p => p.display_name || `User${p.user_id}`);
-							const winner = participants.find(p => p.id === game.winner_id);
-							let result: string | undefined = undefined;
-							if (game.round_number === 2 && game.winner_id) {
-								result = (game.winner_id === matches[0].player_id) ? 'champion' : (playerNames.includes(matches[0].display_name) ? 'runner_up' : undefined);
-							}
-							return {
-								round_number: game.round_number,
-								players: playerNames,
-								winner: winner ? (winner.display_name || `User${winner.user_id}`) : null,
-								result
-							};
-						})
-					);
+		// 			// 각 매치의 참가자, 승자 정보 조회
+		// 			const rounds = await Promise.all(
+		// 				allGames.map(async (game) => {
+		// 					const participants = await knex('game_participants as gp')
+		// 						.join('players as p', 'gp.player_id', 'p.id')
+		// 						.select('p.display_name', 'p.user_id', 'p.id')
+		// 						.where('gp.game_id', game.id);
+		// 					const playerNames = participants.map(p => p.display_name || `User${p.user_id}`);
+		// 					const winner = participants.find(p => p.id === game.winner_id);
+		// 					let result: string | undefined = undefined;
+		// 					if (game.round_number === 2 && game.winner_id) {
+		// 						result = (game.winner_id === matches[0].player_id) ? 'champion' : (playerNames.includes(matches[0].display_name) ? 'runner_up' : undefined);
+		// 					}
+		// 					return {
+		// 						round_number: game.round_number,
+		// 						players: playerNames,
+		// 						winner: winner ? (winner.display_name || `User${winner.user_id}`) : null,
+		// 						result
+		// 					};
+		// 				})
+		// 			);
 
-					// 최종 순위 결정 (기존 로직 유지)
-					let finalRank = 4;
-					const userMatches = matches.filter(m => m.user_id === userId);
-					const lastMatch = userMatches[userMatches.length - 1];
-					if (lastMatch) {
-						if (lastMatch.round_number === 2) {
-							finalRank = lastMatch.winner_id === lastMatch.player_id ? 1 : 2;
-						} else {
-							finalRank = 3;
-						}
-					}
+		// 			// 최종 순위 결정 (기존 로직 유지)
+		// 			let finalRank = 4;
+		// 			const userMatches = matches.filter(m => m.user_id === userId);
+		// 			const lastMatch = userMatches[userMatches.length - 1];
+		// 			if (lastMatch) {
+		// 				if (lastMatch.round_number === 2) {
+		// 					finalRank = lastMatch.winner_id === lastMatch.player_id ? 1 : 2;
+		// 				} else {
+		// 					finalRank = 3;
+		// 				}
+		// 			}
 
-					history.push({
-						tournament_id: tournamentId,
-						tournament_date: matches[0].created_at,
-						participants: participantNames,
-						rounds,
-						final_rank: finalRank
-					});
-				}
-				return history;
-			} catch (err: any) {
-				console.error('Error getting user tournament history:', err.message);
-				throw err;
-			}
-		},
+		// 			history.push({
+		// 				tournament_id: tournamentId,
+		// 				tournament_date: matches[0].created_at,
+		// 				participants: participantNames,
+		// 				rounds,
+		// 				final_rank: finalRank
+		// 			});
+		// 		}
+		// 		return history;
+		// 	} catch (err: any) {
+		// 		console.error('Error getting user tournament history:', err.message);
+		// 		throw err;
+		// 	}
+		// },
 
 		/**
 		 * 토너먼트 상태 업데이트
@@ -912,13 +912,13 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 			try {
 				const knex = fastify.knex;
 
-				console.log(`[DEBUG] Getting tournament history for userId: ${userId}`);
+				// console.log(`[DEBUG] Getting tournament history for userId: ${userId}`);
 
 				// 1. userId로 player_id 조회
 				const player = await knex('players').where('user_id', userId).first('id');
-				console.log(`[DEBUG] Found player for userId ${userId}:`, player);
+				// console.log(`[DEBUG] Found player for userId ${userId}:`, player);
 				if (!player) {
-					console.log(`[DEBUG] No player found for userId ${userId}`);
+					// console.log(`[DEBUG] No player found for userId ${userId}`);
 					return [];
 				}
 
@@ -933,10 +933,10 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 					.where('t.status', 'ended') // ended 인 토너먼트만 포함
 					.distinct('tm.tournament_id');
 
-				console.log(`[DEBUG] Found tournament IDs for player ${player.id}:`, tournamentIdsRows);
+				// console.log(`[DEBUG] Found tournament IDs for player ${player.id}:`, tournamentIdsRows);
 
 				const tournamentIds = tournamentIdsRows.map(r => r.tournament_id);
-				console.log(`[DEBUG] Tournament IDs array:`, tournamentIds);
+				// console.log(`[DEBUG] Tournament IDs array:`, tournamentIds);
 
 				// 3. 토너먼트별 참가자 정보와 게임 기록 조회
 				const tournHistories = [];
@@ -1110,15 +1110,15 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 			let final_rank = 3;
 			const finalGame = rounds.find(r => r.round_number === 2);
 			if (finalGame) {
-				console.log('[DEBUG] Final game data:', {
-					winnerId: finalGame.winnerId,
-					my_player_id: finalGame.my_player_id,
-					isMyGame: finalGame.isMyGame,
-					player1: finalGame.player1,
-					player2: finalGame.player2,
-					winnerId_type: typeof finalGame.winnerId,
-					my_player_id_type: typeof finalGame.my_player_id
-				});
+				// console.log('[DEBUG] Final game data:', {
+				// 	winnerId: finalGame.winnerId,
+				// 	my_player_id: finalGame.my_player_id,
+				// 	isMyGame: finalGame.isMyGame,
+				// 	player1: finalGame.player1,
+				// 	player2: finalGame.player2,
+				// 	winnerId_type: typeof finalGame.winnerId,
+				// 	my_player_id_type: typeof finalGame.my_player_id
+				// });
 				
 				// 내가 결승에 참여했는지 확인
 				if (finalGame.isMyGame) {
@@ -1128,25 +1128,25 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 						const winnerId = parseInt(finalGame.winnerId.toString());
 						const myPlayerId = parseInt(finalGame.my_player_id.toString());
 						final_rank = winnerId === myPlayerId ? 1 : 2;
-						console.log('[DEBUG] Final rank calculation:', { winnerId, myPlayerId, final_rank });
+						// console.log('[DEBUG] Final rank calculation:', { winnerId, myPlayerId, final_rank });
 					} else {
 						console.log('[DEBUG] Warning: winnerId or my_player_id is null in final game');
 						final_rank = 2; // 결승 진출했지만 데이터 오류로 2등 처리
 					}
 				} else {
 					// 결승에 참여하지 않았다면 3등 이하
-					console.log('[DEBUG] User did not participate in final game');
+					// console.log('[DEBUG] User did not participate in final game');
 					final_rank = 3;
 				}
 			} else {
 				console.log('[DEBUG] No final game (round_number=2) found');
 			}
-			console.log('[DEBUG] Calculated final_rank:', final_rank);
+			// console.log('[DEBUG] Calculated final_rank:', final_rank);
 
 					// my_player_id는 반환할 필요 없으니 rounds에서 삭제, isMyGame은 유지
 					const cleanRounds = rounds.map(({ my_player_id, ...rest }) => rest);
 
-			console.log('[DEBUG] Clean rounds after my_player_id removal:', JSON.stringify(cleanRounds, null, 2));
+			// console.log('[DEBUG] Clean rounds after my_player_id removal:', JSON.stringify(cleanRounds, null, 2));
 
 			const tournamentHistory = {
 				tournament_id: tournamentInfo.id,
@@ -1156,21 +1156,21 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 				final_rank: final_rank,
 			};
 
-			// 상세한 로그 출력
-			console.log(`[DEBUG] Tournament History for userId ${userId}, tournamentId ${tournamentInfo.id}:`);
-			console.log(`[DEBUG] - tournament_id: ${tournamentHistory.tournament_id}`);
-			console.log(`[DEBUG] - tournament_date: ${tournamentHistory.tournament_date}`);
-			console.log(`[DEBUG] - participants:`, JSON.stringify(tournamentHistory.participants, null, 2));
-			console.log(`[DEBUG] - final_rank: ${tournamentHistory.final_rank}`);
-			console.log(`[DEBUG] - rounds (${tournamentHistory.rounds.length} rounds):`, JSON.stringify(tournamentHistory.rounds, null, 2));
+			// // 상세한 로그 출력
+			// console.log(`[DEBUG] Tournament History for userId ${userId}, tournamentId ${tournamentInfo.id}:`);
+			// console.log(`[DEBUG] - tournament_id: ${tournamentHistory.tournament_id}`);
+			// console.log(`[DEBUG] - tournament_date: ${tournamentHistory.tournament_date}`);
+			// console.log(`[DEBUG] - participants:`, JSON.stringify(tournamentHistory.participants, null, 2));
+			// console.log(`[DEBUG] - final_rank: ${tournamentHistory.final_rank}`);
+			// console.log(`[DEBUG] - rounds (${tournamentHistory.rounds.length} rounds):`, JSON.stringify(tournamentHistory.rounds, null, 2));
 
 			tournHistories.push(tournamentHistory);
 			}
 
 			tournHistories.sort((a, b) => new Date(b.tournament_date).getTime() - new Date(a.tournament_date).getTime());
 
-			console.log(`[DEBUG] Final tournHistories for userId ${userId} (${tournHistories.length} tournaments):`);
-			console.log('[DEBUG] Complete result:', JSON.stringify(tournHistories, null, 2));
+			// console.log(`[DEBUG] Final tournHistories for userId ${userId} (${tournHistories.length} tournaments):`);
+			// console.log('[DEBUG] Complete result:', JSON.stringify(tournHistories, null, 2));
 
 				return tournHistories;
 			} catch (err: any) {
