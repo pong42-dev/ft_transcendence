@@ -22,6 +22,12 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 	fastify.post(
 		'/',
 		{
+			config: {
+				rateLimit: {
+					max: fastify.config.RATE_LIMIT_APIKEY_MAX,
+					timeWindow: '1 hour'
+				}
+			},
 			schema: {
 				body: Type.Object({
 					type: Type.Literal('tournament'),
@@ -85,21 +91,6 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 					return reply.status(400).send({ message: '로그인된 사용자 정보가 필요합니다.' });
 				}
 
-				// 3. 중복 토너먼트 생성 방지 - 최근 10초 내에 같은 사용자가 같은 게스트들과 토너먼트를 생성했는지 확인
-				const recentTournaments = await trx('tournaments')
-					.join('games', 'tournaments.id', 'games.tournament_id')
-					.join('game_participants', 'games.id', 'game_participants.game_id')
-					.join('players', 'game_participants.player_id', 'players.id')
-					.where('players.user_id', loggedInUser.user_id)
-					.where('tournaments.created_at', '>', new Date(Date.now() - 10000).toISOString())
-					.select('tournaments.id', 'tournaments.created_at');
-
-				if (recentTournaments.length > 0) {
-					shouldCommit = null;
-					await trx.rollback();
-					fastify.log.warn(`Duplicate tournament creation attempt by user ${loggedInUser.user_id}`);
-					return reply.status(429).send({ message: 'Tournament creation in progress, please wait...' });
-				}
 				// 3. 전체 참가자 목록 (인증된 사용자 1명 + 게스트 3명)을 구성합니다.
 				const allParticipants = [
 					{ type: 'user', userId: loggedInUser.user_id },
