@@ -44,10 +44,10 @@ async function seedUsers(db: sqlite3.Database) {
   const passwordManager = createPasswordManager()
 
   const users = [
-    { email: '1@gmail.com', password: '@1234567Ab', provider: 'local', provider_id: '', avatar: "public/1.png" },
-    { email: '2@gmail.com', password: '@1234567Ab', provider: 'local', provider_id: '', avatar: "public/2.png" },
-    { email: '3@gmail.com', password: '@1234567Ab', provider: 'local', provider_id: '', avatar: "public/3.png" },
-    { email: '4@gmail.com', password: '@1234567Ab', provider: 'local', provider_id: '', avatar: "public/4.png" },
+    { email: '1@gmail.com', password: '@123123Qw', provider: 'local', provider_id: '', avatar: "public/1.png" },
+    { email: '2@gmail.com', password: '@123123Qw', provider: 'local', provider_id: '', avatar: "public/2.png" },
+    { email: '3@gmail.com', password: '@123123Qw', provider: 'local', provider_id: '', avatar: "public/3.png" },
+    { email: '4@gmail.com', password: '@123123Qw', provider: 'local', provider_id: '', avatar: "public/4.png" },
   ]
 
   for (const user of users) {
