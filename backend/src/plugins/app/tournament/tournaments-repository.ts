@@ -1167,6 +1167,8 @@ export function createTournamentsRepository(fastify: FastifyInstance) {
 			tournHistories.push(tournamentHistory);
 			}
 
+			tournHistories.sort((a, b) => new Date(b.tournament_date).getTime() - new Date(a.tournament_date).getTime());
+
 			console.log(`[DEBUG] Final tournHistories for userId ${userId} (${tournHistories.length} tournaments):`);
 			console.log('[DEBUG] Complete result:', JSON.stringify(tournHistories, null, 2));
 
