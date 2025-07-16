@@ -240,7 +240,7 @@ export class TournamentClient {
     }
     
     // 토너먼트 시작 시 브라켓을 5초간 표시
-    this.showBracketWithCountdown(5, '토너먼트 시작');
+    this.showBracketWithCountdown(5, i18next.t('tournament.client.tournament_start'));
   }
 
   private handleBracketUpdate(data: any): void {
@@ -313,7 +313,7 @@ export class TournamentClient {
     console.log('Current match set to:', this.currentMatch);
     
     // 1. 브라켓과 함께 5초 카운트다운 표시
-    this.showBracketWithCountdown(5, '매치 시작');
+    this.showBracketWithCountdown(5, i18next.t('tournament.client.match_start'));
     
     // 2. 5초 후 게임 시작
     this.currentTimeout = window.setTimeout(() => {
@@ -331,7 +331,7 @@ export class TournamentClient {
           return {
             id: p.id,
             type: p.user_id ? 'user' : 'guest',
-            name: p.display_name || p.name || `Player${p.id}`,
+            name: p.display_name || p.name || i18next.t('tournament.client.player_id', { id: p.id }),
             avatarUrl: fullParticipantInfo?.avatarUrl || undefined
           };
         })

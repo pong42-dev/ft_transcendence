@@ -626,7 +626,10 @@
           "match_starting_error": "매치 시작 중 오류가 발생했습니다.",
           "tournament_end_error": "토너먼트 종료 처리 중 오류가 발생했습니다."
         }
-      }
+      },
+      "tournament_start": "토너먼트 시작",
+      "match_start": "매치 시작",
+      "player_id": "플레이어 {{id}}"
     }
   },
   "app": {

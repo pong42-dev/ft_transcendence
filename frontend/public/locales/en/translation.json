@@ -633,7 +633,10 @@
           "match_starting_error": "An error occurred while starting the match.",
           "tournament_end_error": "An error occurred while processing tournament end."
         }
-      }
+      },
+      "tournament_start": "Tournament Start",
+      "match_start": "Match Start",
+      "player_id": "Player {{id}}"
     }
   },
   "app": {

@@ -633,7 +633,10 @@
           "match_starting_error": "試合開始中にエラーが発生しました。",
           "tournament_end_error": "トーナメント終了処理中にエラーが発生しました。"
         }
-      }
+      },
+      "tournament_start": "トーナメント開始",
+      "match_start": "試合開始",
+      "player_id": "プレイヤー{{id}}"
     }
   },
   "app": {
