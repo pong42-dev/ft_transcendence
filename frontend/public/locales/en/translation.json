@@ -429,6 +429,14 @@
     "invalidApiResponseStructure": "Invalid API response structure: missing userInfo or me",
     "invalidUserDataMissingName": "Invalid user data: missing name field"
   },
+  "api": {
+    "genericError": "An error occurred while processing your request.",
+    "unauthorized": "Authentication required. Please log in again.",
+    "forbidden": "Access denied.",
+    "notFound": "The requested resource could not be found.",
+    "serverError": "A server error occurred. Please try again later.",
+    "networkError": "Please check your network connection and try again."
+  },
   "baseApi": {
     "cannotMakeRequestFromDisposedService": "Cannot make request from disposed service",
     "mockLoadingFailed": "Mock loading failed",

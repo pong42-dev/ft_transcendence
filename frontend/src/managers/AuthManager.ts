@@ -50,7 +50,7 @@ export class AuthManager {
       
       // 터미널 메시지 표시 (선택적)
       if (this.terminal) {
-        this.terminal.appendOutput('Session expired. Please login again.');
+        this.terminal.appendOutput(i18next.t('auth.sessionExpired'));
       }
     });
   }

@@ -13,6 +13,7 @@ import { ApiError } from '../api/BaseApiService.js';
 import { TokenManager } from './TokenManager.js';
 import { MockInterceptor } from '../mocks/MockInterceptor.js';
 import { ErrorHandler, ErrorLevel } from '../../utils/ErrorHandler.js';
+import i18next from 'i18next'; // Import i18next
 
 // URL 패턴 매칭을 위한 간단한 헬퍼
 const URL_PATTERNS = {
@@ -189,22 +190,22 @@ export const createInterceptors = (options?: {
     onResponseError: async (error) => {
       if (!showNotification) return error;
       
-      let message = '요청 처리 중 오류가 발생했습니다.';
+      let message = i18next.t('api.genericError');
       let type: 'error' | 'warning' | 'info' = 'error';
       
       if (error instanceof ApiError && error.data?.message) {
         message = error.data.message;
       } else if (error.message.includes('401')) {
-        message = '인증이 필요합니다. 다시 로그인해주세요.';
+        message = i18next.t('api.unauthorized');
         type = 'warning';
       } else if (error.message.includes('403')) {
-        message = '접근 권한이 없습니다.';
+        message = i18next.t('api.forbidden');
       } else if (error.message.includes('404')) {
-        message = '요청한 리소스를 찾을 수 없습니다.';
+        message = i18next.t('api.notFound');
       } else if (error.message.includes('500')) {
-        message = '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
+        message = i18next.t('api.serverError');
       } else if (error instanceof TypeError || error.message.includes('fetch')) {
-        message = '네트워크 연결을 확인하고 다시 시도해주세요.';
+        message = i18next.t('api.networkError');
         type = 'warning';
       }
       

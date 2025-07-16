@@ -429,6 +429,14 @@
     "invalidApiResponseStructure": "無効なAPI応答構造: userInfoまたはmeがありません",
     "invalidUserDataMissingName": "無効なユーザーデータ: 名前フィールドがありません"
   },
+  "api": {
+    "genericError": "リクエスト処理中にエラーが発生しました。",
+    "unauthorized": "認証が必要です。再度ログインしてください。",
+    "forbidden": "アクセスが拒否されました。",
+    "notFound": "要求されたリソースが見つかりません。",
+    "serverError": "サーバーエラーが発生しました。後でもう一度お試しください。",
+    "networkError": "ネットワーク接続を確認して、もう一度お試しください。"
+  },
   "baseApi": {
     "cannotMakeRequestFromDisposedService": "解放されたサービスからリクエストを作成できません",
     "mockLoadingFailed": "モックの読み込みに失敗しました",
