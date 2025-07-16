@@ -28,11 +28,13 @@ export class RegisterModal {
   private isSubmitting: boolean = false;
   private selectedAvatarFile: File | null = null;
   private debounceTimers: Map<string, number> = new Map();
+  private formData: FormData;
 
   constructor(apiClient: ApiClient, callbacks: RegisterModalCallbacks) {
     this.apiClient = apiClient;
     this.callbacks = callbacks;
     this.modalManager = ModalManager.getInstance();
+    this.formData = new FormData();
   }
 
   /**
@@ -746,6 +748,8 @@ export class RegisterModal {
       input.value = '';
       return;
     }
+
+    this.formData.append('avatar', file);
 
     this.selectedAvatarFile = file;
     this.showAvatarPreview(file);
