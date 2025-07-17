@@ -18,12 +18,17 @@ async function login(
 ): Promise<void> {
 	const { config, log, 
 		tokenManager, 
-		userTokensRepository, 
+		userTokensRepository, googleOAuth2Manager,userProfilesRepository,
 		generateUUID } = fasitfy;
 		
 	const isNotLoggedIn = await tokenManager.isNotLoggedIn(user_id);
 	if (!isNotLoggedIn) {
 		await userTokensRepository.deleteRowByColumnValue("user_id", user_id);
+		const userToken = await userTokensRepository.getRowByColumnValue("user_id", user_id);
+		if (userToken.google_refresh_token) {
+			await googleOAuth2Manager.revokeGoogleToken(userToken.google_refresh_token);
+		}
+		await userProfilesRepository.updateRowByColumn("user_id", user_id, "status", false);
 	} 
 	const tokenVersion = generateUUID();
 	const tokenData = { user_id: user_id, token_version: tokenVersion};
