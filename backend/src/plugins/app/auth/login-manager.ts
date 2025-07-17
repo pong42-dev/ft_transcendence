@@ -25,7 +25,7 @@ async function login(
 	if (!isNotLoggedIn) {
 		await userTokensRepository.deleteRowByColumnValue("user_id", user_id);
 		const userToken = await userTokensRepository.getRowByColumnValue("user_id", user_id);
-		if (userToken.google_refresh_token) {
+		if (userToken?.google_refresh_token) {
 			await googleOAuth2Manager.revokeGoogleToken(userToken.google_refresh_token);
 		}
 		await userProfilesRepository.updateRowByColumn("user_id", user_id, "status", false);
@@ -67,10 +67,8 @@ async function login(
 		? 'Successfully logged in.' 
 		: 'Successfully logged in. Your previous session has been terminated.';
 	fasitfy.log.debug(`isNotLoggedIn: ${isNotLoggedIn}`);
-	fasitfy.log.info(`${loginMessage}`);
-
 	if (googleRefreshToken) {
-		
+		fasitfy.log.info(`google: ${loginMessage}`);
 		// 리다이렉트 URL에 메시지를 쿼리 파라미터로 추가
 		const redirectUrl = new URL(config.BASE_URL);
 		redirectUrl.searchParams.set('message', encodeURIComponent(loginMessage)); // 메시지 인코딩
@@ -78,6 +76,7 @@ async function login(
 		return ;
 	}
 	const accessToken = await fasitfy.tokenManager.generateAccessToken(tokenData)
+	fasitfy.log.info(`local: ${loginMessage}`);
 	fasitfy.log.info(`Generated access token for user ${user_id}: ${accessToken}`);
 	reply.send({
 		success: true,
