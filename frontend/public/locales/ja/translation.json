@@ -404,6 +404,7 @@
     "change_failed": "言語を{{lang}}に変更できませんでした。"
   },
   "auth": {
+    "sessionExpired": "セッションが期限切れです。再度ログインしてください。",
     "loggedOutFromOtherTab": "別のタブからログアウトしました。",
     "loginAgainPrompt": "'login' コマンドを使用して再度サインインしてください。",
     "welcomeBack": "おかえりなさい、{{username}}さん！",

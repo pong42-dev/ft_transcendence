@@ -404,6 +404,7 @@
     "change_failed": "Failed to change language to {{lang}}."
   },
   "auth": {
+    "sessionExpired": "Your session has expired. Please log in again.",
     "loggedOutFromOtherTab": "You have been logged out from another tab.",
     "loginAgainPrompt": "Please use the 'login' command to sign in again.",
     "welcomeBack": "Welcome back, {{username}}!",

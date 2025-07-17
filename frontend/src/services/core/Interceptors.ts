@@ -13,7 +13,7 @@ import { ApiError } from '../api/BaseApiService.js';
 import { TokenManager } from './TokenManager.js';
 import { MockInterceptor } from '../mocks/MockInterceptor.js';
 import { ErrorHandler, ErrorLevel } from '../../utils/ErrorHandler.js';
-import i18next from 'i18next'; // Import i18next
+import i18next from 'i18next';
 
 // URL 패턴 매칭을 위한 간단한 헬퍼
 const URL_PATTERNS = {
@@ -86,7 +86,7 @@ export const createInterceptors = (options?: {
               if (terminalDiv) {
                 const messageDiv = document.createElement('div');
                 messageDiv.className = 'text-terminal-red';
-                messageDiv.textContent = 'Session expired. Please login again.';
+                messageDiv.textContent = i18next.t('auth.sessionExpired');
                 terminalDiv.appendChild(messageDiv);
               }
             } else {
