@@ -194,7 +194,6 @@ export class GameSession {
       clearTimeout(this.loop);
     }
     
-    this.engine.resetRound(); // 라운드 시작 전 상태 초기화
     this.loop = setInterval(() => {
       this._updateGame();
     }, this.config.gameLoopInterval);
@@ -261,6 +260,7 @@ export class GameSession {
     
     // 1. 엔진의 라운드 종료 처리 및 점수 업데이트를 먼저 수행합니다.
     const result = this.engine.handleRoundEnd(winnerSide);
+    this.engine.resetRound(); // 라운드 종료 후 상태 초기화
 
     // 2. 업데이트된 최종 점수를 가져옵니다.
     const finalScores = this.engine.getRoundWins();
