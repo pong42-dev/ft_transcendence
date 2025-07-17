@@ -65,10 +65,10 @@ async function login(
 	const accessToken = await fasitfy.tokenManager.generateAccessToken(tokenData)
 	fasitfy.log.info(`Generated access token for user ${user_id}: ${accessToken}`);
 	const msg = isNotLoggedIn? 'Successfully logged in. Your previous session has been terminated.':'Successfully logged in.'
-
+	fasitfy.log.info(`${msg}`);
 	reply.send({
 		success: true,
-		msg: 'Successfully logged in.',
+		msg: msg,
 		data: {
 			token: accessToken
 		}
