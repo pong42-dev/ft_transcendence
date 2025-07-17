@@ -71,7 +71,7 @@
     "enter_username": "Enter your username",
     "profile_picture_optional": "Profile Picture (Optional)",
     "choose_image": "Choose Image",
-    "file_size_formats": "Max file size: 5MB. Supported formats: JPG, PNG, GIF",
+    "file_size_formats": "Max file size: 5MB. Supported formats: JPG, PNG, GIF, WEBP",
     "sign_up_with_google": "Sign up with Google",
     "already_have_account_signin": "Already have an account? Sign in",
     "creating_account": "Creating account...",

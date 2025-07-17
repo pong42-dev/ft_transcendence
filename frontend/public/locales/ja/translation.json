@@ -71,7 +71,7 @@
     "enter_username": "ユーザー名を入力してください",
     "profile_picture_optional": "プロフィール画像（オプション）",
     "choose_image": "画像を選択",
-    "file_size_formats": "最大ファイルサイズ：5MB。対応形式：JPG、PNG、GIF",
+    "file_size_formats": "最大ファイルサイズ：5MB。対応形式：JPG、PNG、GIF、WEBP",
     "sign_up_with_google": "Googleでサインアップ",
     "already_have_account_signin": "すでにアカウントをお持ちですか？サインイン",
     "creating_account": "アカウント作成中...",
