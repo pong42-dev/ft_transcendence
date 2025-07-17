@@ -58,17 +58,24 @@ async function login(
 	console.log("refreshToken:", refreshTokenCookie.value);
 	console.log("hashed refreshToken:", hashedRefreshToken);
 	await fasitfy.userProfilesRepository.updateRowByColumn('user_id', user_id, 'status', true)
+	const loginMessage = isNotLoggedIn 
+		? 'Successfully logged in. Your previous session has been terminated.' 
+		: 'Successfully logged in.';
+	fasitfy.log.info(`${loginMessage}`); // 로그 메시지는 여전히 출력
+
 	if (googleRefreshToken) {
-		reply.redirect(config.BASE_URL);
+		
+		// 리다이렉트 URL에 메시지를 쿼리 파라미터로 추가
+		const redirectUrl = new URL(config.BASE_URL);
+		redirectUrl.searchParams.set('message', encodeURIComponent(loginMessage)); // 메시지 인코딩
+		reply.redirect(redirectUrl.toString());
 		return ;
 	}
 	const accessToken = await fasitfy.tokenManager.generateAccessToken(tokenData)
 	fasitfy.log.info(`Generated access token for user ${user_id}: ${accessToken}`);
-	const msg = isNotLoggedIn? 'Successfully logged in. Your previous session has been terminated.':'Successfully logged in.'
-	fasitfy.log.info(`${msg}`);
 	reply.send({
 		success: true,
-		msg: msg,
+		msg: loginMessage,
 		data: {
 			token: accessToken
 		}
