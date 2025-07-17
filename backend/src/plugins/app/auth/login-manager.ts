@@ -16,7 +16,11 @@ async function login(
 	reply: FastifyReply,
 	googleRefreshToken: string | ''
 ): Promise<void> {
-	const { config, tokenManager, userTokensRepository, generateUUID } = fasitfy;
+	const { config, log, 
+		tokenManager, 
+		userTokensRepository, 
+		generateUUID } = fasitfy;
+		
 	const isNotLoggedIn = await tokenManager.isNotLoggedIn(user_id);
 	if (!isNotLoggedIn) {
 		await userTokensRepository.deleteRowByColumnValue("user_id", user_id);
@@ -36,8 +40,8 @@ async function login(
 	// 	})
 	const refreshTokenCookie = await fasitfy.tokenManager.generateRefreshToken(tokenData);
 	const expiresAtISO = new Date(refreshTokenCookie.expiresAt).toISOString();
-	fasitfy.log.info(`Generated refresh token for user ${user_id}: ${refreshTokenCookie.value}`);
-	fasitfy.log.info(`Refresh token expires at: ${expiresAtISO}`);
+	log.info(`Generated refresh token for user ${user_id}: ${refreshTokenCookie.value}`);
+	log.info(`Refresh token expires at: ${expiresAtISO}`);
 	reply.setCookie(
 		refreshTokenCookie.name,
 		refreshTokenCookie.value,
@@ -60,6 +64,8 @@ async function login(
 	}
 	const accessToken = await fasitfy.tokenManager.generateAccessToken(tokenData)
 	fasitfy.log.info(`Generated access token for user ${user_id}: ${accessToken}`);
+	const msg = isNotLoggedIn? 'Successfully logged in. Your previous session has been terminated.':'Successfully logged in.'
+
 	reply.send({
 		success: true,
 		msg: 'Successfully logged in.',

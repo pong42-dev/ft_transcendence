@@ -55,7 +55,8 @@ export function manageGoogleOauth2(fastify: FastifyInstance) {
 		},
 
 		async revokeGoogleToken(token: string): Promise<void> {
-			fastify.log.info('Invoking revokeGoogleToken')
+			const { log } = fastify;
+			log.info('Invoking revokeGoogleToken')
 			try {
 				const response = await fetch('https://oauth2.googleapis.com/revoke', {
 					method: 'POST',
@@ -65,16 +66,16 @@ export function manageGoogleOauth2(fastify: FastifyInstance) {
 					body: new URLSearchParams({ token }).toString(),
 				})
 				if (response.ok) {
-					fastify.log.info('Successfully revoked Google token')
+					log.info('Successfully revoked Google token')
 				} else {
 					const error = await response.json() as { error: string };
-					fastify.log.error('Failed to revoke Google token', error)
+					log.error('Failed to revoke Google token', error)
 				}
 			} catch (err: unknown) {
 				if (err instanceof Error) {
-					fastify.log.error('Google revoke request failed', err.message)
+					log.error('Google revoke request failed', err.message)
 				} else {
-					fastify.log.error('An unknown error occurred during revoke')
+					log.error('An unknown error occurred during revoke')
 				}
 			}
 		},

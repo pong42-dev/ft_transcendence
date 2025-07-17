@@ -13,22 +13,24 @@ declare module 'fastify' {
 }
 
 async function authenticate(request: FastifyRequest, reply: FastifyReply) {
-	const { log, userProfilesRepository, userTokensRepository } = request.server;
+	const { log, 
+		userProfilesRepository, userTokensRepository } = request.server;
+
 	const authHeader = request.headers.authorization;
 	if (!authHeader || !authHeader.startsWith('Bearer ')) {
 		return reply.status(401).send({ msg: 'Authorization header is missing or improperly formatted.' });
 	}
 	const token = authHeader.split(' ')[1];
-	console.log("token:", token);
+	log.debug(`token: ${token}`)
 	let decoded : TokenData | null = null;
 	try {
 		decoded = await request.server.jwt.verify(token) as TokenData;
 	} catch (err) {
-		console.error("Token verification error:", err);
+		log.error("Token verification error:", err);
 		return reply.status(401).send({ msg: 'Invalid or expired token.' });
 	}
 	try {
-		console.log("decoded:", decoded);
+		log.debug(`decoded: ${decoded}`)
 		const userTokenRow = await userTokensRepository.getRowByColumnValue('user_id', Number(decoded.user_id));
 		log.debug(`userTokenRow: ${userTokenRow.token_version}`);
 		if (userTokenRow.token_version != decoded.token_version) {
@@ -38,16 +40,16 @@ async function authenticate(request: FastifyRequest, reply: FastifyReply) {
 		if (!userProfileRow) {
 			return reply.status(404).send({ msg: 'User not found.' });
 		}
-		console.log("row:", userProfileRow);
+		log.debug(`row: ${userProfileRow}`)
 		if (userProfileRow) {
 			request.user = { user_id: userProfileRow.user_id as number, name: userProfileRow.name };
-			console.log("user_id:", userProfileRow.user_id, "name:", userProfileRow.name);
-			request.log.info("Completed authentication middleware");
+			log.debug(`user_id: ${userProfileRow.user_id}, name: ${userProfileRow.name}`)
+			log.info("Completed authentication middleware");
 			return;
 		}
 		return reply.status(401).send({ msg: 'Invalid or expired token.' });
 	} catch (err) {
-		request.log.error(err);
+		log.error(err);
 		return reply.status(500).send({ msg: 'An internal server error occurred.' });
 	}
 }

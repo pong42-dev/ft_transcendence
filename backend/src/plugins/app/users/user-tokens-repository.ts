@@ -70,27 +70,6 @@ export function createUserTokensRepository(fastify: FastifyInstance) {
 			}
 		},
 
-		// async deleteExpiredTokenForUser(userId: number): Promise<boolean> {
-		// 	try {
-		// 		// const now = Date.now();
-		// 		const now = new Date();
-		// 		const result = await knex('user_tokens')
-		// 			.where('user_id', userId)
-		// 			.andWhere('server_expires_at', '<', now)
-		// 			.del();
-		// 		if (result > 0) {
-		// 			fastify.log.info(`Expired tokens deleted for user ${userId}: ${result}`);
-		// 			return true;
-		// 		} else {
-		// 			fastify.log.info(`No expired tokens found for user ${userId}.`);
-		// 			return false;
-		// 		}
-		// 	} catch (err: any) {
-		// 		fastify.log.error(`Error deleting expired tokens for user ${userId}:`, err.message);
-		// 		throw err;
-		// 	}
-		// },
-
 		async hasValidTokenForUser(userId: number): Promise<number> {
 			try {
 				const now = new Date();
