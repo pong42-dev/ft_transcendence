@@ -11,11 +11,13 @@ RUN npm install
 COPY ./ .
 COPY ./.env ./
 
-RUN npm run db:reset
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
 
 # 3000 포트 오픈
 EXPOSE 3000
 
 # 서버 실행 (예: server.ts 또는 dist/server.js 등)
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["npm", "run", "dev"]
 
