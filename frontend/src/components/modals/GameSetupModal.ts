@@ -190,6 +190,7 @@ export class GameSetupModal {
             autocomplete="off"
           />
           <div class="text-xs text-terminal-red mt-1 hidden" id="guest-nickname-${i}-error"></div>
+          <div class="text-xs text-terminal-yellow mt-1 hidden" id="guest-nickname-${i}-duplicate-warning"></div>
         </div>
       `;
     }
@@ -237,10 +238,20 @@ export class GameSetupModal {
     // Input validation function
     const validateInputs = () => {
       let allValid = true;
+      // 중복 닉네임 체크용
+      const nicknames = guestNameInputs.map(input => input.value.trim());
+      const nicknameCounts = nicknames.reduce((acc, name) => {
+        if (!name) return acc;
+        acc[name] = (acc[name] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+
       guestNameInputs.forEach((input, idx) => {
         const nickname = input.value.trim();
         const result = validateNickname(nickname);
         const errorDiv = this.contentElement?.querySelector(`#guest-nickname-${idx}-error`) as HTMLElement;
+        const duplicateWarningDiv = this.contentElement?.querySelector(`#guest-nickname-${idx}-duplicate-warning`) as HTMLElement;
+        // 형식 오류 처리
         if (nickname && !result.isValid) {
           errorDiv.textContent = i18n.t(result.error || 'validation.invalid_nickname_format');
           errorDiv.classList.remove('hidden');
@@ -252,6 +263,13 @@ export class GameSetupModal {
           input.classList.remove('border-terminal-red');
           input.classList.add('border-terminal-gray');
           if (!nickname) allValid = false;
+        }
+        // 중복 경고 처리 (입력은 가능, 경고만 노출)
+        if (nickname && nicknameCounts[nickname] > 1) {
+          duplicateWarningDiv.textContent = i18n.t('validation.duplicate_nickname_warning');
+          duplicateWarningDiv.classList.remove('hidden');
+        } else {
+          duplicateWarningDiv.classList.add('hidden');
         }
       });
       if (startGameBtn) {

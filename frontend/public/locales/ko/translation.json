@@ -275,7 +275,8 @@
     "username_available": "사용자 이름은 사용 가능합니다.",
     "email_available": "이메일은 사용 가능합니다.",
     "unable_to_check_availability": "사용 가능 여부를 확인할 수 없습니다. 다시 시도해주세요.",
-    "Invalid email format.": "유효하지 않은 이메일 형식입니다."
+    "Invalid email format.": "유효하지 않은 이메일 형식입니다.",
+    "duplicate_nickname_warning": "동일한 닉네임이 있습니다."
   },
   "helpCommand": {
     "api_status": "API 상태",

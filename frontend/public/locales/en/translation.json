@@ -277,7 +277,8 @@
     "username_available": "Username is available.",
     "email_available": "Email is available.",
     "unable_to_check_availability": "Unable to check availability. Please try again.",
-    "Invalid email format.": "Invalid email format."
+    "Invalid email format.": "Invalid email format.",
+    "duplicate_nickname_warning": "Duplicate nickname exists."
   },
   "helpCommand": {
     "api_status": "API Status",

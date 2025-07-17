@@ -277,7 +277,8 @@
     "username_available": "ユーザー名は利用可能です。",
     "email_available": "メールアドレスは利用可能です。",
     "unable_to_check_availability": "利用可能か確認できませんでした。もう一度お試しください。",
-    "Invalid email format.": "無効なメール形式です。"
+    "Invalid email format.": "無効なメール形式です。",
+    "duplicate_nickname_warning": "同じニックネームが存在します。"
   },
   "helpCommand": {
     "api_status": "APIステータス",
