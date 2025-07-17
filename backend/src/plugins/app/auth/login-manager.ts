@@ -59,9 +59,10 @@ async function login(
 	console.log("hashed refreshToken:", hashedRefreshToken);
 	await fasitfy.userProfilesRepository.updateRowByColumn('user_id', user_id, 'status', true)
 	const loginMessage = isNotLoggedIn 
-		? 'Successfully logged in. Your previous session has been terminated.' 
-		: 'Successfully logged in.';
-	fasitfy.log.info(`${loginMessage}`); // 로그 메시지는 여전히 출력
+		? 'Successfully logged in.' 
+		: 'Successfully logged in. Your previous session has been terminated.';
+	fasitfy.log.debug(`isNotLoggedIn: ${isNotLoggedIn}`);
+	fasitfy.log.info(`${loginMessage}`);
 
 	if (googleRefreshToken) {
 		
