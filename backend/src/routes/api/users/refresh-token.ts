@@ -47,7 +47,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 			try {
 				console.log("decoded:", decoded);
 				const row = await userTokensRepository.getRowByColumnValue('user_id', decoded.user_id);
-				if (!row.token_version && row.token_version != decoded?.token_version) {
+				if (!row?.token_version || row?.token_version != decoded?.token_version) {
 					return reply.status(401).send({ msg: '11Invalid or expired token.' });
 				}
 				const hashedRefreshToken = row?.server_refresh_token
