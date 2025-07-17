@@ -15,6 +15,11 @@ services:
     restart: always
     init: true
     tty: true
+    command: >
+      sh -c "
+        npm run db:reset &&
+        npm run dev
+      "
 
   frontend:
     container_name: frontend
