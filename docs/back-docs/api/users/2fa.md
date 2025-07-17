@@ -144,6 +144,16 @@ Verifies the OTP and hashed temporary token during login and issues an access to
 }
 ```
 
+```json
+{
+  "success": true,
+  "msg": "Successfully logged in. Your previous session has been terminated.':'Successfully logged in.",
+  "data": {
+    "token": "<access-token>"
+  }
+}
+```
+
 * **401 Unauthorized**
 
 ```json

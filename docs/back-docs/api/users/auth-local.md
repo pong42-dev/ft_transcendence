@@ -94,6 +94,16 @@ Authenticates a user using local credentials. If 2FA is enabled, returns a tempo
   }
   ```
 
+  ```json
+  {
+    "success": true,
+    "msg": "Successfully logged in. Your previous session has been terminated.':'Successfully logged in.",
+    "data": {
+      "token": "access-token"
+    }
+  }
+  ```
+
   * If 2FA **is required**:
 
   ```json
