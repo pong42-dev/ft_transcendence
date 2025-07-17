@@ -256,6 +256,64 @@ export function createGameRepository(fastify: FastifyInstance) {
 		},
 
 		/**
+		 * 모든 게임 기록 조회 (토너먼트 포함)
+		 * @param userId 조회할 유저의 ID
+		 */
+		async getUserAllGameHistory(userId: number): Promise<any[]> {
+			const knex = fastify.knex;
+			// 1. 요청된 userId를 기반으로 player_id를 찾습니다.
+			const playerSubQuery = knex('players').where('user_id', userId).first('id');	
+			// 2. 메인 쿼리를 작성합니다.
+			const results = await knex('games as g')
+				.select(
+					'g.ended_at',
+					'g.winner_id',
+					'me.score as my_score',
+					'op.score as opponent_score',
+					'op_player.id as opponent_player_id',
+					'op_player.type as opponent_player_type',
+					'op_player.user_id as opponent_user_id',
+					'op_player.display_name as opponent_display_name'
+				)
+				.join('game_participants as me', 'g.id', 'me.game_id')
+				.join('game_participants as op', function() {
+					this.on('g.id', '=', 'op.game_id')
+						.andOn('me.player_id', '!=', 'op.player_id');
+				})
+				.join('players as op_player', 'op.player_id', 'op_player.id')
+				.where('g.status', 'finished')
+				.where(function() {
+					this.where('g.type', 'local_1v1').orWhere('g.type', 'ai_1v1')
+						.orWhere('g.type', 'tournament');
+				})
+				.where('me.player_id', playerSubQuery)
+				.orderBy('g.ended_at', 'desc');
+
+			const history = [];
+			for (const row of results) {
+				const opponentInfo = await this.mapDBPlayerToResponseDto({
+					id: row.opponent_player_id,
+					type: row.opponent_player_type,
+					user_id: row.opponent_user_id,
+					display_name: row.opponent_display_name,
+					created_at: '' // 이 필드는 DTO 변환에 사용되지 않음
+				});
+
+				history.push({
+					endedAt: row.ended_at,
+					opponent: opponentInfo,
+					myScore: row.my_score,
+					opponentScore: row.opponent_score,
+					winnerId: row.winner_id
+				});
+			}
+
+			return history;
+		
+		},
+
+		
+		/**
 		 * DB Player를 Response DTO로 변환
 		 */
 		async mapDBPlayerToResponseDto(dbPlayer: DBPlayer): Promise<PlayerResponseDto> {
