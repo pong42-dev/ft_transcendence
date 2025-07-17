@@ -54,7 +54,13 @@ async function login(args: any) {
       console.error('Login failed:', response.data.msg);
     }
   } catch (error: any) {
-    console.error('Error during login:', error.response?.data || error.message);
+    if (error.response) {
+      console.error('Error during login:', error.response.data);
+    } else if (error.request) {
+      console.error('Error during login: No response from server. Please check if the backend server is running.');
+    } else {
+      console.error('Error setting up login request:', error.message);
+    }
   }
 }
 
@@ -84,7 +90,13 @@ async function createGame(args: any) {
     console.log('Game created successfully:');
     console.log(response.data);
   } catch (error: any) {
-    console.error('Error creating game:', error.response?.data || error.message);
+    if (error.response) {
+      console.error('Error creating game:', error.response.data);
+    } else if (error.request) {
+      console.error('Error creating game: No response from server. Please check if the backend server is running.');
+    } else {
+      console.error('Error setting up create game request:', error.message);
+    }
   }
 }
 
@@ -99,7 +111,13 @@ async function getGameStatus(args: any) {
     console.log('Game status:');
     console.log(response.data);
   } catch (error: any) {
-    console.error('Error getting game status:', error.response?.data || error.message);
+    if (error.response) {
+      console.error('Error getting game status:', error.response.data);
+    } else if (error.request) {
+      console.error('Error getting game status: No response from server. Please check if the backend server is running.');
+    } else {
+      console.error('Error setting up get game status request:', error.message);
+    }
   }
 }
 
@@ -110,11 +128,17 @@ async function cancelGame(args: any) {
       console.error('Error: --gameId is required.');
       return;
     }
-    const response = await api.post(`/games/${gameId}/cancel`);
+    const response = await api.post(`/games/${gameId}/cancel`, {});
     console.log('Game canceled successfully:');
     console.log(response.data);
   } catch (error: any) {
-    console.error('Error canceling game:', error.response?.data || error.message);
+    if (error.response) {
+      console.error('Error canceling game:', error.response.data);
+    } else if (error.request) {
+      console.error('Error canceling game: No response from server. Please check if the backend server is running.');
+    } else {
+      console.error('Error setting up cancel game request:', error.message);
+    }
   }
 }
 

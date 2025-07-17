@@ -17,6 +17,9 @@ up:
 	mkdir -p ${DATA_PATH}
 	docker compose -f ./docker-compose.yml --env-file ./.env up --build
 
+game-cli:
+	@docker-compose exec backend npx tsx scripts/game-cli.ts $(ARGS)
+
 # -f ./docker-compose.yml : 사용할 Compose 파일 경로 지정(기본 ./docker-compose.yml)
 # --env-file ./.env : .env 파일의 경로를 명시.
 # up : 컨테이너를 생성하고 시작하는 명령어. 
@@ -144,4 +147,4 @@ help:
 	@echo "❓ 기타:"
 	@echo "   make help      - 이 도움말 표시"
 
-.PHONY: all setup up down clean fclean re status dev-guide help
+.PHONY: all setup up down clean fclean re status dev-guide help game-cli

@@ -34,6 +34,8 @@ CLI는 다음 명령어를 지원합니다:
 - `status`
 - `cancel`
 
+모든 명령어는 `make game-cli ARGS='...'` 형식을 사용하여 실행해야 합니다. 셸(zsh 등)의 예기치 않은 확장을 방지하기 위해 전체 인수를 작은따옴표로 묶는 것이 가장 안전합니다.
+
 ### `login`
 
 사용자를 인증하고 현재 디렉토리에 `.clitoken` 파일로 액세스 토큰을 저장합니다. 이 토큰은 이후 모든 명령에 사용됩니다.
@@ -41,7 +43,7 @@ CLI는 다음 명령어를 지원합니다:
 **사용법:**
 
 ```bash
-./backend/scripts/game-cli.ts login --email <귀하의_이메일> --password <귀하의_비밀번호>
+make game-cli ARGS='login --email "<귀하의_이메일>" --password "<귀하의_비밀번호>"'
 ```
 
 **인수 (Arguments):**
@@ -52,7 +54,7 @@ CLI는 다음 명령어를 지원합니다:
 **예시:**
 
 ```bash
-./backend/scripts/game-cli.ts login --email user@example.com --password "password123"
+make game-cli ARGS='login --email "user@example.com" --password "password123!@#"'
 ```
 
 ### `create`
@@ -62,7 +64,7 @@ CLI는 다음 명령어를 지원합니다:
 **사용법:**
 
 ```bash
-./backend/scripts/game-cli.ts create <유형> [옵션]
+make game-cli ARGS='create <유형> [옵션]'
 ```
 
 **인수 (Arguments):**
@@ -78,11 +80,11 @@ CLI는 다음 명령어를 지원합니다:
 
 - 로컬 1대1 게임 생성:
   ```bash
-  ./backend/scripts/game-cli.ts create local --opponent "Player2"
+  make game-cli ARGS='create local --opponent "Player2"'
   ```
 - 중간 난이도 AI와의 게임 생성:
   ```bash
-  ./backend/scripts/game-cli.ts create ai --difficulty medium
+  make game-cli ARGS='create ai --difficulty medium'
   ```
 
 ### `status`
@@ -92,7 +94,7 @@ CLI는 다음 명령어를 지원합니다:
 **사용법:**
 
 ```bash
-./backend/scripts/game-cli.ts status <게임ID>
+make game-cli ARGS='status "<게임ID>"'
 ```
 
 **인수 (Arguments):**
@@ -102,7 +104,7 @@ CLI는 다음 명령어를 지원합니다:
 **예시:**
 
 ```bash
-./backend/scripts/game-cli.ts status "some-game-uuid"
+make game-cli ARGS='status "some-game-uuid"'
 ```
 
 ### `cancel`
@@ -112,7 +114,7 @@ CLI는 다음 명령어를 지원합니다:
 **사용법:**
 
 ```bash
-./backend/scripts/game-cli.ts cancel <게임ID>
+make game-cli ARGS='cancel "<게임ID>"'
 ```
 
 **인수 (Arguments):**
@@ -122,5 +124,5 @@ CLI는 다음 명령어를 지원합니다:
 **예시:**
 
 ```bash
-./backend/scripts/game-cli.ts cancel "some-game-uuid"
+make game-cli ARGS='cancel "some-game-uuid"'
 ``` 
