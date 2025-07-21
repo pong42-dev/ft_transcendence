@@ -20,9 +20,9 @@ async function login(
 		tokenManager, 
 		userTokensRepository, googleOAuth2Manager,userProfilesRepository,
 		generateUUID } = fasitfy;
-		
-	const isNotLoggedIn = await tokenManager.isNotLoggedIn(user_id);
-	if (!isNotLoggedIn) {
+		 
+	const isLoggedIn = await tokenManager.isLoggedIn(user_id);
+	if (isLoggedIn) {
 		await userTokensRepository.deleteRowByColumnValue("user_id", user_id);
 		const userToken = await userTokensRepository.getRowByColumnValue("user_id", user_id);
 		if (userToken?.google_refresh_token) {
@@ -32,17 +32,6 @@ async function login(
 	} 
 	const tokenVersion = generateUUID();
 	const tokenData = { user_id: user_id, token_version: tokenVersion};
-	// 	if (googleRefreshToken) {
-	// 		const errorParams = new URLSearchParams({
-	// 			error: 'account_in_use',
-	// 			message: 'This account is already in use. Please log out and try again.'
-	// 		});
-	// 		reply.redirect(`${config.BASE_URL}?${errorParams.toString()}`);
-	// 		return;
-	// 	}
-	// 	reply.status(409).send({
-	// 		msg: 'This account is already in use. Please log out and try again.'
-	// 	})
 	const refreshTokenCookie = await fasitfy.tokenManager.generateRefreshToken(tokenData);
 	const expiresAtISO = new Date(refreshTokenCookie.expiresAt).toISOString();
 	log.info(`Generated refresh token for user ${user_id}: ${refreshTokenCookie.value}`);
@@ -63,10 +52,10 @@ async function login(
 	console.log("refreshToken:", refreshTokenCookie.value);
 	console.log("hashed refreshToken:", hashedRefreshToken);
 	await fasitfy.userProfilesRepository.updateRowByColumn('user_id', user_id, 'status', true)
-	const loginMessage = isNotLoggedIn 
-		? 'Successfully logged in.' 
-		: 'Successfully logged in. Your previous session has been terminated.';
-	fasitfy.log.debug(`isNotLoggedIn: ${isNotLoggedIn}`);
+	const loginMessage = isLoggedIn 
+		? 'Successfully logged in. Your previous session has been terminated.'
+		: 'Successfully logged in.';
+	fasitfy.log.debug(`isLoggedIn: ${isLoggedIn}`);
 	if (googleRefreshToken) {
 		fasitfy.log.info(`google: ${loginMessage}`);
 		// 리다이렉트 URL에 메시지를 쿼리 파라미터로 추가

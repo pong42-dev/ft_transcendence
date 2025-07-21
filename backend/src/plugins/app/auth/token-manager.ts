@@ -107,15 +107,15 @@ export function manageTokens(fastify: FastifyInstance) {
 			}
 		},
 
-		async isNotLoggedIn(
+		async isLoggedIn(
 			userId: number
 		): Promise<boolean> {
 			const { userTokensRepository } = fastify;
 			const hasToken = await userTokensRepository.hasValidTokenForUser(userId);
 			if (hasToken) {
-				return false;
+				return true;
 			}
-			return true;
+			return false;
 		},
 
 		async cleanExpiredToken(): Promise<void> {
