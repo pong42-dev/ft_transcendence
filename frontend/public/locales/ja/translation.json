@@ -406,6 +406,7 @@
   "auth": {
     "sessionExpired": "セッションが期限切れです。再度ログインしてください。",
     "loggedOutFromOtherTab": "別のタブからログアウトしました。",
+    "loggedInFromOtherTab": "別のタブで{{username}}さんがログインしました。",
     "loginAgainPrompt": "'login' コマンドを使用して再度サインインしてください。",
     "welcomeBack": "おかえりなさい、{{username}}さん！",
     "typeHelp": "利用可能なコマンドを表示するには 'help' と入力してください。",
@@ -419,6 +420,8 @@
     "twoFAFailed": "二要素認証に失敗しました。もう一度お試しください。",
     "twoFAFailedWithMessage": "二要素認証に失敗しました: {{message}}",
     "invalidCode": "無効なコード",
+    "successfullyLoggedIn": "正常にログインしました。",
+    "successfullyLoggedInSessionTerminated": "正常にログインしました。前のセッションが終了されました。",
     "loginFailed": "ログイン失敗",
     "invalidResponseFromServer": "サーバーからの無効な応答",
     "registrationFailed": "登録失敗",

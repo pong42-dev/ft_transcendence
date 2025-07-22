@@ -406,6 +406,7 @@
   "auth": {
     "sessionExpired": "Your session has expired. Please log in again.",
     "loggedOutFromOtherTab": "You have been logged out from another tab.",
+    "loggedInFromOtherTab": "{{username}} has logged in from another tab.",
     "loginAgainPrompt": "Please use the 'login' command to sign in again.",
     "welcomeBack": "Welcome back, {{username}}!",
     "typeHelp": "Type 'help' to see available commands.",
@@ -419,6 +420,8 @@
     "twoFAFailed": "2FA verification failed. Please try again.",
     "twoFAFailedWithMessage": "2FA verification failed: {{message}}",
     "invalidCode": "Invalid code",
+    "successfullyLoggedIn": "Successfully logged in.",
+    "successfullyLoggedInSessionTerminated": "Successfully logged in. Previous session was terminated.",
     "loginFailed": "Login failed",
     "invalidResponseFromServer": "Invalid response from server",
     "registrationFailed": "Registration failed",

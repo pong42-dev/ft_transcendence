@@ -56,6 +56,9 @@ export class AuthApiService extends BaseApiService {
       // 다른 탭에 로그인 이벤트 브로드캐스트
       this.broadcastLogin(user);
       
+      // 백엔드 메시지를 사용자 객체에 임시 속성으로 추가
+      (user as any).loginMessage = response.msg;
+      
       return user;
     }
     
@@ -76,6 +79,9 @@ export class AuthApiService extends BaseApiService {
     
     // 사용자 정보 가져오기 (2FA 완료 상태)
     const user = await this._fetchUserProfile(true);
+    
+    // 백엔드 메시지를 사용자 객체에 임시 속성으로 추가
+    (user as any).loginMessage = response.msg;
     
     // 다른 탭에 로그인 이벤트 브로드캐스트
     this.broadcastLogin(user);
@@ -430,7 +436,7 @@ export class AuthApiService extends BaseApiService {
   }
 
   // 2FA 로그인 검증 - /api/users/auth/2fa
-  async verifyTwoFA(request: Types.TwoFAVerifyRequest): Promise<{ token: string }> {
+  async verifyTwoFA(request: Types.TwoFAVerifyRequest): Promise<{ token: string; msg: string }> {
     // 2FA 검증 시 tmpToken은 body에만 포함 (Authorization 헤더 사용 안함)
     const headers: Record<string, string> = {
       'Content-Type': 'application/json'
@@ -452,7 +458,10 @@ export class AuthApiService extends BaseApiService {
       throw new ApiError(409, i18next.t('auth.twoFAVerificationFailed'), { message: response.msg });
     }
     
-    return response.data;
+    return { 
+      token: response.data.token,
+      msg: response.msg 
+    };
   }
 
   // 2FA 비활성화 - /api/users/auth/2fa/disable

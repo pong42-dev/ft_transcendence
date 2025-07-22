@@ -11,10 +11,14 @@ export class Terminal {
   private outputContent: string = '';
   private initialMessage: string = i18n.t('terminal.initial_message_logged_out');
   private isInputEnabled: boolean = true;
+  
+  // Terminal state flags for efficient tracking
+  private isShowingInitialMessage: boolean = true;
+  private hasUserCommands: boolean = false;
 
   constructor(commandCallback: (command: string) => void) {
     this.commandCallback = commandCallback;
-    this.outputContent = this.initialMessage;
+    this.outputContent = ''; // 초기에는 빈 상태로 시작
     
     // Create DOM elements only once
     this.terminalElement = document.createElement('div');
@@ -25,7 +29,7 @@ export class Terminal {
     
     this.outputElement = document.createElement('div');
     this.outputElement.className = 'whitespace-pre-wrap text-sm opacity-90 space-y-1';
-    this.outputElement.innerHTML = this.outputContent;
+    // 초기에는 비어있는 상태로 시작, 필요시 initializeWithMessage() 호출
     
     const inputContainer = document.createElement('div');
     inputContainer.className = 'flex items-center mt-2';
@@ -65,6 +69,18 @@ export class Terminal {
     return this.terminalElement;
   }
 
+  /**
+   * 터미널을 초기 웰컴 메시지로 초기화
+   */
+  public initializeWithWelcomeMessage(): void {
+    if (this.outputContent === '') {
+      this.outputElement.innerHTML = this.initialMessage;
+      this.outputContent = this.initialMessage;
+      this.isShowingInitialMessage = true;
+      this.hasUserCommands = false;
+    }
+  }
+
   private scrollToBottom(): void {
     const outputContainer = this.outputElement.parentElement;
     if (outputContainer) {
@@ -79,12 +95,17 @@ export class Terminal {
     messageElement.className = 'text-terminal-green';
     if (text.startsWith('$')) {
       messageElement.className += ' opacity-75';
+      // 사용자 명령어가 실행된 것을 표시
+      this.hasUserCommands = true;
     }
     messageElement.textContent = text;
     
     // Use DOMUpdater to add list item with animation
     this.outputElement.appendChild(messageElement);
     this.outputContent = this.outputElement.innerHTML;
+    
+    // 새로운 출력이 추가되면 더 이상 초기 메시지 상태가 아님
+    this.isShowingInitialMessage = false;
     
     // Use requestAnimationFrame to ensure smooth scrolling after DOM update
     requestAnimationFrame(() => this.scrollToBottom());
@@ -93,24 +114,34 @@ export class Terminal {
   public clearOutput(): void {
     DOMUpdater.updateHTML(this.outputElement, '');
     this.outputContent = '';
+    // 출력이 지워지면 초기 상태로 복원
+    this.isShowingInitialMessage = true;
+    this.hasUserCommands = false;
   }
 
   public updateWelcomeMessage(isLoggedIn: boolean, username?: string): void {
-    const welcomeMessage = isLoggedIn && username
+    const newWelcomeMessage = isLoggedIn && username
       ? i18n.t('terminal.welcome_message_logged_in', { username })
       : i18n.t('terminal.initial_message_logged_out');
     
-    const oldInitialMessage = this.initialMessage;
-    this.initialMessage = welcomeMessage;
-    
-    // 현재 터미널이 초기 상태라면 메시지 업데이트
-    if (this.outputContent === oldInitialMessage) {
-      DOMUpdater.updateHTML(this.outputElement, welcomeMessage, {
-        animate: true,
-        duration: 300,
-        onComplete: () => this.scrollToBottom()
+    // 메시지가 실제로 변경된 경우에만 업데이트
+    if (this.initialMessage !== newWelcomeMessage) {
+      console.log('🖥️ Terminal welcome message changed:', {
+        from: this.initialMessage,
+        to: newWelcomeMessage
       });
-      this.outputContent = welcomeMessage;
+      
+      this.initialMessage = newWelcomeMessage;
+      
+      // 터미널이 초기 상태(사용자 명령어가 없는 상태)인 경우에만 업데이트
+      if (this.isShowingInitialMessage && !this.hasUserCommands) {
+        DOMUpdater.updateHTML(this.outputElement, newWelcomeMessage, {
+          animate: true,
+          duration: 300,
+          onComplete: () => this.scrollToBottom()
+        });
+        this.outputContent = newWelcomeMessage;
+      }
     }
   }
 
@@ -118,12 +149,31 @@ export class Terminal {
     this.clearOutput();
     this.commandHistory = [];
     this.historyIndex = -1;
+    
+    // 초기 메시지로 리셋
     DOMUpdater.updateHTML(this.outputElement, this.initialMessage, {
       animate: true,
       duration: 200,
       onComplete: () => this.scrollToBottom()
     });
     this.outputContent = this.initialMessage;
+    
+    // 플래그 상태도 초기화
+    this.isShowingInitialMessage = true;
+    this.hasUserCommands = false;
+  }
+
+  /**
+   * 터미널을 초기화하되, 이후 메시지 추가를 위해 초기 상태 플래그는 false로 설정
+   */
+  public resetForNewContent(): void {
+    this.clearOutput();
+    this.commandHistory = [];
+    this.historyIndex = -1;
+    
+    // 플래그를 false로 설정하여 UIRenderer의 웰컴 메시지 덮어쓰기 방지
+    this.isShowingInitialMessage = false;
+    this.hasUserCommands = false;
   }
 
   public focus(): void {

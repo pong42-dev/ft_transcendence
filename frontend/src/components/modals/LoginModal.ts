@@ -11,7 +11,7 @@ import { DOMUpdater } from '../../utils/DOMUpdater.js';
 import i18n from '../../services/i18n.js';
 
 export interface LoginModalCallbacks {
-  onLoginSuccess: (user: User) => void;
+  onLoginSuccess: (user: User, loginMessage?: string) => void;
   onSwitchToRegister: () => void;
   on2FARequired: (tmpToken: string) => void;
 }
@@ -232,7 +232,9 @@ export class LoginModal {
         this.callbacks.on2FARequired((response as any).tmpToken);
         // 2FA가 필요한 경우 모달을 닫지 않음 - 2FA 완료 후에 닫아야 함
       } else {
-        this.callbacks.onLoginSuccess(response as User);
+        // 백엔드에서 오는 msg 필드를 콜백에 전달 (사용자 객체에 첨부된 메시지 우선)
+        const loginMessage = (response as any).loginMessage || null;
+        this.callbacks.onLoginSuccess(response as User, loginMessage);
         this.hide();
       }
     } catch (error: any) {

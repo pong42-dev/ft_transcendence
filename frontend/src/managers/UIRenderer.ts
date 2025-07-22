@@ -128,8 +128,8 @@ export class UIRenderer {
       return;
     }
     
-    // 터미널 메시지 업데이트 (로그인 상태에 따라)
-    this.mainTerminal.updateWelcomeMessage(isLoggedIn, currentUser?.username);
+    // 터미널 메시지는 로그인/로그아웃 콜백에서 직접 관리하므로 
+    // UIRenderer에서는 터미널 메시지를 업데이트하지 않음
     
     DOMUpdater.updateHTML(mainContent, '');
     

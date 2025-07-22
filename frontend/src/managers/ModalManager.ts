@@ -16,7 +16,7 @@ import { RegisterResult } from '../components/modals/RegisterModal.js';
  */
 
 export interface ModalCallbacks {
-  onLoginSuccess?: (user: User) => Promise<void>;
+  onLoginSuccess?: (user: User, loginMessage?: string) => Promise<void>;
   onRegisterSuccess?: (result: RegisterResult) => void;
   onSwitchToRegister?: () => void;
   onSwitchToLogin?: () => void;

@@ -399,6 +399,7 @@
   "auth": {
     "sessionExpired": "세션이 만료되었습니다. 다시 로그인해주세요.",
     "loggedOutFromOtherTab": "다른 탭에서 로그아웃되었습니다.",
+    "loggedInFromOtherTab": "다른 탭에서 {{username}}님으로 로그인되었습니다.",
     "loginAgainPrompt": "'login' 명령을 사용하여 다시 로그인하십시오.",
     "welcomeBack": "돌아오신 것을 환영합니다, {{username}}님!",
     "typeHelp": "사용 가능한 명령을 보려면 'help'를 입력하십시오.",
@@ -412,6 +413,8 @@
     "twoFAFailed": "2단계 인증에 실패했습니다. 다시 시도해 주세요.",
     "twoFAFailedWithMessage": "2단계 인증 실패: {{message}}",
     "invalidCode": "잘못된 코드",
+    "successfullyLoggedIn": "성공적으로 로그인되었습니다.",
+    "successfullyLoggedInSessionTerminated": "성공적으로 로그인되었습니다. 이전 세션이 종료되었습니다.",
     "loginFailed": "로그인 실패",
     "invalidResponseFromServer": "서버에서 잘못된 응답",
     "registrationFailed": "회원가입 실패",

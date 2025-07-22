@@ -126,8 +126,10 @@ export class App {
 
 
   public init(): void {
-    this.uiRenderer.render(); // Show UI immediately (loading state)
-    this.setupRouting(); // Routes are safe because DOM exists
+    this.setupRouting(); // Setup routes first
+    
+    // OAuth 리다이렉트에서 온 메시지 처리
+    this.handleOAuthRedirectMessage();
     
     // 새로고침 후 리다이렉트 처리
     if (sessionStorage.getItem('redirectToProfile') === 'true') {
@@ -139,23 +141,60 @@ export class App {
       }, 100);
     }
     
-    // 즉시 세션 스토리지에서 토큰 복원 시도
+    // 세션 토큰 복원 (로그인 상태는 설정하지 않고 토큰만 복원)
     this.authManager.tryRestoreSessionToken();
+    
+    // 초기 UI 렌더링 (인증 확인 중 상태)
+    this.uiRenderer.render();
     
     // 인증 상태 확인을 백그라운드에서 실행 (UI 블로킹 방지)
     setTimeout(() => {
       this.authManager.checkAuthStateWithTimeout().then(() => {
-        this.uiRenderer.render(); // Render after auth check is complete
+        // 인증 확인 완료 후 최종 렌더링
+        this.uiRenderer.render();
         
-        // 인증 확인 완료 후 터미널에 포커스 (로그인 상태이고 게임 중이 아닌 경우)
+        // 인증 확인 완료 후 처리
         const isLoggedIn = authStore.getIsLoggedIn();
         if (isLoggedIn && !this.uiRenderer.getGameState()) {
+          // 로그인된 경우 터미널에 포커스
+          setTimeout(() => {
+            this.mainTerminal.focus();
+          }, 300);
+        } else if (isLoggedIn === false) {
+          // 로그인되지 않은 경우에만 웰컴 메시지 표시
+          this.mainTerminal.initializeWithWelcomeMessage();
           setTimeout(() => {
             this.mainTerminal.focus();
           }, 300);
         }
+      }).catch((error) => {
+        console.error('Auth check failed during init:', error);
+        // 인증 실패 시에도 UI 상태 업데이트
+        this.uiRenderer.render();
+        // 인증 실패 시 웰컴 메시지 표시
+        this.mainTerminal.initializeWithWelcomeMessage();
+        setTimeout(() => {
+          this.mainTerminal.focus();
+        }, 300);
       });
     }, 100);
+  }
+
+  /**
+   * OAuth 리다이렉트에서 온 메시지 처리
+   */
+  private handleOAuthRedirectMessage(): void {
+    const url = new URL(window.location.href);
+    const message = url.searchParams.get('message');
+    
+    if (message) {
+      // URL에서 메시지 파라미터 제거
+      url.searchParams.delete('message');
+      window.history.replaceState({}, document.title, url.toString());
+      
+      // 메시지를 세션에 저장하여 로그인 완료 후 표시
+      sessionStorage.setItem('oauthLoginMessage', decodeURIComponent(message));
+    }
   }
   
   private setupRouting(): void {
@@ -349,6 +388,23 @@ export class App {
 
 
 
+  // ===== TRANSLATION HELPERS =====
+
+  /**
+   * 백엔드에서 온 영어 메시지를 한국어로 번역
+   */
+  private translateBackendMessage(message: string): string {
+    // 백엔드 메시지를 정확히 매칭하여 번역
+    if (message === 'Successfully logged in. Your previous session has been terminated.') {
+      return i18next.t('auth.successfullyLoggedInSessionTerminated');
+    }
+    if (message === 'Successfully logged in.') {
+      return i18next.t('auth.successfullyLoggedIn');
+    }
+    // 번역되지 않은 메시지는 그대로 반환
+    return message;
+  }
+
   // ===== MODAL MANAGEMENT =====
 
   /**
@@ -379,16 +435,25 @@ export class App {
   // 공통 모달 콜백들
   private getCommonModalCallbacks() {
     return {
-      onLoginSuccess: async (user: Types.User) => {
+      onLoginSuccess: async (user: Types.User, loginMessage?: string) => {
         authStore.login(user);
         UserStateCache.cache(user);
-        this.mainTerminal.reset();
-        this.mainTerminal.appendOutput(i18next.t('app.welcome_back', { username: user.username }));
+        
+        this.mainTerminal.resetForNewContent();
+        
+        // 백엔드에서 온 메시지가 있으면 번역해서 사용, 없으면 기본 환영 메시지
+        if (loginMessage) {
+          this.mainTerminal.appendOutput(this.translateBackendMessage(loginMessage));
+          // 이중 로그인 메시지에는 이미 로그인 성공 내용이 포함되어 있으므로 추가 환영 메시지 불필요
+        } else {
+          this.mainTerminal.appendOutput(i18next.t('app.welcome_back', { username: user.username }));
+        }
         
         await this.userProfileManager.handlePendingAvatarUpload();
         
         this.mainTerminal.appendOutput(i18next.t('app.type_help_command'));
-        this.uiRenderer.render();
+        
+        // authStore 구독자가 자동으로 렌더링하므로 수동 render() 호출 제거
         setTimeout(() => {
           this.router.navigate('/profile');
           this.mainTerminal.focus();

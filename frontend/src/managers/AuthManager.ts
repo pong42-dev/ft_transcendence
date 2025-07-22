@@ -41,17 +41,18 @@ export class AuthManager {
     TokenManager.onTokenExpired(() => {
       console.log('[AuthManager] 🚨 Token expired - forcing logout and redirect to home');
       
-      // 로그아웃 처리
+      // 터미널 초기화 및 메시지 표시를 먼저 수행
+      if (this.terminal) {
+        this.terminal.resetForNewContent();
+        this.terminal.appendOutput(i18next.t('auth.sessionExpired'));
+      }
+      
+      // 로그아웃 처리 (이때 authStore 구독자가 트리거되지만 터미널은 이미 설정됨)
       authStore.logout();
       UserStateCache.clear();
       
       // 홈으로 리다이렉트
       this.router.navigate('/');
-      
-      // 터미널 메시지 표시 (선택적)
-      if (this.terminal) {
-        this.terminal.appendOutput(i18next.t('auth.sessionExpired'));
-      }
     });
   }
 
@@ -102,6 +103,11 @@ export class AuthManager {
   private handleCrossTabLogout(): void {
     console.info('[AuthManager] Handling cross-tab logout');
     
+    // 터미널 초기화 및 메시지 표시를 먼저 수행
+    this.terminal.resetForNewContent();
+    this.terminal.appendOutput(i18next.t('auth.loggedOutFromOtherTab'));
+    this.terminal.appendOutput(i18next.t('auth.loginAgainPrompt'));
+    
     // 로그아웃 상태로 업데이트
     authStore.logout();
     UserStateCache.clear();
@@ -109,10 +115,6 @@ export class AuthManager {
     // 토큰 정리
     TokenManager.clearTokens();
     this.apiClient.clearToken();
-    
-    // 터미널 메시지 표시
-    this.terminal.appendOutput(i18next.t('auth.loggedOutFromOtherTab'));
-    this.terminal.appendOutput(i18next.t('auth.loginAgainPrompt'));
     
     // 홈으로 이동
     this.router.navigate('/');
@@ -165,23 +167,21 @@ export class AuthManager {
   tryRestoreSessionToken(): void {
     const sessionToken = TokenManager.getAccessToken(); // 이제 세션에서 자동 복원됨
     if (sessionToken) {
-      console.log('🔄 Session token restored, setting preliminary auth state');
+      console.log('🔄 Session token found, but keeping in checking state until API verification');
       
-      // 기본 사용자 정보만 복원 (2FA 상태는 API에서만 가져옴)
+      // 토큰이 있어도 즉시 로그인 상태로 설정하지 않음
+      // API 검증이 완료될 때까지 checking 상태 유지
       const cachedUser = UserStateCache.restore();
       if (cachedUser) {
-        // 사용자 정보를 authStore에 저장
-        authStore.login({
-          ...cachedUser,
-          twoFactorEnabled: false // 기본값, API 검증 후 실제 값으로 업데이트
-        });
-        console.log('👤 Cached user state restored (excluding 2FA):', cachedUser.username);
-        
+        console.log('👤 Cached user found, but will verify with API:', cachedUser.username);
       } else {
         console.log('⚠️ No cached user state found, will fetch from server');
       }
+      
+      // authStore는 checking 상태(null) 그대로 유지
     } else {
-      console.log('❌ No session token found, remaining in logged out state');
+      console.log('❌ No session token found, setting logged out state');
+      authStore.setLoggedOut();
     }
   }
 
@@ -249,13 +249,26 @@ export class AuthManager {
         if (user) {
           authStore.login(user);
           UserStateCache.cache(user);
-          this.terminal.reset();
-          this.terminal.appendOutput(i18next.t('auth.welcomeBack', { username: user.username }));
+          
+          this.terminal.resetForNewContent();
+          
+          // OAuth 로그인 메시지 처리 (세션에서 가져옴)
+          const oauthMessage = sessionStorage.getItem('oauthLoginMessage');
+          if (oauthMessage) {
+            this.terminal.appendOutput(this.translateBackendMessage(oauthMessage));
+            sessionStorage.removeItem('oauthLoginMessage');
+            
+            // 이중 로그인 메시지에는 이미 로그인 성공 내용이 포함되어 있으므로 추가 환영 메시지 불필요
+          } else {
+            this.terminal.appendOutput(i18next.t('auth.welcomeBack', { username: user.username }));
+          }
+          
           this.terminal.appendOutput(i18next.t('auth.typeHelp'));
           
           // OAuth 로그인 시도 추적 정리
           sessionStorage.removeItem('oauth_login_attempt');
           
+          // authStore 구독자가 자동으로 렌더링하므로 수동 렌더링 제거
           setTimeout(() => {
             this.router.navigate('/profile');
             this.terminal.focus();
@@ -546,10 +559,20 @@ export class AuthManager {
                 // Handle successful registration
                 const { authStore } = await import('../store/authStore.js');
                 authStore.login(result.user);
-                this.terminal.reset();
-                this.terminal.appendOutput(i18next.t('auth.welcomeBack', { username: result.user.username }));
+                
+                this.terminal.resetForNewContent();
+                
+                // 회원가입 성공 시 환영 메시지
+                if (result.avatarUploaded) {
+                  this.terminal.appendOutput(i18next.t('auth.accountCreatedSuccessWithAvatar', { username: result.user.username }));
+                } else {
+                  this.terminal.appendOutput(i18next.t('auth.accountCreatedSuccess', { username: result.user.username }));
+                  this.terminal.appendOutput(i18next.t('auth.usingDefaultAvatar'));
+                }
+                
                 this.terminal.appendOutput(i18next.t('auth.typeHelp'));
                 
+                // authStore 구독자가 자동 렌더링하므로 수동 렌더링 제거
                 setTimeout(() => {
                   this.router.navigate('/profile');
                   this.terminal.focus();
@@ -560,14 +583,24 @@ export class AuthManager {
               }
             })
           : modalManager.showLoginModal({
-              onLoginSuccess: async (user) => {
+              onLoginSuccess: async (user, loginMessage) => {
                 // Handle successful login
                 const { authStore } = await import('../store/authStore.js');
                 authStore.login(user);
-                this.terminal.reset();
-                this.terminal.appendOutput(i18next.t('auth.welcomeBack', { username: user.username }));
+                
+                this.terminal.resetForNewContent();
+                
+                // 백엔드 메시지가 있으면 번역해서 사용, 없으면 기본 메시지
+                if (loginMessage) {
+                  this.terminal.appendOutput(this.translateBackendMessage(loginMessage));
+                  // 이중 로그인 메시지에는 이미 로그인 성공 내용이 포함되어 있으므로 추가 환영 메시지 불필요
+                } else {
+                  this.terminal.appendOutput(i18next.t('auth.welcomeBack', { username: user.username }));
+                }
+                
                 this.terminal.appendOutput(i18next.t('auth.typeHelp'));
                 
+                // authStore 구독자가 자동 렌더링하므로 수동 렌더링 제거
                 setTimeout(() => {
                   this.router.navigate('/profile');
                   this.terminal.focus();
@@ -639,6 +672,21 @@ export class AuthManager {
   }
 
   /**
+   * 백엔드에서 온 영어 메시지를 한국어로 번역
+   */
+  private translateBackendMessage(message: string): string {
+    // 백엔드 메시지를 정확히 매칭하여 번역
+    if (message === 'Successfully logged in. Your previous session has been terminated.') {
+      return i18next.t('auth.successfullyLoggedInSessionTerminated');
+    }
+    if (message === 'Successfully logged in.') {
+      return i18next.t('auth.successfullyLoggedIn');
+    }
+    // 번역되지 않은 메시지는 그대로 반환
+    return message;
+  }
+
+  /**
    * 정리 메서드
    */
   cleanup(): void {
@@ -687,8 +735,16 @@ export class AuthManager {
       // 로그인 성공 처리
       authStore.login(user);
       UserStateCache.cache(user);
-      this.terminal.updateWelcomeMessage(true, user.username);
-      this.terminal.reset();
+      this.terminal.resetForNewContent();
+      
+      // 백엔드 메시지가 있으면 번역해서 사용, 없으면 기본 환영 메시지
+      const loginMessage = (user as any).loginMessage;
+      if (loginMessage) {
+        this.terminal.appendOutput(this.translateBackendMessage(loginMessage));
+      } else {
+        this.terminal.appendOutput(i18next.t('auth.welcomeBack', { username: user.username }));
+      }
+      
       this.terminal.appendOutput(i18next.t('auth.typeHelp'));
       
       setTimeout(() => {
