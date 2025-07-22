@@ -228,13 +228,14 @@ export class LoginModal {
         passwordInput.value
       );
 
-      if ('requires2FA' in response && (response as any).requires2FA) {
-        this.callbacks.on2FARequired((response as any).tmpToken);
+      if ('requires2FA' in response && response.requires2FA) {
+        this.callbacks.on2FARequired(response.tmpToken);
         // 2FA가 필요한 경우 모달을 닫지 않음 - 2FA 완료 후에 닫아야 함
       } else {
-        // 백엔드에서 오는 msg 필드를 콜백에 전달 (사용자 객체에 첨부된 메시지 우선)
-        const loginMessage = (response as any).loginMessage || null;
-        this.callbacks.onLoginSuccess(response as User, loginMessage);
+        // 일반 로그인 성공 - response는 { user, loginMessage } 타입
+        const loginResult = response as { user: User; loginMessage: string };
+        const { user, loginMessage } = loginResult;
+        this.callbacks.onLoginSuccess(user, loginMessage);
         this.hide();
       }
     } catch (error: any) {

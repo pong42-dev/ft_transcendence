@@ -10,8 +10,8 @@ export class AuthApiService extends BaseApiService {
     super(undefined, 'AuthApiService');
   }
 
-  // 로컬 로그인 - /api/users/login/local (2FA 지원)
-  async login(email: string, password: string): Promise<Types.User | { requires2FA: true; tmpToken: string }> {
+  // 로컬 로그인 - /api/users/login/local (2FA 지원)  
+  async login(email: string, password: string): Promise<{ user: Types.User; loginMessage: string } | { requires2FA: true; tmpToken: string; data?: { token: string } }> {
     const response = await this.post<{
       success: boolean;
       requires2FA?: boolean;
@@ -30,10 +30,11 @@ export class AuthApiService extends BaseApiService {
     
     
     // 2FA가 필요한 경우
-    if (response.requires2FA && response.data?.token) {
+    if (response.requires2FA && response.data.token) {
       return {
         requires2FA: true,
-        tmpToken: response.data.token
+        tmpToken: response.data.token,
+        data: { token: response.data.token }
       };
     }
     
@@ -56,10 +57,8 @@ export class AuthApiService extends BaseApiService {
       // 다른 탭에 로그인 이벤트 브로드캐스트
       this.broadcastLogin(user);
       
-      // 백엔드 메시지를 사용자 객체에 임시 속성으로 추가
-      (user as any).loginMessage = response.msg;
-      
-      return user;
+      // 사용자와 로그인 메시지를 별도 객체로 반환
+      return { user, loginMessage: response.msg };
     }
     
     // 디버깅을 위한 로그
@@ -68,7 +67,7 @@ export class AuthApiService extends BaseApiService {
   }
 
   // 2FA 로그인 완료 - tmpToken과 2FA 코드로 로그인 마무리
-  async completeTwoFALogin(tmpToken: string, twoFACode: string): Promise<Types.User> {
+  async completeTwoFALogin(tmpToken: string, twoFACode: string): Promise<{ user: Types.User; loginMessage: string }> {
     const response = await this.verifyTwoFA({
       tmpToken,
       token: twoFACode
@@ -80,13 +79,11 @@ export class AuthApiService extends BaseApiService {
     // 사용자 정보 가져오기 (2FA 완료 상태)
     const user = await this._fetchUserProfile(true);
     
-    // 백엔드 메시지를 사용자 객체에 임시 속성으로 추가
-    (user as any).loginMessage = response.msg;
-    
     // 다른 탭에 로그인 이벤트 브로드캐스트
     this.broadcastLogin(user);
     
-    return user;
+    // 사용자와 로그인 메시지를 별도 객체로 반환
+    return { user, loginMessage: response.msg };
   }
 
   // 회원가입 - /api/users/register (multipart/form-data)

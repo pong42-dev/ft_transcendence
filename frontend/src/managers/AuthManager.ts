@@ -730,7 +730,8 @@ export class AuthManager {
   async handle2FAVerification(tmpToken: string, code: string, twoFAModal: any): Promise<void> {
     try {
       this.terminal.appendOutput(i18next.t('auth.twoFAVerifying'));
-      const user = await this.apiClient.auth.completeTwoFALogin(tmpToken, code);
+      const loginResult = await this.apiClient.auth.completeTwoFALogin(tmpToken, code);
+      const { user, loginMessage } = loginResult;
       
       // 로그인 성공 처리
       authStore.login(user);
@@ -738,7 +739,6 @@ export class AuthManager {
       this.terminal.resetForNewContent();
       
       // 백엔드 메시지가 있으면 번역해서 사용, 없으면 기본 환영 메시지
-      const loginMessage = (user as any).loginMessage;
       if (loginMessage) {
         this.terminal.appendOutput(this.translateBackendMessage(loginMessage));
       } else {

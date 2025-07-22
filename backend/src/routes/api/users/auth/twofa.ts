@@ -210,7 +210,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 		},
 		async (request, reply): Promise<void> => {
 			const { user_id:userId } = request.user;
-			await loginManager.login(userId, reply, '');
+			await loginManager.login(fastify, userId, reply, '');
 		}
 	);
 
