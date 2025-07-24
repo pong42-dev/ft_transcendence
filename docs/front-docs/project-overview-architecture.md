@@ -1,327 +1,530 @@
-# PONG-CLI - 프로젝트 개요 및 아키텍처
+# ft_transcendence Frontend - Project Overview and Architecture
 
-## 🎯 프로젝트 개요
+## 🎯 Project Overview
 
-**PONG-CLI**는 명령줄 인터페이스를 모방한 현대적인 웹 애플리케이션으로 구축된 터미널 스타일의 Pong 게임 구현입니다. 이 프로젝트는 클래식 터미널 인터페이스의 향수를 불러일으키는 느낌과 현대적인 웹 기술을 결합하여 매력적인 게임 경험을 제공합니다.
+**ft_transcendence** is the final web project for 42Seoul, a modern web application that provides real-time multiplayer Pong games and tournament systems. It combines a terminal-style CLI interface with modern web technologies to deliver a unique and engaging user experience.
 
-### 프로젝트 비전
-- 진정한 터미널 스타일의 게임 경험 창조
-- 싱글플레이어 및 멀티플레이어 Pong 게임플레이 제공
-- 소셜 기능을 갖춘 포괄적인 사용자 관리 시스템 구현
-- 쉬운 유지보수와 확장을 위한 깨끗하고 모듈화된 아키텍처 유지
+### Project Vision
+- **Modern Web Technologies**: Adherence to latest web standards using TypeScript, Tailwind CSS, and WebSocket
+- **Real-time Multiplayer**: Real-time gaming experience through server-based game logic and WebSocket
+- **Comprehensive User Management**: Complete user system including authentication, 2FA, and social features
+- **Scalable Architecture**: Modular design for easy maintenance and feature expansion
+- **Multi-language Support**: Accessibility through support for 3 languages (Korean, English, Japanese)
+- **Terminal Aesthetics**: Developer-friendly CLI-style interface
 
-## 🛠️ 기술 스택
+### Core Requirements (PRD-based)
+- **WEB-TYPESCRIPT**: Pure implementation using only TypeScript and Tailwind CSS
+- **WEB-SPA-NAV**: SPA navigation that respects browser history
+- **WEB-ERROR-FREE**: Robust error handling with no errors during user interactions
+- **WEB-BROWSER-COMPAT**: Guaranteed proper functionality across multiple browsers
+- **WEB-MULTI-LANG**: Support for minimum 3 languages with language switching functionality
 
-### 핵심 기술
-- **TypeScript**: 타입 안전성과 더 나은 개발자 경험을 위한 주요 언어
-- **Vite**: 빠른 HMR(Hot Module Replacement)을 위한 현대적인 빌드 도구 및 개발 서버
-- **TailwindCSS**: 터미널 스타일 테마를 위한 유틸리티 우선 CSS 프레임워크
-- **HTML5 Canvas**: 부드러운 게임 렌더링 및 애니메이션을 위함
+## 🛠️ Technology Stack
 
-### 주요 기능
-- **터미널 UI**: 진정한 명령줄 인터페이스 시뮬레이션
-- **인증 시스템**: 2FA 지원을 통한 사용자 등록, 로그인
-- **소셜 기능**: 친구 시스템, 알림, 채팅 기능
-- **게임 모드**: 데모, 일반 1v1, 토너먼트 모드
-- **사용자 프로필**: 통계 추적, 업적, 경기 기록
+### Core Technologies
+- **TypeScript**: Primary language for type safety and enhanced developer experience
+- **Vanilla JavaScript**: Pure implementation without framework dependencies
+- **TailwindCSS**: Utility-first CSS framework for rapid UI development
+- **HTML5 Canvas**: High-performance game rendering and animation
+- **WebSocket**: Real-time game communication and multiplayer support
+- **i18next**: Internationalization library for multi-language support
 
-## 🏗️ 애플리케이션 아키텍처
+### Development Tools
+- **HTTP Server**: Development server for serving static files
+- **PostCSS**: CSS preprocessing and optimization
+- **TypeScript Compiler**: Code compilation and type checking
+- **Docker**: Containerized deployment environment
 
-### 아키텍처 패턴
-애플리케이션은 명확한 관심사의 분리를 갖춘 **컴포넌트 기반 아키텍처**를 따릅니다:
+### Key Features
+- **Terminal CLI**: Command-based user interface
+- **Authentication System**: Local login, Google OAuth, 2FA support
+- **Social Features**: Friend system, real-time notifications, online status tracking
+- **Game Modes**: Local, online, and tournament mode support
+- **User Profile**: Statistics tracking, match history, achievement system
+- **Real-time Communication**: WebSocket-based game state synchronization
+
+## 🏗️ Application Architecture
+
+### Layered Architecture Pattern
+The ft_transcendence frontend adopts a **layered architecture** to ensure separation of concerns and scalability:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                        App.ts                               │
-│                  (메인 오케스트레이터)                           │
-├─────────────────────────────────────────────────────────────┤
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │
-│  │  Terminal   │  │  PongGame   │  │   UserProfile       │  │
-│  │  컴포넌트     │  │  컴포넌트     │  │   컴포넌트             │  │
-│  └─────────────┘  └─────────────┘  └─────────────────────┘  │
-├─────────────────────────────────────────────────────────────┤
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │
-│  │   모달       │  │   알림       │  │   AuthService       │  │
-│  │  (다양함)     │  │   센터       │  │   (데이터 레이어)      │  │
-│  └─────────────┘  └─────────────┘  └─────────────────────┘  │
-├─────────────────────────────────────────────────────────────┤
-│                    타입 및 모델                                │
-│                   (데이터 계약)                                │
+│                    Presentation Layer                       │
+│   App.ts │ Terminal.ts │ GamePage.ts │ UserProfile.ts      │
+└─────────────────────────────────────────────────────────────┘
+                              │
+┌─────────────────────────────────────────────────────────────┐
+│                   Business Logic Layer                     │
+│ AuthManager │ UIRenderer │ ModalManager │ GameManager     │
+└─────────────────────────────────────────────────────────────┘
+                              │
+┌─────────────────────────────────────────────────────────────┐
+│                     Service Layer                          │
+│ ApiClient │ WebSocketService │ i18n │ Router │ GameClient │
+└─────────────────────────────────────────────────────────────┘
+                              │
+┌─────────────────────────────────────────────────────────────┐
+│                      Data Layer                            │
+│        authStore        │      userProfileStore           │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### 아키텍처 개요 다이어그램
+### Overall System Architecture
 
 ```mermaid
 graph TB
-    subgraph "애플리케이션 레이어"
-        A[App.ts<br/>메인 오케스트레이터]
+    subgraph "Frontend (TypeScript/Tailwind)"
+        subgraph "Presentation Layer"
+            A[App.ts<br/>Main Application]
+            B[Terminal.ts<br/>CLI Interface]
+            C[GamePage.ts<br/>Game Screen]
+            D[UserProfile.ts<br/>Profile Display]
+            E[Modals/*<br/>Modal System]
+        end
+        
+        subgraph "Business Logic Layer"
+            F[AuthManager.ts<br/>Authentication Management]
+            G[UIRenderer.ts<br/>UI State Management]
+            H[ModalManager.ts<br/>Modal Management]
+            I[UserProfileManager.ts<br/>Profile Management]
+        end
+        
+        subgraph "Service Layer"
+            J[ApiClient.ts<br/>HTTP Communication]
+            K[WebSocketService.ts<br/>Real-time Communication]
+            L[GameClient.ts<br/>Game Logic]
+            M[Router.ts<br/>SPA Routing]
+            N[i18n.ts<br/>Multi-language Support]
+        end
+        
+        subgraph "Data Layer"
+            O[authStore.ts<br/>Authentication State]
+            P[userProfileStore.ts<br/>User State]
+        end
     end
     
-    subgraph "컴포넌트 레이어"
-        B[Terminal.ts<br/>CLI 컴포넌트]
-        C[PongGame.ts<br/>게임 컴포넌트]
-        D[UserProfile.ts<br/>프로필 컴포넌트]
+    subgraph "Backend (Node.js/Fastify)"
+        Q[REST API<br/>User/Game Management]
+        R[WebSocket Server<br/>Real-time Gaming]
+        S[SQLite Database<br/>Data Storage]
     end
     
-    subgraph "모달 레이어"
-        E[GameModal<br/>게임 설정]
-        F[GameEndModal<br/>결과]
-        G[FileModal<br/>파일 관리]
-    end
-    
-    subgraph "서비스 레이어"
-        H[AuthService<br/>인증]
-        I[NotificationCenter<br/>메시징]
-    end
-    
-    subgraph "데이터 레이어"
-        J[Types.ts<br/>데이터 계약]
-        K[사용자 데이터 저장소<br/>인메모리]
-    end
-    
-    A --> B
-    A --> C
-    A --> D
-    A --> E
     A --> F
-    A --> G
-    A --> H
-    A --> I
-    
-    B --> H
-    C --> H
-    D --> H
+    B --> F
+    C --> L
+    D --> I
     E --> H
-    F --> H
-    G --> H
     
+    F --> J
+    G --> J
     H --> J
-    H --> K
     I --> J
+    L --> K
+    
+    J --> Q
+    K --> R
+    Q --> S
+    R --> S
+    
+    J --> O
+    K --> P
     
     style A fill:#e3f2fd
-    style B fill:#f3e5f5
-    style C fill:#e8f5e8
-    style D fill:#fff3e0
-    style E fill:#fce4ec
-    style F fill:#fce4ec
-    style G fill:#fce4ec
-    style H fill:#e0f2f1
-    style I fill:#e0f2f1
-    style J fill:#fff8e1
-    style K fill:#fff8e1
+    style F fill:#f3e5f5
+    style J fill:#e8f5e8
+    style O fill:#fff3e0
+    style Q fill:#ffebee
+    style R fill:#ffebee
+    style S fill:#f3e5f5
 ```
 
-### 핵심 컴포넌트
+## 🧩 Core Component Details
 
-#### 1. **App 컴포넌트** (`src/components/App.ts`)
-- **역할**: 메인 애플리케이션 오케스트레이터 및 상태 관리자
-- **책임**:
-  - 애플리케이션 생명주기 관리
-  - 다른 뷰(게임, 프로필, 터미널) 간의 라우트 처리
-  - 사용자 인증 및 게임 상태에 대한 상태 관리
-  - 터미널 세션 및 채팅을 위한 탭 관리
-  - 명령 처리 및 위임
+### 1. **App Component** (`src/components/App.ts`)
+**Role**: Central controller and lifecycle manager for the application
+**Key Responsibilities**:
+- Dependency injection and initialization (acts as DI container)
+- SPA routing setup and navigation handling
+- Global state subscription and UI state synchronization
+- Component communication mediation
+- Application lifecycle event handling
 
-#### 2. **PongGame 컴포넌트** (`src/components/PongGame.ts`)
-- **역할**: 게임 엔진 및 렌더링 시스템
-- **책임**:
-  - 게임 물리 및 공 움직임 계산
-  - 패들 제어 (플레이어 입력 및 AI)
-  - 충돌 감지 및 점수 계산
-  - 게임 모드 (데모, 일반, 토너먼트)
-  - 라운드 기반 게임플레이 관리
-
-#### 3. **Terminal 컴포넌트** (`src/components/Terminal.ts`)
-- **역할**: 명령줄 인터페이스 시뮬레이션
-- **책임**:
-  - 명령 입력 처리
-  - 터미널 스타일 포맷팅으로 출력 렌더링
-  - 명령 기록 관리
-  - 채팅 모드 기능
-
-#### 4. **UserProfile 컴포넌트** (`src/components/UserProfile.ts`)
-- **역할**: 사용자 정보 표시 및 관리
-- **책임**:
-  - 프로필 정보 렌더링
-  - 통계 표시 (플레이한 게임, 승리, 업적)
-  - 친구 목록 관리
-  - 사용자 설정 및 선호도
-
-#### 5. **모달 컴포넌트**
-- **GameModal**: 토너먼트 브래킷 및 게임 설정
-- **GameEndModal**: 게임 후 결과 및 네비게이션
-- **FileModal**: 프로필 관리를 위한 파일 시스템 시뮬레이션
-
-### 데이터 레이어
-
-#### AuthService (`src/utils/AuthService.ts`)
-- **패턴**: 서비스 레이어 / 저장소 패턴
-- **책임**:
-  - 사용자 인증 (로그인, 등록)
-  - 사용자 데이터 지속성 (인메모리 저장소)
-  - 친구 관계 관리
-  - 소셜 기능 (차단, 상태 추적)
-
-#### 타입 시스템 (`src/models/Types.ts`)
-- **패턴**: 인터페이스 분리
-- **주요 인터페이스**:
-  - `User`: 통계 및 관계를 포함한 완전한 사용자 프로필
-  - `AppState`: 애플리케이션 전체 상태 관리
-  - `Friend`: 친구 관계 및 상태 추적
-  - `Notification`: 메시지 및 알림 시스템
-  - `Achievement`: 게임화 시스템
-
-## 🎮 게임 아키텍처
-
-### 게임 흐름 상태
-```
-데모 모드 ←→ 인증 ←→ 프로필 뷰 ←→ 게임 모드
-    ↓        ↓         ↓         ↓
-자동 플레이  로그인/등록  사용자 통계  1v1/토너먼트
+```typescript
+// Core structure
+class App {
+  // Dependency injection
+  private router: Router
+  private authManager: AuthManager
+  private uiRenderer: UIRenderer
+  
+  // State subscription management
+  private subscriptions: Array<() => void> = []
+  
+  constructor() {
+    this.initializeDependencies()
+    this.setupRouting()
+    this.subscribeToStores()
+  }
+}
 ```
 
+### 2. **Terminal Component** (`src/components/Terminal.ts`)
+**Role**: CLI-style user interface
+**Key Responsibilities**:
+- Command parsing and execution
+- Terminal-style output rendering
+- Command history and auto-completion
+- Keyboard event handling
+- Multi-language message display
+
+### 3. **GamePage Component** (`src/game/GamePage.ts`)
+**Role**: Game screen management and game system integration
+**Key Responsibilities**:
+- Canvas-based game rendering
+- Real-time game state synchronization
+- Input handling and server transmission
+- Tournament system integration
+- Game mode-specific UI management
+
+### 4. **AuthManager** (`src/managers/AuthManager.ts`)
+**Role**: Authentication and user session management
+**Key Responsibilities**:
+- Login/logout flow handling
+- Google OAuth integration
+- 2FA authentication management
+- JWT token management
+- User state synchronization
+
+## 🎮 Game System Architecture
+
+### Game State Flow
 ```mermaid
 stateDiagram-v2
-    [*] --> 데모모드
-    데모모드 --> 인증 : 로그인 클릭
-    인증 --> 프로필뷰 : 로그인 성공
-    프로필뷰 --> 게임모드 : 게임 시작
-    게임모드 --> 프로필뷰 : 게임 완료
-    프로필뷰 --> 데모모드 : 로그아웃
-    인증 --> 데모모드 : 취소
+    [*] --> Home
+    Home --> Login : User Authentication
+    Login --> MainMenu : Authentication Success
+    MainMenu --> GameSetup : play command
+    GameSetup --> LocalGame : Local Mode Selection
+    GameSetup --> OnlineGame : Online Mode Selection
+    GameSetup --> Tournament : Tournament Mode Selection
     
-    state 데모모드 {
-        [*] --> 자동플레이
-        자동플레이 --> 관전
-        note right of 자동플레이 : 미인증 사용자는\nAI vs AI 관전
+    LocalGame --> GameEnd : Game Complete
+    OnlineGame --> GameEnd : Game Complete
+    Tournament --> TournamentProgress : Next Round
+    TournamentProgress --> Tournament : Continue
+    TournamentProgress --> GameEnd : Tournament Complete
+    
+    GameEnd --> MainMenu : Return to Menu
+    MainMenu --> Profile : profile command
+    Profile --> MainMenu : Go Back
+    MainMenu --> Home : Logout
+    
+    state LocalGame {
+        [*] --> GameInit
+        GameInit --> Playing
+        Playing --> Paused
+        Paused --> Playing
+        Playing --> [*]
     }
     
-    state 인증 {
-        [*] --> 로그인폼
-        로그인폼 --> 회원가입
-        회원가입 --> 로그인폼
-        로그인폼 --> 인증중
-        회원가입 --> 인증중
+    state OnlineGame {
+        [*] --> Matchmaking
+        Matchmaking --> GameWaiting
+        GameWaiting --> GameProgress
+        GameProgress --> [*]
     }
     
-    state 프로필뷰 {
-        [*] --> 사용자통계
-        사용자통계 --> 친구목록
-        친구목록 --> 업적
-        업적 --> 사용자통계
-    }
-    
-    state 게임모드 {
-        [*] --> 일대일
-        일대일 --> 토너먼트
-        토너먼트 --> 일대일
+    state Tournament {
+        [*] --> BracketCreation
+        BracketCreation --> ParticipantWaiting
+        ParticipantWaiting --> MatchProgress
+        MatchProgress --> NextRound
+        NextRound --> MatchProgress
+        NextRound --> WinnerDetermination
+        WinnerDetermination --> [*]
     }
 ```
 
-### 게임 모드
-1. **데모 모드**: 미인증 사용자를 위한 자동 플레이 시연
-2. **일반 모드**: 표준 1v1 Pong 게임플레이
-3. **토너먼트 모드**: 여러 라운드를 가진 브래킷 스타일 경쟁
+### Real-time Communication Architecture
+```mermaid
+sequenceDiagram
+    participant Client1
+    participant Frontend
+    participant WebSocketService
+    participant BackendWS
+    participant GameEngine
+    participant Client2
+    
+    Client1->>Frontend: Game Input (Keyboard)
+    Frontend->>WebSocketService: Process Input Event
+    WebSocketService->>BackendWS: playerMove Message
+    BackendWS->>GameEngine: Update Game State
+    GameEngine->>GameEngine: Execute Physics Calculation
+    GameEngine->>BackendWS: New Game State
+    BackendWS->>Client1: gameState Broadcast
+    BackendWS->>Client2: gameState Broadcast
+    Frontend->>Frontend: Update Screen Rendering
+```
 
-### 상태 관리
-- **애플리케이션 상태**: App 컴포넌트에서 중앙화
-- **게임 상태**: PongGame 컴포넌트 내에서 캡슐화
-- **사용자 상태**: 반응적 업데이트를 통해 AuthService에서 관리
+## 🔄 State Management System
 
-## 🎨 UI/UX 디자인 철학
+### Redux-like Pattern
+ft_transcendence uses a custom state management system that provides a Redux-like pattern:
 
-### 터미널 미학
-- **색상 스키마**: 클래식 검정 바탕에 녹색 터미널 색상
-- **타이포그래피**: 진정한 모노스페이스 느낌을 위한 JetBrains Mono 폰트
-- **상호작용**: 키보드 단축키를 가진 명령 기반 인터페이스
-- **시각적 요소**: ASCII 스타일 테두리, 픽셀화된 게임 그래픽
+```typescript
+// Store basic structure
+abstract class BaseStore<T> {
+  protected state: T
+  private subscribers: Map<keyof T, Set<Function>>
+  
+  // State subscription
+  subscribe<K extends keyof T>(key: K, callback: (value: T[K]) => void): () => void
+  
+  // Action dispatch
+  dispatch(action: Action): void
+  
+  // Reducer (abstract method)
+  protected abstract reducer(state: T, action: Action): T
+}
+```
 
-### 반응형 디자인
-- **레이아웃**: 데스크톱 경험에 최적화된 고정 너비 디자인
-- **컴포넌트**: 일관된 간격을 가진 모듈식 UI 컴포넌트
-- **애니메이션**: 터미널 느낌을 유지하면서 부드러운 전환
+### Main Stores
 
-## 🔧 개발 패턴
+#### 1. **authStore** - Authentication State Management
+```typescript
+interface AuthState {
+  user: User | null
+  isAuthenticated: boolean
+  isLoading: boolean
+  error: string | null
+  token: string | null
+}
 
-### 코드 구성 원칙
-1. **단일 책임**: 각 컴포넌트는 명확하고 집중된 목적을 가집니다
-2. **의존성 주입**: 생성자를 통해 컴포넌트에 서비스가 주입됩니다
-3. **이벤트 기반 아키텍처**: 컴포넌트는 콜백을 통해 통신합니다
-4. **불변 상태 업데이트**: 제어된 메서드를 통한 상태 변경
+// Action types
+type AuthAction = 
+  | { type: 'LOGIN_START' }
+  | { type: 'LOGIN_SUCCESS', payload: { user: User, token: string } }
+  | { type: 'LOGIN_FAILURE', payload: { error: string } }
+  | { type: 'LOGOUT' }
+```
 
-### 주요 설계 결정
-- **프레임워크 의존성 없음**: 순수 TypeScript/JavaScript 구현
-- **컴포넌트 캡슐화**: 각 컴포넌트는 자체 DOM 요소를 관리
-- **서비스 레이어**: 프레젠테이션 컴포넌트에서 분리된 비즈니스 로직
-- **타입 안전성**: 애플리케이션 전체에 걸친 강력한 타이핑
+#### 2. **userProfileStore** - User Profile State
+```typescript
+interface UserProfileState {
+  profile: UserProfile | null
+  friends: Friend[]
+  gameStats: GameStats
+  matchHistory: Match[]
+  isLoading: boolean
+}
+```
 
-## 🚀 빌드 및 배포
+## 🌐 Service Layer Architecture
 
-### 개발 워크플로
+### API Communication System
+```typescript
+class ApiClient {
+  // Specialized API services
+  public auth: AuthApiService
+  public user: UserApiService
+  public friend: FriendApiService
+  public game: GameApiService
+  public tournament: TournamentApiService
+  
+  constructor() {
+    this.initializeServices()
+    this.setupInterceptors()
+  }
+}
+```
+
+### WebSocket Service
+```typescript
+class WebSocketService {
+  private ws: WebSocket | null = null
+  private eventHandlers: Map<string, Set<Function>>
+  
+  // Event-based communication
+  on<T>(event: string, handler: (data: T) => void): () => void
+  emit(event: string, data: any): void
+  
+  // Connection management
+  connect(url: string): Promise<void>
+  disconnect(): void
+  reconnect(): void
+}
+```
+
+## 🎨 UI/UX Design Philosophy
+
+### Terminal Aesthetics
+- **Color Palette**: 
+  - Background: `#0a0a0a` (deep black)
+  - Primary text: `#00ff00` (terminal green)
+  - Accent: `#ffff00` (yellow)
+  - Error: `#ff0000` (red)
+  - Success: `#00ffff` (cyan)
+
+- **Typography**: 
+  - Primary: `JetBrains Mono, 'Courier New', monospace`
+  - Size: Consistent monospace spacing
+  - Style: Pixel-perfect rendering
+
+- **Interaction Design**:
+  - Keyboard-centric navigation
+  - Command auto-completion
+  - Fast keyboard shortcuts
+  - Terminal-style animations
+
+### Responsive Design Strategy
+```css
+/* Mobile-first approach */
+.terminal-container {
+  @apply w-full h-screen;
+  
+  /* Tablet */
+  @apply md:max-w-4xl md:mx-auto md:my-8 md:h-auto;
+  
+  /* Desktop */
+  @apply lg:max-w-6xl;
+}
+
+.game-canvas {
+  @apply w-full h-64 md:h-96 lg:h-[500px];
+}
+```
+
+## 🔧 Development Patterns and Best Practices
+
+### Code Organization Principles
+1. **Single Responsibility Principle**: Each class and function has only one responsibility
+2. **Dependency Injection**: Explicit dependency management through constructors
+3. **Interface Segregation**: Interface abstraction for testability
+4. **Event-driven Architecture**: Event system for loose coupling
+
+### Key Design Decisions
+- **No Framework**: Pure TypeScript implementation for minimal bundle size
+- **Type Safety**: Strong type system to prevent runtime errors
+- **Component Encapsulation**: DOM and state encapsulation for each component
+- **Service Layer Pattern**: Separation of business logic and presentation
+
+### Performance Optimization Patterns
+```typescript
+// Rendering throttling
+class OptimizedComponent {
+  private renderScheduled = false
+  
+  update(): void {
+    if (!this.renderScheduled) {
+      this.renderScheduled = true
+      requestAnimationFrame(() => {
+        this.render()
+        this.renderScheduled = false
+      })
+    }
+  }
+}
+
+// Event delegation
+class EventManager {
+  setupGlobalHandlers(): void {
+    document.addEventListener('click', this.handleGlobalClick.bind(this))
+    document.addEventListener('keydown', this.handleGlobalKeydown.bind(this))
+  }
+}
+```
+
+## 🚀 Build and Deployment Pipeline
+
+### Development Workflow
 ```bash
-npm run dev      # HMR을 사용한 개발 서버 시작
-npm run build    # TypeScript 컴파일을 통한 프로덕션 빌드
-npm run preview  # 로컬에서 프로덕션 빌드 미리보기
+# Start development server
+npm run dev
+
+# Production build
+npm run build
+
+# Build preview
+npm run preview
+
+# Type checking
+npm run typecheck
 ```
 
-### 빌드 파이프라인
-1. **TypeScript 컴파일**: 소스 코드 타입 검사 및 컴파일
-2. **Vite 번들링**: 모듈 번들링 및 최적화
-3. **TailwindCSS 처리**: CSS 제거 및 최적화
-4. **자산 최적화**: 이미지 및 정적 자산 처리
-
+### Build Process
 ```mermaid
 graph LR
-    A[소스 코드] --> B[TypeScript 컴파일러]
-    B --> C[Vite 번들러]
-    C --> D[TailwindCSS 프로세서]
-    D --> E[자산 최적화기]
-    E --> F[프로덕션 빌드]
+    A[Source Code] --> B[TypeScript Compilation]
+    B --> C[TailwindCSS Processing]
+    C --> D[File Copy]
+    D --> E[Optimization]
+    E --> F[Deployment Ready]
     
-    G[package.json] --> B
-    H[tsconfig.json] --> B
-    I[tailwind.config.js] --> D
-    J[postcss.config.js] --> D
+    G[src/**/*.ts] --> B
+    H[src/style.css] --> C
+    I[public/*] --> D
+    J[index.html] --> D
     
-    B --> B1[타입 검사]
-    B --> B2[JS 컴파일]
-    C --> C1[모듈 번들링]
-    C --> C2[코드 분할]
-    D --> D1[CSS 제거]
-    D --> D2[최소화]
-    E --> E1[이미지 최적화]
-    E --> E2[정적 자산]
+    B --> B1[Type Checking]
+    B --> B2[JS Transformation]
+    C --> C1[CSS Purging]
+    C --> C2[Compression]
+    E --> E1[File Compression]
+    E --> E2[Tree Shaking]
 ```
 
-## 📈 성능 고려사항
+### Docker Containerization
+```dockerfile
+# Frontend Dockerfile
+FROM node:18-alpine as builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
 
-### 게임 성능
-- **RAF (RequestAnimationFrame)**: 부드러운 60fps 게임 루프
-- **DOM 최적화**: 게임플레이 중 최소한의 DOM 조작
-- **이벤트 위임**: 효율적인 키보드 이벤트 처리
+FROM nginx:alpine
+COPY --from=builder /app/dist /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/nginx.conf
+EXPOSE 80
+```
 
-### 메모리 관리
-- **컴포넌트 정리**: 적절한 이벤트 리스너 제거
-- **애니메이션 정리**: 컴포넌트 파괴 시 cancelAnimationFrame
-- **상태 관리**: 사용자 데이터 저장소에서 제어된 메모리 사용
+## 📈 Performance and Optimization
 
-## 🔮 확장 지점
+### Game Performance
+- **60fps Target**: RequestAnimationFrame-based game loop
+- **DOM Optimization**: Minimal DOM manipulation during gameplay
+- **Memory Management**: Object pooling and garbage collection optimization
+- **Network**: WebSocket message batching and compression
 
-### 쉽게 확장 가능한 영역
-1. **새로운 게임 모드**: 토너먼트 변형 또는 다른 게임 타입 추가
-2. **인증 방법**: OAuth 제공자 또는 외부 인증 통합
-3. **소셜 기능**: 더 많은 상호작용 타입으로 친구 시스템 확장
-4. **터미널 명령**: 향상된 기능을 위한 새로운 CLI 명령 추가
-5. **업적 시스템**: 더 복잡한 업적 추적으로 확장
+### Bundle Optimization
+- **Code Splitting**: Module-based lazy loading
+- **Tree Shaking**: Removal of unused code
+- **Compression**: Gzip/Brotli compression utilization
+- **Caching**: Aggressive browser caching strategy
 
-### 아키텍처 이점
-- **모듈식 설계**: 기존 컴포넌트에 영향을 주지 않고 새로운 컴포넌트를 쉽게 추가
-- **서비스 레이어**: 데이터 지속성 레이어를 간단히 교체 가능
-- **타입 안전성**: TypeScript로 리팩터링 및 기능 추가가 더 안전
-- **이벤트 기반**: 새로운 기능이 기존 이벤트 시스템에 연결 가능
+## 🔮 Scalability and Future Plans
+
+### Expandable Areas
+1. **Game Modes**: Adding new game variations
+2. **Social Features**: Chat, guild, ranking systems
+3. **AI System**: More sophisticated AI opponents
+4. **Mobile Support**: Touch-based interface
+5. **Real-time Spectator**: Game spectating mode
+
+### Architecture Benefits
+- **Modular Design**: Independent feature development possible
+- **Type Safety**: Safety guaranteed during refactoring
+- **Testability**: Easy unit testing and integration testing
+- **Performance Scalability**: Ability to optimize specific parts when needed
+
+### Technical Debt Management
+- **Regular Dependency Updates**: Security and performance improvements
+- **Code Reviews**: Maintaining code quality
+- **Performance Monitoring**: Real-time performance tracking
+- **Documentation**: Continuous documentation updates
 
 ---
 
-이 아키텍처는 새로운 요구사항에 성장하고 적응할 수 있는 유연성을 유지하면서 PONG-CLI 애플리케이션을 위한 견고한 기반을 제공합니다. 명확한 관심사의 분리와 모듈식 설계는 새로운 개발자가 코드베이스를 이해하고 기여하기 쉽게 만듭니다. 
+This architecture provides a solid foundation that meets the requirements of the ft_transcendence project while flexibly responding to future expansions and changes. Through clear layer separation and modular design, we have built a codebase that developers can easily understand and contribute to.

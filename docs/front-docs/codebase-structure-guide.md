@@ -1,243 +1,320 @@
-# PONG-CLI - 코드베이스 구조 가이드
+# ft_transcendence Frontend - Codebase Structure Guide
 
-## 📁 디렉토리 구조 개요
+## 📁 Directory Structure Overview
 
 ```
-bolt_demo/
-├── docs/                          # 문서 파일
-│   ├── project-overview-architecture.md
-│   └── codebase-structure-guide.md
-├── public/                        # 정적 자산
-│   └── vite.svg                   # Vite 로고 자산
-├── src/                           # 소스 코드
-│   ├── components/                # UI 컴포넌트
-│   │   ├── App.ts                 # 메인 애플리케이션 오케스트레이터
-│   │   ├── PongGame.ts            # 게임 엔진 및 렌더링
-│   │   ├── Terminal.ts            # 터미널 인터페이스 시뮬레이션
-│   │   ├── UserProfile.ts         # 사용자 프로필 관리
-│   │   ├── NotificationCenter.ts  # 알림 시스템
-│   │   ├── GameModal.ts           # 게임 설정 및 토너먼트 모달
-│   │   ├── GameEndModal.ts        # 게임 종료 후 결과 모달
-│   │   └── FileModal.ts           # 파일 시스템 시뮬레이션 모달
-│   ├── models/                    # 데이터 모델 및 인터페이스
-│   │   └── Types.ts               # TypeScript 인터페이스 및 타입
-│   ├── utils/                     # 유틸리티 함수 및 서비스
-│   │   ├── AuthService.ts         # 인증 및 사용자 관리
-│   │   └── helpers.ts             # 공통 유틸리티 함수
-│   ├── main.ts                    # 애플리케이션 진입점
-│   ├── style.css                  # 전역 스타일 및 TailwindCSS
-│   ├── typescript.svg             # TypeScript 로고 자산
-│   └── vite-env.d.ts             # Vite 환경 타입 정의
-├── index.html                     # HTML 진입점
-├── package.json                   # 프로젝트 의존성 및 스크립트
-├── package-lock.json              # 잠긴 의존성 버전
-├── tailwind.config.js             # TailwindCSS 구성
-├── tsconfig.json                  # TypeScript 구성
-└── postcss.config.js              # PostCSS 구성
+ft_transcendence/frontend/
+├── dist/                          # Build artifacts
+├── node_modules/                  # NPM dependencies
+├── public/                        # Static assets
+│   ├── locales/                   # Multi-language resources
+│   │   ├── en/translation.json    # English
+│   │   ├── ja/translation.json    # Japanese
+│   │   └── ko/translation.json    # Korean
+│   ├── game-test.html             # Game test page
+│   └── pingpong.svg               # App icon
+├── src/                           # Source code
+│   ├── main.ts                    # Application entry point
+│   ├── style.css                  # Global styles (TailwindCSS)
+│   ├── components/                # UI components
+│   │   ├── App.ts                 # Main application controller
+│   │   ├── Terminal.ts            # CLI-style terminal interface
+│   │   ├── UserProfile.ts         # User profile display
+│   │   ├── NotificationCenter.ts  # Centralized notification system
+│   │   └── modals/                # Modal components
+│   │       ├── index.ts           # Modal entry point
+│   │       ├── LoginModal.ts      # Login modal
+│   │       ├── RegisterModal.ts   # Registration modal
+│   │       ├── TwoFAModal.ts      # 2FA authentication modal
+│   │       ├── GameSetupModal.ts  # Game setup modal
+│   │       ├── GameEndModal.ts    # Game end modal
+│   │       └── FileModal.ts       # File system simulation
+│   ├── managers/                  # Business logic managers
+│   │   ├── index.ts               # Manager entry point
+│   │   ├── AuthManager.ts         # Authentication management
+│   │   ├── ModalManager.ts        # Modal state management (singleton)
+│   │   ├── UIRenderer.ts          # UI rendering management
+│   │   └── UserProfileManager.ts  # User profile management
+│   ├── services/                  # Service layer
+│   │   ├── index.ts               # Service entry point
+│   │   ├── ApiClient.ts           # API client factory
+│   │   ├── UserStateCache.ts      # User state caching
+│   │   ├── i18n.ts                # Internationalization service
+│   │   ├── api/                   # API services
+│   │   │   ├── BaseApiService.ts  # Base API service class
+│   │   │   ├── AuthApiService.ts  # Authentication API
+│   │   │   ├── UserApiService.ts  # User API
+│   │   │   ├── FriendApiService.ts # Friend management API
+│   │   │   ├── GameApiService.ts  # Game API
+│   │   │   └── TournamentApiService.ts # Tournament API
+│   │   ├── core/                  # Core services
+│   │   │   ├── TokenManager.ts    # JWT token management
+│   │   │   ├── Interceptors.ts    # HTTP interceptors
+│   │   │   └── DataTransformers.ts # Data transformation
+│   │   ├── websocket/             # WebSocket services
+│   │   │   └── WebSocketService.ts # Real-time communication
+│   │   ├── mocks/                 # Mock services for development
+│   │   │   ├── index.ts           # Mock service entry point
+│   │   │   ├── AuthApiServiceMock.ts
+│   │   │   ├── GameApiServiceMock.ts
+│   │   │   ├── FriendApiServiceMock.ts
+│   │   │   ├── UserApiServiceMock.ts
+│   │   │   └── MockInterceptor.ts
+│   │   └── utils/
+│   │       └── TypeSafetyUtils.ts # Type safety utilities
+│   ├── store/                     # State management
+│   │   ├── index.ts               # Store entry point
+│   │   ├── authStore.ts           # Authentication state store
+│   │   └── userProfileStore.ts    # User profile state
+│   ├── game/                      # Game system
+│   │   ├── GameClient.ts          # Game client
+│   │   ├── GamePage.ts            # Game page component
+│   │   ├── GameRenderer.ts        # Canvas-based game rendering
+│   │   ├── InputHandler.ts        # Input handling (keyboard/mouse)
+│   │   ├── TournamentClient.ts    # Tournament client
+│   │   ├── TournamentRenderer.ts  # Tournament rendering
+│   │   └── TournamentErrorHandler.ts # Tournament error handling
+│   ├── commands/                  # Terminal command system
+│   │   └── CommandHandler.ts      # CLI command processing
+│   ├── utils/                     # Utility functions
+│   │   ├── index.ts               # Utility entry point
+│   │   ├── Router.ts              # Client router
+│   │   ├── DOMUpdater.ts          # DOM update utilities
+│   │   ├── ErrorHandler.ts        # Global error handling (singleton)
+│   │   ├── Logger.ts              # Structured logging
+│   │   ├── UIUtils.ts             # UI-related utilities
+│   │   └── validators.ts          # Input validation
+│   ├── types/                     # TypeScript type definitions
+│   │   ├── types.ts               # Common data types
+│   │   ├── game-websocket.ts      # Game WebSocket types
+│   │   └── tournament-websocket.ts # Tournament WebSocket types
+│   └── config/                    # Configuration
+│       └── environment.ts         # Environment settings
+├── index.html                     # HTML entry point
+├── package.json                   # Project dependencies and scripts
+├── package-lock.json              # Locked dependency versions
+├── tailwind.config.js             # TailwindCSS configuration
+├── tsconfig.json                  # TypeScript configuration
+├── postcss.config.js              # PostCSS configuration
+├── Dockerfile                     # Docker container setup
+└── nginx.conf                     # Nginx configuration
 ```
 
-### 시각적 디렉토리 구조
+### Visual Directory Structure
 
 ```mermaid
 graph TD
-    A[bolt_demo/] --> B[docs/]
-    A --> C[public/]
-    A --> D[src/]
-    A --> E[설정 파일]
+    A[ft_transcendence/frontend/] --> B[public/]
+    A --> C[src/]
+    A --> D[Configuration Files]
     
-    B --> B1[project-overview-architecture.md]
-    B --> B2[codebase-structure-guide.md]
+    B --> B1[locales/]
+    B --> B2[game-test.html]
+    B --> B3[pingpong.svg]
+    B1 --> B1A[ko/translation.json]
+    B1 --> B1B[en/translation.json]
+    B1 --> B1C[ja/translation.json]
     
-    C --> C1[vite.svg]
+    C --> C1[components/]
+    C --> C2[managers/]
+    C --> C3[services/]
+    C --> C4[store/]
+    C --> C5[game/]
+    C --> C6[utils/]
+    C --> C7[types/]
+    C --> C8[main.ts]
     
-    D --> D1[components/]
-    D --> D2[models/]
-    D --> D3[utils/]
-    D --> D4[main.ts]
-    D --> D5[style.css]
-    D --> D6[vite-env.d.ts]
+    C1 --> C1A[App.ts]
+    C1 --> C1B[Terminal.ts]
+    C1 --> C1C[UserProfile.ts]
+    C1 --> C1D[modals/]
+    C1D --> C1D1[LoginModal.ts]
+    C1D --> C1D2[GameSetupModal.ts]
     
-    D1 --> D1A[App.ts]
-    D1 --> D1B[PongGame.ts]
-    D1 --> D1C[Terminal.ts]
-    D1 --> D1D[UserProfile.ts]
-    D1 --> D1E[NotificationCenter.ts]
-    D1 --> D1F[GameModal.ts]
-    D1 --> D1G[GameEndModal.ts]
-    D1 --> D1H[FileModal.ts]
+    C2 --> C2A[AuthManager.ts]
+    C2 --> C2B[ModalManager.ts]
+    C2 --> C2C[UIRenderer.ts]
     
-    D2 --> D2A[Types.ts]
+    C3 --> C3A[api/]
+    C3 --> C3B[websocket/]
+    C3 --> C3C[mocks/]
+    C3A --> C3A1[BaseApiService.ts]
+    C3B --> C3B1[WebSocketService.ts]
     
-    D3 --> D3A[AuthService.ts]
-    D3 --> D3B[helpers.ts]
+    C4 --> C4A[authStore.ts]
+    C4 --> C4B[userProfileStore.ts]
     
-    E --> E1[index.html]
-    E --> E2[package.json]
-    E --> E3[tailwind.config.js]
-    E --> E4[tsconfig.json]
-    E --> E5[postcss.config.js]
+    C5 --> C5A[GameClient.ts]
+    C5 --> C5B[GameRenderer.ts]
+    C5 --> C5C[TournamentClient.ts]
+    
+    D --> D1[index.html]
+    D --> D2[package.json]
+    D --> D3[tailwind.config.js]
+    D --> D4[tsconfig.json]
+    D --> D5[Dockerfile]
 ```
 
-## 🗂️ 파일 구성 원칙
+## 🗂️ File Organization Principles
 
-### 1. **기능 기반 컴포넌트 구성**
-컴포넌트는 파일 타입이 아닌 기능별로 구성됩니다:
-- **핵심 컴포넌트**: App, PongGame, Terminal, UserProfile
-- **모달 컴포넌트**: GameModal, GameEndModal, FileModal
-- **시스템 컴포넌트**: NotificationCenter
+### 1. **Feature-based Component Organization**
+Components are organized by functionality rather than file type:
+- **Core Components**: App, PongGame, Terminal, UserProfile
+- **Modal Components**: GameModal, GameEndModal, FileModal
+- **System Components**: NotificationCenter
 
-### 2. **관심사의 분리**
+### 2. **Separation of Concerns**
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   컴포넌트      │    │     모델        │    │   유틸리티      │
-│  (프레젠테이션) │ ←→ │  (데이터 형태)  │ ←→ │   (비즈니스)    │
+│   Components    │    │     Models      │    │   Utilities     │
+│ (Presentation)  │ ←→ │  (Data Shape)   │ ←→ │   (Business)    │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
 
 ```mermaid
 graph LR
-    A[컴포넌트<br/>프레젠테이션] <--> B[모델<br/>데이터 형태]
-    B <--> C[유틸리티<br/>비즈니스 로직]
+    A[Components<br/>Presentation] <--> B[Models<br/>Data Shape]
+    B <--> C[Utilities<br/>Business Logic]
     
     A --> A1[App.ts]
     A --> A2[PongGame.ts]
     A --> A3[Terminal.ts]
     A --> A4[UserProfile.ts]
-    A --> A5[모달]
+    A --> A5[Modals]
     
-    B --> B1[Types.ts<br/>인터페이스]
+    B --> B1[Types.ts<br/>Interfaces]
     
-    C --> C1[AuthService.ts<br/>데이터 관리]
-    C --> C2[helpers.ts<br/>유틸리티]
+    C --> C1[AuthService.ts<br/>Data Management]
+    C --> C2[helpers.ts<br/>Utilities]
 ```
 
-### 3. **구성 통합**
-모든 빌드 및 스타일링 구성은 쉬운 접근과 수정을 위해 루트 레벨에 보관됩니다.
+### 3. **Configuration Consolidation**
+All build and styling configurations are kept at root level for easy access and modification.
 
-## 컴포넌트 아키텍처 심화 분석
+## Component Architecture Deep Dive
 
-### 핵심 애플리케이션 컴포넌트
+### Core Application Components
 
-#### **App.ts** - 메인 애플리케이션 오케스트레이터
+#### **App.ts** - Main Application Orchestrator
 ```typescript
-// 주요 책임:
-- 애플리케이션 상태 관리 (AppState)
-- 컴포넌트 생명주기 조정
-- 뷰 간 라우트 처리
-- 터미널 세션의 탭 관리
-- 명령 처리 및 위임
+// Key responsibilities:
+- Application state management (AppState)
+- Component lifecycle coordination
+- Route handling between views
+- Tab management for terminal sessions
+- Command processing and delegation
 ```
 
-**내부 구조:**
-- **상태 관리**: 중앙화된 `AppState` 객체
-- **컴포넌트 인스턴스**: Terminal, PongGame, UserProfile 인스턴스 관리
-- **이벤트 조정**: 컴포넌트 간 통신 처리
-- **DOM 관리**: 메인 콘텐츠 영역 렌더링 제어
+**Internal Structure:**
+- **State Management**: Centralized `AppState` object
+- **Component Instances**: Managing Terminal, PongGame, UserProfile instances
+- **Event Coordination**: Handling inter-component communication
+- **DOM Management**: Controlling main content area rendering
 
-#### **PongGame.ts** - 게임 엔진
+#### **PongGame.ts** - Game Engine
 ```typescript
-// 주요 책임:
-- 게임 물리 계산
-- 공 움직임 및 충돌 감지
-- 패들 제어 (플레이어 입력 + AI)
-- 게임 모드 관리 (데모/일반/토너먼트)
-- 점수 및 라운드 추적
+// Key responsibilities:
+- Game physics calculations
+- Ball movement and collision detection
+- Paddle control (player input + AI)
+- Game mode management (demo/normal/tournament)
+- Score and round tracking
 ```
 
-**내부 구조:**
-- **게임 상태**: 공 위치, 패들 위치, 점수
-- **애니메이션 루프**: RequestAnimationFrame 기반 게임 루프
-- **입력 처리**: 키보드 이벤트 관리
-- **렌더링**: DOM 기반 게임 요소 위치 지정
+**Internal Structure:**
+- **Game State**: Ball position, paddle positions, scores
+- **Animation Loop**: RequestAnimationFrame-based game loop
+- **Input Processing**: Keyboard event management
+- **Rendering**: DOM-based game element positioning
 
-#### **Terminal.ts** - CLI 인터페이스 시뮬레이션
+#### **Terminal.ts** - CLI Interface Simulation
 ```typescript
-// 주요 책임:
-- 명령 입력 처리
-- 터미널 스타일로 출력 렌더링
-- 명령 기록 관리
-- 채팅 모드 기능
-- 터미널 미학 (스크롤링, 포맷팅)
+// Key responsibilities:
+- Command input processing
+- Terminal-style output rendering
+- Command history management
+- Chat mode functionality
+- Terminal aesthetics (scrolling, formatting)
 ```
 
-**내부 구조:**
-- **DOM 요소**: 입력 필드, 출력 컨테이너, 프롬프트
-- **기록 관리**: 화살표 키 탐색이 있는 명령 기록
-- **출력 포맷팅**: 타임스탬프 포맷팅, 메시지 스타일링
-- **모드 전환**: 메인 터미널 vs 채팅 모드
+**Internal Structure:**
+- **DOM Elements**: Input field, output container, prompt
+- **History Management**: Command history with arrow key navigation
+- **Output Formatting**: Timestamp formatting, message styling
+- **Mode Switching**: Main terminal vs chat mode
 
-#### **UserProfile.ts** - 사용자 관리 인터페이스
+#### **UserProfile.ts** - User Management Interface
 ```typescript
-// 주요 책임:
-- 사용자 정보 표시
-- 통계 렌더링 (게임, 업적)
-- 친구 목록 관리
-- 프로필 편집 기능
+// Key responsibilities:
+- User information display
+- Statistics rendering (games, achievements)
+- Friend list management
+- Profile editing functionality
 ```
 
-### 모달 컴포넌트
+### Modal Components
 
-#### **GameModal.ts** - 게임 설정 인터페이스
-- 토너먼트 브래킷 표시
-- 게임 모드 선택
-- 친구 초대 시스템
-- 멀티플레이어 게임 조정
+#### **GameModal.ts** - Game Setup Interface
+- Tournament bracket display
+- Game mode selection
+- Friend invitation system
+- Multiplayer game coordination
 
-#### **GameEndModal.ts** - 게임 후 인터페이스
-- 게임 결과 표시
-- 토너먼트 진행
-- 재경기 기능
-- 통계 업데이트
+#### **GameEndModal.ts** - Post-game Interface
+- Game result display
+- Tournament progression
+- Rematch functionality
+- Statistics update
 
-#### **FileModal.ts** - 파일 시스템 시뮬레이션
-- 프로필 파일 관리
-- 가져오기/내보내기 기능
-- 파일 브라우저 미학
+#### **FileModal.ts** - File System Simulation
+- Profile file management
+- Import/export functionality
+- File browser aesthetics
 
-### 시스템 컴포넌트
+### System Components
 
-#### **NotificationCenter.ts** - 알림 관리
-- 실시간 알림 표시
-- 메시지 큐잉 및 전달
-- 사용자 상호작용 처리
-- 알림 지속성
+#### **NotificationCenter.ts** - Notification Management
+- Real-time notification display
+- Message queuing and delivery
+- User interaction handling
+- Notification persistence
 
-## 📊 데이터 흐름 아키텍처
+## 📊 Data Flow Architecture
 
-### 상태 관리 흐름
+### State Management Flow
 ```
 ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
 │    App.ts   │ ←→ │ AuthService │ ←→ │   Types.ts  │
-│   (상태)     │    │   (데이터)    │    │ (계약서)     │
+│   (State)   │    │   (Data)    │    │ (Contract)  │
 └─────────────┘    └─────────────┘    └─────────────┘
        ↓                  ↓                  ↓
 ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-│ 컴포넌트      │    │   사용자      │    │ 인터페이스     │
-│  (뷰)        │    │ (저장소)     │    │ (검증)       │
+│ Components  │    │    User     │    │ Interfaces  │
+│   (View)    │    │  (Storage)  │    │(Validation) │
 └─────────────┘    └─────────────┘    └─────────────┘
 ```
 
 ```mermaid
 graph TB
-    A[App.ts<br/>상태] <--> B[AuthService<br/>데이터]
-    A <--> C[Types.ts<br/>계약서]
+    A[App.ts<br/>State] <--> B[AuthService<br/>Data]
+    A <--> C[Types.ts<br/>Contract]
     B <--> C
     
-    A --> D[컴포넌트<br/>뷰]
-    B --> E[사용자<br/>저장소]
-    C --> F[인터페이스<br/>검증]
+    A --> D[Components<br/>View]
+    B --> E[User<br/>Storage]
+    C --> F[Interfaces<br/>Validation]
     
     D --> D1[Terminal]
     D --> D2[PongGame]
     D --> D3[UserProfile]
-    D --> D4[모달]
+    D --> D4[Modals]
     
-    E --> E1[사용자 데이터]
-    E --> E2[게임 통계]
-    E --> E3[친구]
+    E --> E1[User Data]
+    E --> E2[Game Statistics]
+    E --> E3[Friends]
     
-    F --> F1[타입 안전성]
-    F --> F2[데이터 검증]
+    F --> F1[Type Safety]
+    F --> F2[Data Validation]
 ```
 
 ### 컴포넌트 통신 패턴
@@ -505,72 +582,72 @@ graph TD
     H[서비스 응답] --> A
 ```
 
-## 🎯 파일 명명 규칙
+## 🎯 File Naming Conventions
 
-### **컴포넌트 파일**
-- **형식**: `PascalCase.ts` (예: `UserProfile.ts`)
-- **패턴**: 설명적이고 명사 기반 이름
-- **위치**: `src/components/`
+### **Component Files**
+- **Format**: `PascalCase.ts` (e.g., `UserProfile.ts`)
+- **Pattern**: Descriptive, noun-based names
+- **Location**: `src/components/`
 
-### **유틸리티 파일**
-- **형식**: `camelCase.ts` (예: `helpers.ts`)
-- **패턴**: 기능 또는 목적 기반 이름
-- **위치**: `src/utils/`
+### **Utility Files**
+- **Format**: `camelCase.ts` (e.g., `helpers.ts`)
+- **Pattern**: Function or purpose-based names
+- **Location**: `src/utils/`
 
-### **타입 정의 파일**
-- **형식**: `PascalCase.ts` (예: `Types.ts`)
-- **패턴**: 콘텐츠 타입을 설명하는 이름
-- **위치**: `src/models/`
+### **Type Definition Files**
+- **Format**: `PascalCase.ts` (e.g., `Types.ts`)
+- **Pattern**: Names describing content type
+- **Location**: `src/models/`
 
-### **구성 파일**
-- **형식**: 표준 이름 (예: `tailwind.config.js`)
-- **패턴**: 도구별 명명 규칙
-- **위치**: 프로젝트 루트
+### **Configuration Files**
+- **Format**: Standard names (e.g., `tailwind.config.js`)
+- **Pattern**: Tool-specific naming conventions
+- **Location**: Project root
 
-## 🔍 가져오기/내보내기 패턴
+## 🔍 Import/Export Patterns
 
-### **컴포넌트 내보내기**
+### **Component Exports**
 ```typescript
-// 단일 클래스 내보내기
+// Single class export
 export class Terminal { /* ... */ }
 
-// 사용법
+// Usage
 import { Terminal } from './components/Terminal';
 ```
 
-### **타입 내보내기**
+### **Type Exports**
 ```typescript
-// 다중 인터페이스 내보내기
+// Multiple interface exports
 export interface User { /* ... */ }
 export interface Friend { /* ... */ }
 
-// 사용법
+// Usage
 import { User, Friend } from '../models/Types';
 ```
 
-### **유틸리티 내보내기**
+### **Utility Exports**
 ```typescript
-// 명명된 함수 내보내기
+// Named function exports
 export const formatTime = (): string => { /* ... */ };
 export const validateEmail = (email: string): boolean => { /* ... */ };
 
-// 사용법
+// Usage
 import { formatTime, validateEmail } from '../utils/helpers';
 ```
 
-## 🚀 개발 워크플로 통합
+## 🚀 Development Workflow Integration
 
-### **파일 변경 영향**
-- **컴포넌트 변경**: UI 및 상호작용에 영향
-- **타입 변경**: 컴포넌트 업데이트가 필요할 수 있음
-- **유틸리티 변경**: 여러 컴포넌트에 영향을 줄 수 있음
-- **구성 변경**: 빌드 프로세스 또는 스타일링에 영향
+### **File Change Impact**
+- **Component Changes**: Affects UI and interactions
+- **Type Changes**: May require component updates
+- **Utility Changes**: Can affect multiple components
+- **Configuration Changes**: Affects build process or styling
 
-### **핫 모듈 교체**
-- **컴포넌트**: 상태 보존과 함께 라이브 리로드
-- **스타일**: 즉각적인 CSS 업데이트
-- **타입**: 안전성을 위해 페이지 새로고침 필요
+### **Hot Module Replacement**
+- **Components**: Live reload with state preservation
+- **Styles**: Instant CSS updates
+- **Types**: Page refresh required for safety
 
 ---
 
-이 구조 가이드는 코드베이스의 포괄적인 지도를 제공하여 특정 기능을 쉽게 찾고, 컴포넌트 관계를 이해하며, 새로운 기능을 추가할 때 일관된 패턴을 유지할 수 있도록 합니다. 
+This structure guide provides a comprehensive map of the codebase, making it easy to find specific functionality, understand component relationships, and maintain consistent patterns when adding new features. 
