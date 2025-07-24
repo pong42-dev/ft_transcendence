@@ -34,7 +34,7 @@ async function authenticate(request: FastifyRequest, reply: FastifyReply) {
 		const userTokenRow = await userTokensRepository.getRowByColumnValue('user_id', Number(decoded.user_id));
 		log.debug(`userTokenRow: ${userTokenRow?.token_version}`);
 		if (!userTokenRow?.token_version || userTokenRow.token_version != decoded.token_version) {
-			return reply.status(401).send({ msg: '111Invalid or expired token.' });
+			return reply.status(401).send({ msg: 'Invalid or expired token.' });
 		}
 		const userProfileRow = await userProfilesRepository.getRowByColumnValue("user_id", Number(decoded.user_id));			
 		if (!userProfileRow) {

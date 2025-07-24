@@ -48,6 +48,9 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 					msg: Type.String()
 				}),
 				302: Type.Null(),
+				303: Type.Object({
+					msg: Type.String()
+				}),
 				409: Type.Object({
 					msg: Type.String()
 				}),
@@ -57,9 +60,17 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 			},
 			tags: ["Users"]
 		}
-	}, async (request: FastifyRequest<{ Querystring: { code: string } }>, reply) => {
+	}, async (request: FastifyRequest<{ Querystring: GoogleCallbackQuery  }>, reply) => {
 		const { googleOAuth2Manager, loginManager, usersRepository, userProfilesRepository, downloadImageFromUrl, config } = fastify;
 		try {
+			if (!request.query.code) {
+				// return reply.status(303).send({
+				// 	msg: request.query.error || 'access_denied.',
+				// });
+				const redirectUrl = new URL(config.BASE_URL);
+				redirectUrl.searchParams.set('message', encodeURIComponent(request.query.error)); // 메시지 인코딩
+				reply.redirect(redirectUrl.toString());
+			}
 			const tokenData = await googleOAuth2Manager.getTokenFromCode(request);
 			console.log("tokenData:", tokenData);
 			const userProfile = await googleOAuth2Manager.getUserProfileFromToken(tokenData.access_token);
@@ -71,7 +82,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 			console.log("userByName: ", userByName);
 			if (!userByEmail) {
 				const uniqueName = userByName? await userProfilesRepository.generateUniqueUsername(name) : name;
-				console.log("name", name);
+				console.log("nhttps://chatgpt.com/c/6880b3bf-0534-8013-857d-d1b717639beeame", name);
 				console.log("userName", userByName);
 				console.log("uniqueName", uniqueName);
 				const userId = await usersRepository.insertRow(email, '', 'google', provider_id.toString());
