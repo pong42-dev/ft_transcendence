@@ -421,7 +421,7 @@ export function createGameRepository(fastify: FastifyInstance) {
 					.whereNot('status', 'canceled') // 이미 취소된 게임은 제외
 					.update({
 						status: 'canceled',
-						ended_at: knex.fn.now()
+						ended_at: new Date().toISOString()
 					});
 			} catch (error) {
 				throw error; // 에러를 다시 던져서 호출한 쪽에서 처리할 수 있도록 함
@@ -435,9 +435,9 @@ export function createGameRepository(fastify: FastifyInstance) {
 			const updateData: any = { status };
 			
 			if (status === 'playing') {
-				updateData.started_at = knex.fn.now();
+				updateData.started_at = new Date().toISOString();
 			} else if (status === 'finished' || status === 'canceled') {
-				updateData.ended_at = knex.fn.now();
+				updateData.ended_at = new Date().toISOString();
 			}
 
 			await knex('games').where('id', gameId).update(updateData);
@@ -450,7 +450,7 @@ export function createGameRepository(fastify: FastifyInstance) {
 			await knex('games').where('id', gameId).update({
 				winner_id: winnerId,
 				status: 'finished',
-				ended_at: knex.fn.now()
+				ended_at: new Date().toISOString()
 			});
 		},
 
