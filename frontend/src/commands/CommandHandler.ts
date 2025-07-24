@@ -126,12 +126,14 @@ export class CommandHandler {
       console.warn('Server logout failed, logging out locally:', error);
     }
 
+    // 터미널 초기화 및 메시지 표시를 먼저 수행 (로그인과 동일한 패턴)
+    this.deps.terminal.resetForNewContent();
+    this.deps.terminal.appendOutput(i18next.t('logoutCommand.logged_out_success'));
+    
+    // 로그아웃 처리 (이때 authStore 구독자가 트리거되지만 터미널은 이미 설정됨)
     authStore.logout();
     UserStateCache.clear();
-    this.deps.terminal.reset();
     this.deps.router.navigate('/');
-    
-    this.deps.terminal.appendOutput(i18next.t('logoutCommand.logged_out_success'));
   }
 
   private async handleFriendCommand(args?: string[]): Promise<void> {
