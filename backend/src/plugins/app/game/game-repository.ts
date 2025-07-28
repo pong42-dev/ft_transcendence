@@ -1,15 +1,14 @@
 import { FastifyInstance } from 'fastify';
 import fp from 'fastify-plugin';
-import { 
-	DBGame, 
-	DBPlayer, 
-	GameMode, 
-	GameStatus, 
+import {
+	DBGame,
+	DBPlayer,
+	GameMode,
+	GameStatus,
 	CreatePlayerRequestDto,
-	PlayerResponseDto 
+	PlayerResponseDto
 } from '../../../schemas/games.js';
 import { UserGameStats } from '../../../schemas/profile.js'
-// import tournament from '../tournament/index.js';
 
 declare module 'fastify' {
 	interface FastifyInstance {
@@ -60,18 +59,6 @@ export function createGameRepository(fastify: FastifyInstance) {
 			}
 
 			return await this.mapDBPlayerToResponseDto(player);
-		},
-
-		/**
-		 * 사용자 ID로 플레이어 조회 (user 타입인 경우)
-		 */
-		async getPlayerByUserId(userId: number): Promise<PlayerResponseDto | null> {
-			const player = await knex('players')
-				.where('type', 'user')
-				.where('user_id', userId)
-				.first() as DBPlayer;
-
-			return player ? await this.mapDBPlayerToResponseDto(player) : null;
 		},
 
 		/**
@@ -192,78 +179,12 @@ export function createGameRepository(fastify: FastifyInstance) {
 		 */
 		async getUser1v1History(userId: number): Promise<any[]> {
 			const knex = fastify.knex;
+			const BASE_URL = fastify.config.BASE_URL;
 
-			// 1. 요청된 userId를 기반으로 player_id를 찾습니다.
+			// 1. 요청된 userId를 기반으로 player_id를 찾는 서브쿼리
 			const playerSubQuery = knex('players').where('user_id', userId).first('id');
 
-			// 2. 메인 쿼리를 작성합니다.
-			const results = await knex('games as g')
-				// 필요한 정보들을 SELECT 합니다.
-				.select(
-					'g.ended_at',
-					'g.winner_id',
-					// 내 스코어 (me.score)
-					'me.score as my_score',
-					// 상대방의 스코어 (opponent.score)
-					'op.score as opponent_score',
-					// 상대방 플레이어 정보
-					'op_player.id as opponent_player_id',
-					'op_player.type as opponent_player_type',
-					'op_player.user_id as opponent_user_id',
-					'op_player.display_name as opponent_display_name'
-				)
-				// 내 게임 참가 기록(me)을 JOIN 합니다.
-				.join('game_participants as me', 'g.id', 'me.game_id')
-				// 상대방 게임 참가 기록(opponent)을 JOIN 합니다.
-				// 같은 게임 ID를 가지지만, 내 player_id와는 다른 기록을 찾습니다.
-				.join('game_participants as op', function() {
-					this.on('g.id', '=', 'op.game_id')
-						.andOn('me.player_id', '!=', 'op.player_id');
-				})
-				// 상대방 플레이어 정보(opponent_player)를 JOIN 합니다.
-				.join('players as op_player', 'op.player_id', 'op_player.id')
-				// WHERE 조건 설정
-				.where('g.status', 'finished') // 완료된 게임만 조회
-				.where(function() { // 1v1 게임 타입만 조회
-					this.where('g.type', 'local_1v1').orWhere('g.type', 'ai_1v1');
-				})
-				.where('me.player_id', playerSubQuery) // 내가 참여한 게임만 조회
-				// 정렬
-				.orderBy('g.ended_at', 'desc'); // 게임 종료 시각으로 내림차순 정렬
-
-			// 3. 조회된 결과를 DTO 형태로 가공합니다.
-			// 기존 `mapDBPlayerToResponseDto` 헬퍼 함수를 재활용하여 상대방 정보를 만듭니다.
-			const history = [];
-			for (const row of results) {
-				const opponentInfo = await this.mapDBPlayerToResponseDto({
-					id: row.opponent_player_id,
-					type: row.opponent_player_type,
-					user_id: row.opponent_user_id,
-					display_name: row.opponent_display_name,
-					created_at: '' // 이 필드는 DTO 변환에 사용되지 않음
-				});
-
-				history.push({
-					endedAt: row.ended_at,
-					opponent: opponentInfo,
-					myScore: row.my_score,
-					opponentScore: row.opponent_score,
-					winnerId: row.winner_id
-				});
-			}
-
-			return history;
-		},
-
-		/**
-		 * 모든 게임 기록 조회 (토너먼트 포함)
-		 * @param userId 조회할 유저의 ID
-		 */
-		async getUserAllGameHistory(userId: number): Promise<any[]> {
-			const knex = fastify.knex;
-			// 1. 요청된 userId를 기반으로 player_id를 찾습니다.
-			const playerSubQuery = knex('players').where('user_id', userId).first('id');	
-			// 2. 메인 쿼리를 작성합니다.
+			// 2. 단일 쿼리로 게임 기록과 상대방 프로필 정보까지 모두 조회
 			const results = await knex('games as g')
 				.select(
 					'g.ended_at',
@@ -272,47 +193,46 @@ export function createGameRepository(fastify: FastifyInstance) {
 					'op.score as opponent_score',
 					'op_player.id as opponent_player_id',
 					'op_player.type as opponent_player_type',
-					'op_player.user_id as opponent_user_id',
-					'op_player.display_name as opponent_display_name'
+					knex.raw('COALESCE(op_user_profile.name, op_player.display_name) as opponent_name'),
+					'op_user_profile.avatar as opponent_avatar'
 				)
 				.join('game_participants as me', 'g.id', 'me.game_id')
-				.join('game_participants as op', function() {
+				.join('game_participants as op', function () {
 					this.on('g.id', '=', 'op.game_id')
 						.andOn('me.player_id', '!=', 'op.player_id');
 				})
 				.join('players as op_player', 'op.player_id', 'op_player.id')
+				.leftJoin('user_profiles as op_user_profile', 'op_player.user_id', '=', 'op_user_profile.user_id')
 				.where('g.status', 'finished')
-				.where(function() {
-					this.where('g.type', 'local_1v1').orWhere('g.type', 'ai_1v1')
-						.orWhere('g.type', 'tournament');
+				.where(function () { // 1v1 게임 타입만 조회
+					this.where('g.type', 'local_1v1').orWhere('g.type', 'ai_1v1');
 				})
 				.where('me.player_id', playerSubQuery)
 				.orderBy('g.ended_at', 'desc');
 
-			const history = [];
-			for (const row of results) {
-				const opponentInfo = await this.mapDBPlayerToResponseDto({
-					id: row.opponent_player_id,
-					type: row.opponent_player_type,
-					user_id: row.opponent_user_id,
-					display_name: row.opponent_display_name,
-					created_at: '' // 이 필드는 DTO 변환에 사용되지 않음
-				});
+			// 3. 조회된 결과를 DTO 형태로 가공
+			const history = results.map(row => {
+				const opponentAvatarUrl = row.opponent_avatar
+					? `${BASE_URL}/${row.opponent_avatar}`
+					: `${BASE_URL}/${fastify.config.PUBLIC_DIRNAME}/default-avatar.png`;
 
-				history.push({
+				return {
 					endedAt: row.ended_at,
-					opponent: opponentInfo,
+					opponent: {
+						id: row.opponent_player_id,
+						type: row.opponent_player_type,
+						name: row.opponent_name,
+						avatarUrl: opponentAvatarUrl
+					},
 					myScore: row.my_score,
 					opponentScore: row.opponent_score,
-					winnerId: row.winner_id
-				});
-			}
+					winnerId: row.winner_id,
+				};
+			});
 
 			return history;
-		
 		},
 
-		
 		/**
 		 * DB Player를 Response DTO로 변환
 		 */
@@ -326,8 +246,7 @@ export function createGameRepository(fastify: FastifyInstance) {
 					.where('user_id', dbPlayer.user_id)
 					.first();
 				name = userProfile?.name || `User ${dbPlayer.user_id}`;
-				
-				// 아바타 URL 생성
+
 				if (userProfile?.avatar) {
 					avatarUrl = `${BASE_URL}/${userProfile.avatar}`;
 				} else {
@@ -360,16 +279,15 @@ export function createGameRepository(fastify: FastifyInstance) {
 			tournamentId?: number
 		): Promise<number> {
 			const trx = await knex.transaction();
-			
+
 			try {
 				let round = 1; // 기본 라운드
 				if (tournamentId) {
-					// 해당 토너먼트에 이미 생성된 게임 수를 센다.
 					const gameCountResult = await trx('games')
 						.where('tournament_id', tournamentId)
 						.count('* as gameCount')
 						.first();
-					
+
 					const gameCount = Number(gameCountResult?.gameCount) || 0;
 
 					// 게임 카운트가 2 미만이면 준결승(라운드 1), 2이면 결승(라운드 2)
@@ -398,7 +316,7 @@ export function createGameRepository(fastify: FastifyInstance) {
 						player_id: playerId,
 						score: 0
 					}));
-					
+
 					await trx('game_participants').insert(participantData);
 				}
 
@@ -418,13 +336,13 @@ export function createGameRepository(fastify: FastifyInstance) {
 			try {
 				const updatedCount = await knex('games')
 					.where('tournament_id', tournamentId)
-					.whereNot('status', 'canceled') // 이미 취소된 게임은 제외
+					.whereNot('status', 'canceled')
 					.update({
 						status: 'canceled',
 						ended_at: new Date().toISOString()
 					});
 			} catch (error) {
-				throw error; // 에러를 다시 던져서 호출한 쪽에서 처리할 수 있도록 함
+				throw error;
 			}
 		},
 
@@ -433,7 +351,7 @@ export function createGameRepository(fastify: FastifyInstance) {
 		 */
 		async updateGameStatus(gameId: number, status: GameStatus): Promise<void> {
 			const updateData: any = { status };
-			
+
 			if (status === 'playing') {
 				updateData.started_at = new Date().toISOString();
 			} else if (status === 'finished' || status === 'canceled') {
@@ -471,24 +389,6 @@ export function createGameRepository(fastify: FastifyInstance) {
 			const game = await knex('games').where('id', gameId).first() as DBGame;
 			return game || null;
 		},
-
-		/**
-		 * 게임 참가자 조회
-		 */
-		async getGameParticipants(gameId: number): Promise<PlayerResponseDto[]> {
-			const participants = await knex('game_participants as gp')
-				.join('players as p', 'gp.player_id', 'p.id')
-				.select('p.*', 'gp.score')
-				.where('gp.game_id', gameId) as (DBPlayer & { score: number })[];
-
-			const result: PlayerResponseDto[] = [];
-			for (const participant of participants) {
-				const playerDto = await this.mapDBPlayerToResponseDto(participant);
-				result.push(playerDto);
-			}
-
-			return result;
-		}
 	};
 }
 
